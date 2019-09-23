@@ -241,9 +241,7 @@ class CrossSections:
         self.default_definition = None
         self.default_definition_shift = 0.0
 
-        self.get_roughnessname = self.dflowfmmodel.network.get_roughness_description
-
-        
+        self.get_roughnessname = self.dflowfmmodel.network.get_roughness_description        
     
     def set_default_definition(self, definition, shift=0.0):
         """
@@ -424,6 +422,7 @@ class Links1d2d:
         self.mesh2d = network.mesh2d
         self.network = network
 
+        # List for 1d 2d links
         self.nodes1d = []
         self.faces2d = []
 
