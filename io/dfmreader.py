@@ -50,7 +50,7 @@ class StructuresIO:
                 branchid=weir.branch_id,
                 chainage=weir.branch_offset,
                 crestlevel=weir.laagstedoorstroomhoogte,
-                crestwidth=weir.kruinbreedte,
+                crestwidth=weir.laagstedoorstroombreedte,
                 dischargecoeff=weir.afvoercoefficient
             )
 
@@ -73,6 +73,8 @@ class StructuresIO:
     	        length=culvert.geometry.length,
     	        inletlosscoeff=culvert.intreeverlies,
     	        outletlosscoeff=culvert.uittreeverlies,
+                frictiontype=hydamo_to_dflowfm.roughness_gml[culvert.ruwheidstypecode],
+                frictionvalue=culvert.ruwheidswaarde
             )
 
 class CrossSectionsIO:
@@ -82,13 +84,13 @@ class CrossSectionsIO:
 
     def from_hydamo(self, dwarsprofielen, parameterised=None):
         """
-        Method to add cross section from hydamo files. Two files and a default cross section
-        can be handed to the function, the cross section file (dwarsprofiel), the
-        parameterised file (normgeparametriseerd) and a standard cross section. The
-        hierarchical order is 1. dwarsprofiel, 2. normgeparametriseerd, 3. standard.
+        Method to add cross section from hydamo files. Two files
+        can be handed to the function, the cross section file (dwarsprofiel) and the
+        parameterised file (normgeparametriseerd). The
+        hierarchical order is 1. dwarsprofiel, 2. normgeparametriseerd.
         Each branch will be assigned a profile following this order. If parameterised
         and standard are not given, branches can be without cross section. In that case
-        dflowfm will assign a standard profile.
+        a standard profile should be assigned
         """
         nnocross = len(self.crosssections.get_branches_without_crosssection())
         logger.info(f'Before adding the number of branches without cross section is: {nnocross}.')
@@ -123,8 +125,8 @@ class CrossSectionsIO:
                     height=css['height'],
                     width=css['width'],
                     closed=css['closed'],
-                    roughnesstype=branchdata.at[branchid, 'ruwheidstypecode'],
-                    roughnessvalue=branchdata.at[branchid, 'ruwheidswaarde']
+                    roughnesstype=css['ruwheidstypecode'],
+                    roughnessvalue=css['ruwheidswaarde']
                 )
 
             if css['type'] == 'trapezium':
@@ -133,12 +135,12 @@ class CrossSectionsIO:
                     maximumflowwidth=css['maximumflowwidth'],
                     bottomwidth=css['bottomwidth'],
                     closed=css['closed'],
-                    roughnesstype=branchdata.at[branchid, 'ruwheidstypecode'],
-                    roughnessvalue=branchdata.at[branchid, 'ruwheidswaarde']
+                    roughnesstype=css['ruwheidstypecode'],
+                    roughnessvalue=css['ruwheidswaarde']
                 ) 
 
             # Add location
-            self.crosssections.add_crosssection_location(branchid=branchid, chainage=chainage, definition=name)
+            self.crosssections.add_crosssection_location(branchid=branchid, chainage=chainage, definition=name, shift=css['bottomlevel'])
 
         nnocross = len(self.crosssections.get_branches_without_crosssection())
         logger.info(f'After adding \'normgeparameteriseerd\' the number of branches without cross section is: {nnocross}.')

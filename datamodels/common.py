@@ -69,6 +69,10 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         if not self.empty:
             self.delete_all()
 
+        # Check columns
+        if check_columns:
+            self._check_columns(gdf)
+
         # Copy content
         for col, values in gdf.iteritems():
             self[col] = values.values
@@ -80,19 +84,15 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         else:
             self.index = gdf[index_col]
             self.index.name = index_col
-
-        # Check columns and types
-        if check_columns:
-            self._check_columns()
-
+        
         # Check geometry types
         self._check_geotype()
 
-    def _check_columns(self):
+    def _check_columns(self, gdf):
         """
         Check presence of columns in geodataframe
         """
-        present_columns = self.columns.tolist()
+        present_columns = gdf.columns.tolist()
         for column in self.required_columns:
             if column not in present_columns:
                 raise KeyError('Column "{}" not found. Got {}, Expected at least {}'.format(

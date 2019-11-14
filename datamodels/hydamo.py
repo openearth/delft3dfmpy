@@ -23,12 +23,15 @@ class HyDAMO:
         # Create standard dataframe for network, crosssections, orifices, weirs
         self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
             'code',
+            'geometry'
+        ])
+        
+        self.crosssections = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
+            'code',
             'geometry',
             'ruwheidswaarde',
             'ruwheidstypecode'
         ])
-        
-        self.crosssections = ExtendedGeoDataFrame(geotype=LineString, required_columns=['code', 'geometry', 'ruwheidswaarde'])
 
         self.parametrised_profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
             'code',
@@ -38,7 +41,9 @@ class HyDAMO:
             'taludhellinglinkerzijde',
             'taludhellingrechterzijde',
             'hoogteinsteeklinkerzijde',
-            'hoogteinsteekrechterzijde'
+            'hoogteinsteekrechterzijde',
+            'ruwheidswaarde',
+            'ruwheidstypecode'
         ])
         
         # Weirs
@@ -46,23 +51,20 @@ class HyDAMO:
             'code',
             'geometry',
             'laagstedoorstroomhoogte',
-            'hoogstedoorstroomhoogte',
             'laagstedoorstroombreedte',
-            'hoogstedoorstroombreedte',
-            'kruinbreedte',
             'afvoercoefficient'
         ])
 
         # Orifices
-        self.orifices = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
-            'code',
-            'geometry',
-            'hoogteopening',
-            'breedteopening',
-            'indpeilregulpeilscheidend',
-            'hoogtebinnenonderkantbenedenstrooms',
-            'hoogtebinnenonderkantbovenstrooms'
-        ])
+        # self.orifices = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
+        #     'code',
+        #     'geometry',
+        #     'hoogteopening',
+        #     'breedteopening',
+        #     'indpeilregulpeilscheidend',
+        #     'hoogtebinnenonderkantbenedenstrooms',
+        #     'hoogtebinnenonderkantbovenstrooms'
+        # ])
 
         # Culverts
         self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
@@ -81,18 +83,36 @@ class HyDAMO:
         ])
         
         # Laterals
-        self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=['code', 'name', 'geometry'])
+        self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',
+            'name',
+            'geometry'
+        ])
 
         # Gemalen
-        self.gemalen = ExtendedGeoDataFrame(geotype=Point, required_columns=['code', 'naam', 'geometry'])
+        self.gemalen = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',
+        ])
         self.pumps = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-            'code', 'maximalecapaciteit', 'geometry', 'codegerelateerdobject'])
+            'code',
+            'maximalecapaciteit',
+            'geometry',
+            'codegerelateerdobject'
+        ])
         self.sturing = ExtendedDataFrame(required_columns=[
-            'code', 'streefwaarde', 'bovenmarge', 'ondermarge', 'codegerelateerdobject'])
+            'code',
+            'streefwaarde',
+            'bovenmarge',
+            'ondermarge',
+            'codegerelateerdobject'
+        ])
 
         # Hydraulische randvoorwaarden
-        self.boundary_conditions = ExtendedGeoDataFrame(
-            geotype=Point, required_columns=['code', 'typerandvoorwaardecode', 'geometry'])
+        self.boundary_conditions = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',
+            'typerandvoorwaardecode',
+            'geometry'
+        ])
 
     def to_pickle(filename, overwrite=False):
         # Check if path exists

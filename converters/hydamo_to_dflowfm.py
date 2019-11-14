@@ -1,17 +1,50 @@
+import logging
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from shapely.geometry import LineString
 
 from delft3dfmpy.core import checks, geometry
-import geopandas as gpd
-
-import logging
 
 logger = logging.getLogger(__name__)
 
+roughness_gml = {
+    1: "Chezy",
+    2: "Manning",
+    3: "StricklerNikuradse",
+    4: "Strickler",
+    5: "WhiteColebrook",
+    6: "deBosBijkerk"
+}
+
+
 def generate_pumps(pompen, sturing, gemalen):
     """
-    Generate pumps from hydamo data
+    Generate pumps from hydamo data. The function combines the pumps
+    with its steering and pumping stations to pumps that can be imported
+    by dflowfm.
+
+    Note that HYDAMO provides to ways of controlling pumps.
+    1. By linking the control to the pumping station, and the pumps to the pumping station
+    2. By linking the control directly to the pumps itself.
+
+    The pumping capacity is given in cubic meters per minute in Hydamo. Dflowfm requires
+    cubic meters per second, so the capacity is divided by 60.
+    
+    Parameters
+    ----------
+    pompen : gpd.GeoDataFrame
+        Geometry and attributes of pumps
+    sturing : gpd.GeoDataFrame
+        Attributes of steering
+    gemalen : gpd.GeoDataFrame
+        Geometry and attributes of pumping stations
+    
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with pump attributes suitable for dflowfm
     """
     # Copy dataframe
     pumps_dfm = pompen.copy()
@@ -56,6 +89,25 @@ def generate_pumps(pompen, sturing, gemalen):
     return pumps_dfm
 
 def generate_weirs(weirs):
+    """
+    Generate weirs from Hydamo input
+
+    Currently only simple weirs can be applied. From Hydamo the attributes 
+    'laagstedoorstroomhoogte' and 'kruinbreedte' are used to define the weir dimensions.
+
+    The function already contains code for handling more complex weirs,
+    but this code is not reached for now.
+    
+    Parameters
+    ----------
+    weirs : gpd.GeoDataFrame
+        GeoDataFrame with geometry and attributes for weirs.
+    
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with weir attributes suitable for dflowfm
+    """
 
     weirs_dfm = weirs.copy().astype('object')
 
@@ -97,9 +149,8 @@ def generate_weirs(weirs):
                 counts = [yzvalues.count(yz) for yz in yzvalues]
 
             # Add values
-            yzlists = list(zip(*yzvalues))
-            weirs.at[weir.Index, 'yvalues'] = ' '.join([f'{yz[0]:7.3f}' for yz in yzvalues])
-            weirs.at[weir.Index, 'zvalues'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])
+            weirs.at[weir.Index, 'ycoordinates'] = ' '.join([f'{yz[0]:7.3f}' for yz in yzvalues])
+            weirs.at[weir.Index, 'zcoordinates'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])
             weirs.at[weir.Index, 'levelscount'] = len(yzvalues)
 
 def generate_culverts(culverts):
@@ -123,7 +174,20 @@ def generate_culverts(culverts):
     return culverts_dfm
 
 def dwarsprofiel_to_yzprofiles(crosssections):
-
+    """
+    Function to convert hydamo cross sections 'dwarsprofiel' to
+    dflowfm input.
+    
+    Parameters
+    ----------
+    crosssections : gpd.GeoDataFrame
+        GeoDataFrame with x,y,z-coordinates of cross sections
+    
+    Returns
+    -------
+    dictionary
+        Dictionary with attributes of cross sections, usable for dflowfm
+    """
     cssdct = {}
 
     for css in crosssections.itertuples():
@@ -151,12 +215,15 @@ def parameterised_to_profiles(parameterised, branches):
 
     Parameters
     ----------
-    method : str
-        For 'missing' or 'all' branches. Default 'missing'
     parameterised : pd.DataFrame
-        ...
+        GeoDataFrame with geometries and attributes of parameterised profiles.
     branches : list
         List of branches for which the parameterised profiles are derived
+
+    Returns
+    -------
+    dictionary
+        Dictionary with attributes of cross sections, usable for dflowfm
     """
 
     checks.check_argument(parameterised, 'parameterised', (pd.DataFrame, gpd.GeoDataFrame))
@@ -177,6 +244,7 @@ def parameterised_to_profiles(parameterised, branches):
     dh1 = parambranches['hoogteinsteeklinkerzijde'] - botlev
     dh2 = parambranches['hoogteinsteekrechterzijde'] - botlev
     parambranches['height'] = (dh1 + dh2) / 2.0
+    parambranches['bottomlevel'] = botlev
 
     # Determine maximum flow width and slope (both needed for output)
     parambranches['maxflowwidth'] = parambranches['bodembreedte'] + parambranches['taludhellinglinkerzijde'] * dh1 + parambranches['taludhellingrechterzijde'] * dh2
@@ -196,14 +264,20 @@ def parameterised_to_profiles(parameterised, branches):
                 'slope': round(branch.slope, 1),
                 'maximumflowwidth': round(branch.maxflowwidth, 1),
                 'bottomwidth': round(branch.bodembreedte, 3),
-                'closed': 0
+                'closed': 0,
+                'ruwheidstypecode': int(branch.ruwheidstypecode) if isinstance(branch.ruwheidstypecode, float) else branch.ruwheidstypecode,
+                'ruwheidswaarde': branch.ruwheidswaarde,
+                'bottomlevel': branch.bottomlevel
             }
         elif branch.css_type == 'rectangle':
             cssdct[branch.Index] = {
                 'type': branch.css_type,
                 'height': 5.0,
                 'width': round(branch.bodembreedte, 3),
-                'closed': 0
+                'closed': 0,
+                'ruwheidstypecode': int(branch.ruwheidstypecode) if isinstance(branch.ruwheidstypecode, float) else branch.ruwheidstypecode,
+                'ruwheidswaarde': branch.ruwheidswaarde,
+                'bottomlevel': branch.bottomlevel
             }
 
     return cssdct
@@ -218,33 +292,39 @@ def generate_boundary_conditions(boundary_conditions, schematised):
         geodataframe with the locations and properties of the boundary conditions
     schematised : gpd.GeoDataFrame
         geodataframe with the schematised branches
+    
+    Returns
+    -------
+    dictionary
+        Dictionary with attributes of boundary conditions, usable for dflowfm
     """
     bcdct = {}
 
-    for bc in boundary_conditions.itertuples():
+    for bndcnd in boundary_conditions.itertuples():
 
         # Find nearest branch for geometry
-        extended_line = geometry.extend_linestring(line=schematised.at[bc.branch_id, 'geometry'], near_pt=bc.geometry, length=1.0)
+        extended_line = geometry.extend_linestring(
+            line=schematised.at[bndcnd.branch_id, 'geometry'], near_pt=bndcnd.geometry, length=1.0)
 
         # Create intersection line for boundary condition
         bcline = LineString(geometry.orthogonal_line(line=extended_line, offset=0.1, width=0.1))
 
-        if bc.typerandvoorwaardecode in [0, 'waterstand']:
+        if bndcnd.typerandvoorwaardecode in [0, 'waterstand']:
             bctype = 'waterlevel'
-        elif bc.typerandvoorwaardecode in [1, 'afvoer']:
+        elif bndcnd.typerandvoorwaardecode in [1, 'debiet']:
             bctype = 'discharge'
 
         # Add boundary condition
-        bcdct[bc.code] = {
-            'code': bc.code,
+        bcdct[bndcnd.code] = {
+            'code': bndcnd.code,
             'bctype': bctype+'bnd',
-            'value': bc.waterstand if not np.isnan(bc.waterstand) else bc.afvoer,
+            'value': bndcnd.waterstand if not np.isnan(bndcnd.waterstand) else bndcnd.debiet,
             'time': None,
             'geometry': bcline,
             'filetype': 9,
             'operand': 'O',
             'method': 3,
-            'branchid': bc.branch_id
+            'branchid': bndcnd.branch_id
         }
 
     return bcdct

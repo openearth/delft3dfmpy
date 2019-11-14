@@ -3,8 +3,10 @@ from ctypes import CDLL, byref, c_char, c_int, pointer
 
 import geopandas as gpd
 import numpy as np
-from scipy.spatial import KDTree
-from shapely.geometry import LineString, Polygon, MultiPolygon
+from scipy.spatial import KDTree, Voronoi
+from shapely.geometry import LineString, Polygon, MultiPolygon, box, Point, MultiLineString
+from shapely.ops import unary_union
+from shapely.prepared import prep
 
 from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.cstructures import meshgeom, meshgeomdim
@@ -82,7 +84,7 @@ class Mesh2D:
 
         dimensions = geometries.meshgeomdim
 
-        wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', '..', 'lib', 'gridgeom.dll'))
+        wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'gridgeom.dll'))
         ierr = wrapperGridgeom.ggeo_deallocate()
         assert ierr == 0
 
@@ -140,25 +142,70 @@ class Mesh2D:
         also taken into account.
         """
 
-        if where == 'node':
-            raise NotImplementedError()
 
         # Select points on faces or nodes
         xy = np.c_[self.meshgeom.get_values(f'{where}x'), self.meshgeom.get_values(f'{where}y')]
-
-        # Get raster statistics
         cells = self.meshgeom.get_faces()
-        facedata = gpd.GeoDataFrame(
-            index=np.arange(len(xy), dtype=np.uint32) + 1,
-            geometry=[Polygon(cell) for cell in cells]
-        )
-        facedata['crds'] = [cell for cell in cells]
+        facedata = gpd.GeoDataFrame(geometry=[Polygon(cell) for cell in cells])   
 
-        df = geometry.raster_stats_fine_cells(rasterpath, facedata, stats=[stat])
-        # Get z values
-        zvalues = df[stat].values
-        # Convert NaN to fill value
-        zvalues[np.isnan(zvalues)] = self.fill_value_z
+        if where == 'face':
+            # Get raster statistics
+            facedata.index = np.arange(len(xy), dtype=np.uint32) + 1
+            # facedata.to_file('test_face.shp')
+            facedata['crds'] = [cell for cell in cells]
+        
+            df = geometry.raster_stats_fine_cells(rasterpath, facedata, stats=[stat])
+            # Get z values
+            zvalues = df[stat].values
+            # Convert NaN to fill value
+            zvalues[np.isnan(zvalues)] = self.fill_value_z
+
+        elif where == 'node':
+            
+            # Creat voronoi polygon
+            # Add border to limit polygons
+            border = box(xy[:, 0].min(), xy[:, 1].min(), xy[:, 0].max(), xy[:, 1].max()).buffer(1000).exterior
+            borderpts = [border.interpolate(dist).coords[0] for dist in np.linspace(0, border.length, max(20, border.length//100))]
+            vor = Voronoi(points=xy.tolist()+borderpts)
+            clippoly = facedata.unary_union
+            # Get lines
+            lines = []
+            for poly in geometry.as_polygon_list(clippoly):
+                lines.extend([[poly.exterior] + [line for line in poly.interiors]])
+            linesprep = prep(MultiLineString(*lines))
+            clipprep = prep(clippoly)
+
+            # Collect polygons
+            data = []
+            for (pr, (i, pt)) in zip(vor.point_region, enumerate(xy)):
+                region = vor.regions[pr]
+                if pr == -1:
+                    break
+                while -1 in region:
+                    region.remove(-1)
+                if len(region) < 3:
+                    continue
+                crds = vor.vertices[region]
+                if clipprep.intersects(Point(pt)):
+                    poly = Polygon(crds)
+                    if linesprep.intersects(poly):
+                        poly = poly.intersection(clippoly)
+                        crds = np.vstack(poly.exterior.coords[:])
+                    data.append({'geometry': poly, 'crds': crds})
+                    
+            # Limit to model extend
+            facedata = gpd.GeoDataFrame(data)
+            facedata.index=np.arange(len(xy), dtype=np.uint32) + 1
+            # facedata.drop('crds', axis=1).to_file('test_node.shp')
+            # Get raster statistics
+            df = geometry.raster_stats_fine_cells(rasterpath, facedata, stats=[stat])
+            # Get z values
+            zvalues = df[stat].values
+            # Convert NaN to fill value
+            zvalues[np.isnan(zvalues)] = self.fill_value_z
+
+        else:
+            raise NotImplementedError()
 
         # Set values to mesh geometry
         self.meshgeom.set_values(f'{where}z', zvalues)

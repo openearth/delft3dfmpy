@@ -290,7 +290,7 @@ class RasterPart:
         return self.f.read(layeridx, window=self.window)
 
     def get_pts_in_part(self, pts, buffer=0):
-        corners = self.get_corners()
+        self.get_corners()
         # Select points within part + buffer
         idx = (
             (pts[:, 0] > self.lowerleft[0] - buffer) & 
@@ -364,10 +364,11 @@ def raster_in_parts(f, ncols, nrows, facedata=None):
     for i, (ix, iy) in enumerate(product(range(nx), range(ny))):
         pl.set_step(i)
         
-        part = RasterPart(f, xparts[ix], yparts[iy], xparts[ix+1], yparts[iy+1])
+        part = RasterPart(f, xmin=xparts[ix], ymin=yparts[iy], xmax=xparts[ix+1], ymax=yparts[iy+1])
         
         if facedata is not None:
-            # For each part, get points in part
+            # For each part, get points in part.
+            # For narrow/diagonal shapes the points in part can be limited
             idx = part.get_pts_in_part(pts)
             if not idx.any():
                 continue
@@ -485,7 +486,7 @@ def raster_stats_fine_cells(rasterpath, facedata, stats=['mean']):
 
                 # For each statistic, get the values and add
                 for stat in stats:
-                    stat_array[stat][cell_idx] = getattr(bottom, stat)()
+                    stat_array[stat][cell_idx] = getattr(np, stat)(bottom)
 
                 stat_array['count'][cell_idx] = len(bottom)
 
@@ -496,19 +497,20 @@ def raster_stats_fine_cells(rasterpath, facedata, stats=['mean']):
 
 def waterdepth_ahn(dempath, facedata, outpath, column):
     """
-    Get raster stats
+    Function that combines a dem and water levels to a water
+    depth raster. No sub grid correction is done.
     
     Parameters
     ----------
     dempath : str
         Path to raster file with terrain level
+    facedata : gpd.GeoDataFrame
+        GeoDataFrame with at least the cell geometry and
+        a column with water levels
     outpath : str
         Path to output raster file
-    pts : Nx3 array
-        Array with x, y and z of results to interpolate
-    buffer : float
-        Max size between different points. This length is used to include points outside
-        domain when splitting raster
+    column : str
+        Name of the column with the water level data
     """
 
     # Open raster file
@@ -561,6 +563,14 @@ def waterdepth_ahn(dempath, facedata, outpath, column):
 
 
 def compress(path):
+    """
+    Function re-save an existing raster file with compression.
+    
+    Parameters
+    ----------
+    path : str
+        Path to raster file. File is overwritten with compress variant.
+    """
     # Compress
     with rasterio.open(path, 'r') as f:
         arr = f.read()
@@ -570,6 +580,19 @@ def compress(path):
         f.write(arr)
 
 def as_polygon_list(polygon):
+    """Convenience method to return a list with one or more
+    Polygons from a given Polygon or MultiPolygon.
+    
+    Parameters
+    ----------
+    polygon : list or Polygon or MultiPolygon
+        Object to be converted
+    
+    Returns
+    -------
+    list
+        list of Polygons
+    """
     if isinstance(polygon, Polygon):
         return [polygon]
     elif isinstance(polygon, MultiPolygon):

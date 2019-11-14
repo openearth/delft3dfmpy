@@ -80,7 +80,7 @@ class DFlowFMWriter:
         f.write('\n')
 
     def writeMdFiles(self):
-        srcMdu = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'FMmdu.txt')
+        srcMdu = os.path.join(os.path.dirname(__file__), '..', 'resources', 'FMmdu.txt')
         targetMdu = os.path.join(self.output_dir, f'{self.name}.mdu')
 
         shutil.copy2(srcMdu, targetMdu)
@@ -104,25 +104,23 @@ class DFlowFMWriter:
             roughnessfiles.append(file)
             with open(os.path.join(self.output_dir, file), 'w') as f:
                 # header roughness
-                self._write_header(f, filetype='roughness')
+                self._write_header(f, filetype='roughness', fileversion=3.00)
                 dct = {
-                    'sectionId': roughness['name'],
-                    "flowDirection": 'False',
-                    'globalType': roughness['code'],
-                    "interpolate": 1,
-                    'globalValue': roughness['value'],
+                    'frictionId': roughness['name'],
+                    'frictionType': roughness['code'],
+                    'frictionValue': roughness['value'],
                 }
-                self._write_dict(f, dct=dct, header='content')
+                self._write_dict(f, dct=dct, header='Global')
 
-        self.mdu_parameters['RoughnessFiles'] = ';'.join(roughnessfiles)
+        self.mdu_parameters['frictFile'] = ';'.join(roughnessfiles)
 
     def write_crosssection_locations(self):
         # Write cross section locations
         with open(os.path.join(self.output_dir, 'cross_section_locations.ini'), 'w') as f:
-            self._write_header(f, 'crossLoc')
+            self._write_header(f, 'crossLoc', fileversion=2.01)
             for _, series in self.dflowfmmodel.crosssections.crosssection_loc.items():
                 # Write the cross section item
-                self._write_dict(f, dct=series, header='crosssection')
+                self._write_dict(f, dct=series, header='CrossSection')
 
             # Write the default profile (if specified) to branches that do not have a cross section
             if self.dflowfmmodel.crosssections.default_definition is not None:
@@ -140,10 +138,9 @@ class DFlowFMWriter:
                     # Write the cross section item
                     self._write_dict(f, dct=dct, header='crosssection')
 
-    def _write_header(self, f, filetype):
-        f.write('[general]\n')
-        f.write('majorVersion = 1\n')
-        f.write('minorVersion = 0\n')
+    def _write_header(self, f, filetype, fileversion):
+        f.write('[General]\n')
+        f.write(f'fileVersion = {fileversion:.2f}\n')
         f.write(f'fileType = {filetype}\n')
         f.write('\n')
 
@@ -151,7 +148,7 @@ class DFlowFMWriter:
 
         with open(os.path.join(self.output_dir, 'cross_section_definitions.ini'), 'w') as f:
             # header
-            self._write_header(f, filetype='crossDef')
+            self._write_header(f, filetype='crossDef', fileversion=3.00)
             # definitions
             for _, dct in self.dflowfmmodel.crosssections.crosssection_def.items():
                 self._write_dict(f, dct=dct, header='definition')
@@ -293,7 +290,7 @@ class DFlowFMWriter:
 
         # Copy external forcing file (*.ext)
         if not os.path.exists(self.extfile):
-            shutil.copy2(os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'template.ext'), self.extfile)
+            shutil.copy2(os.path.join(os.path.dirname(__file__), '..', 'resources', 'template.ext'), self.extfile)
 
         # Create folder for initial conditions if it does not exist yet
         initcondfolder = 'initialconditions'

@@ -6,39 +6,22 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import tqdm
-
 from scipy.spatial import KDTree
 from shapely.geometry import LineString, Point, Polygon
 
-import delft3dfmpy.converters.hydamo_to_dflowfm as hydamo_to_dflowfm
-from delft3dfmpy.core import geometry
+from delft3dfmpy.converters import hydamo_to_dflowfm
+from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
 from delft3dfmpy.datamodels.cstructures import meshgeom, meshgeomdim
 from delft3dfmpy.io import dfmreader
 
-from delft3dfmpy.core import checks
-
-roughness_delft3dfm =  {
-    "chezy": 1,
-    "manning": 4,
-    "nikuradse": 5,
-    "stricklerks": 6,
-    "whitecolebrook": 7,
-    "bosbijkerk": 9
-}
-
-roughness_gml = {
-    1: "chezy",
-    2: "manning",
-    3: "nikuradse",
-    4: "stricklerks",
-    5: "whitecolebrook",
-    6: "bosbijkerk"
-}
-
 logger = logging.getLogger(__name__)
 
 class DFlowFMModel:
+    """Main data structure for dflowfm model. Contains subclasses
+    for network, structures, cross sections, observation points
+    and external forcings.
+    """
 
     def __init__(self):
 
@@ -56,7 +39,24 @@ class DFlowFMModel:
         self.external_forcings = ExternalForcings(self)
 
     def export_network(self, output_dir, overwrite=False):
-
+        """
+        Expert network to shapefiles
+        
+        Three files are exported. One for the 2d mesh, one for the 1d mesh
+        and one for the links between the 1d and 2d mesh.
+    
+        Parameters
+        ----------
+        output_dir : str
+            Path to output directory
+        overwrite : bool, optional
+            Whether to overwrite existing files, by default False
+        
+        Raises
+        ------
+        FileExistsError
+            If one of the shape file names already exists.
+        """
         # Check if files already exist
         files = ['mesh1d.shp', 'mesh2d.shp', 'links1d2d.shp']
         paths = [os.path.join(output_dir, file) for file in files]
@@ -79,6 +79,10 @@ class DFlowFMModel:
         mesh1d.to_file(paths[0])    
     
 class ExternalForcings:
+    """
+    Class for external forcings, which contains the boundary
+    conditions and the initial conditions.
+    """
 
     def __init__(self, dflowfmmodel):
         # Point to relevant attributes from parent
@@ -150,6 +154,30 @@ class ExternalForcings:
         self.initial_waterlevel_xyz.extend([[row.geometry.x, row.geometry.y, row.minz + depth] for row in bottom.itertuples()])
 
     def add_boundary_condition(self, name, pt, bctype, series, branchid=None):
+        """
+        Add boundary conditions to model:
+        - The boundary condition can be discharge or waterlevel
+        - Is specified by a geographical location (pt) and a branchid
+        - If no branchid is given, the nearest is searched
+        - The boundary condition is added to the end of the given or nearest branch.
+        - To specify a time dependendend boundary: a timeseries with values should be given
+        - To specify a constant boundary a float should be given
+        
+        Parameters
+        ----------
+        name : str
+            ID of the boundary condition
+        pt : tuple or shapely.geometry.Point
+            Location of the boundary condition
+        bctype : str
+            Type of boundary condition. Currently only discharge and waterlevel are supported
+        series : pd.Series or float
+            If a float, a constant in time boundary condition is used. If a pandas series,
+            the values per time step are used. Index should be in datetime format
+        branchid : str, optional
+            ID of the branch. If None, the branch nearest to the given location (pt) is
+            searched, by default None
+        """
 
         assert bctype in ['discharge', 'waterlevel']
         
@@ -192,6 +220,19 @@ class ExternalForcings:
         self.dflowfmmodel.network.links1d2d.check_boundary_link(self.boundaries.loc[name])
     
     def add_rain_series(self, name, values, times):
+        """
+        Adds a rain series a boundary condition.
+        Specify name, values, and times
+        
+        Parameters
+        ----------
+        name : str
+            ID of the condition
+        values : list of floats
+            Values of the rain intensity
+        times : list of datetime
+            Times for the values
+        """
         # Add boundary condition
         self.boundaries.loc[name] = {
             'code' : name,
@@ -228,9 +269,21 @@ class ExternalForcings:
         }
 
 class CrossSections:
-
+    """
+    Cross section class.
+    Contains dictionaries for the cross section locations and 
+    cross section definitions. Also has an subclass for input
+    and output.
+    """
     def __init__(self, dflowfmmodel):
+        """
+        Constructor
         
+        Parameters
+        ----------
+        DFlowFMMOdel
+            Model schematisation of which the cross sections are part.
+        """
         self.io = dfmreader.CrossSectionsIO(self)
         
         self.crosssection_loc = {}
@@ -283,11 +336,11 @@ class CrossSections:
             'id' : name,
             'type': 'yz',
             'yzcount': len(z),
-            'yvalues': list_to_str(length),
-            'zvalues': list_to_str(z),
+            'ycoordinates': list_to_str(length),
+            'zcoordinates': list_to_str(z),
             'sectioncount': 1,
-            'roughnessnames': roughnessname,
-            'roughnesspositions': list_to_str([length[0], length[-1]])
+            'frictionids': roughnessname,
+            'frictionpositions': list_to_str([length[0], length[-1]])
         }
 
         return name
@@ -309,7 +362,7 @@ class CrossSections:
             'id' : name,
             'type': 'circle',
             'diameter': diameter,
-            'roughnessnames': roughnessname
+            'frictionId': roughnessname
         }
 
         return name
@@ -333,7 +386,7 @@ class CrossSections:
             'height': height,
             'width': width,
             'closed': int(closed),
-            'roughnessnames': roughnessname
+            'frictionid': roughnessname
         }
 
         return name
@@ -350,15 +403,22 @@ class CrossSections:
         # Get roughnessname
         roughnessname = self.get_roughnessname(roughnesstype, roughnessvalue)
 
+        if not closed:
+            levels = '0 100'
+            flowwidths = f'{bottomwidth:.2f} {bottomwidth + 2 * slope * 100:.2f}'
+        else:
+            levels = f'0 {(maximumflowwidth - bottomwidth) / (2 * slope):.2f}'
+            flowwidths = f'{bottomwidth:.2f} {maximumflowwidth:.2f}'
+
         # Add to dictionary
         self.crosssection_def[name] = {
             'id' : name,
-            'type': 'trapezium',
-            'slope': slope,
-            'maximumflowwidth': maximumflowwidth,
-            'bottomwidth': bottomwidth,
-            'closed': int(closed),
-            'roughnessnames': roughnessname
+            'type': 'zw',
+            'numlevels': 2,
+            'levels': levels,
+            'flowwidths': flowwidths,
+            'totalwidths': flowwidths,
+            'frictionid': roughnessname
         }
 
         return name
@@ -372,7 +432,7 @@ class CrossSections:
             'branchid': branchid,
             'chainage': chainage,
             'shift': shift,
-            'definition': definition,
+            'definitionid': definition,
         }
 
     def get_branches_without_crosssection(self):
@@ -397,7 +457,7 @@ class CrossSections:
             shift = css['shift']
 
             # Get depth from definition if yz and shift
-            definition = self.crosssection_def[css['definition']]
+            definition = self.crosssection_def[css['definitionid']]
             minz = shift
             if definition['type'] == 'yz':
                 minz += min(float(z) for z in definition['zvalues'].split())
@@ -519,7 +579,7 @@ class Links1d2d:
             # Remove links that intersect multiple cells
             cellbounds = cells.bounds.values.T
             for link in tqdm.tqdm(links.itertuples(), total=len(links), desc='Removing links crossing mult. cells'):
-                selectie = cells.loc[possibly_intersecting(cellbounds, link.geometry)].copy()
+                selectie = cells.loc[geometry.possibly_intersecting(cellbounds, link.geometry)].copy()
                 if selectie.intersects(link.geometry).sum() > 1:
                     todrop.append(link.Index)
             links.drop(todrop, inplace=True)
@@ -661,7 +721,7 @@ class Network:
         self.offsets = {}
 
         # Branches and schematised branches
-        self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=['code', 'geometry', 'ruwheidstypecode', 'ruwheidswaarde'])
+        self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=['code', 'geometry'])
         self.schematised = ExtendedGeoDataFrame(geotype=LineString, required_columns=['geometry'])
 
         # Create mesh for the 1d network
@@ -727,18 +787,18 @@ class Network:
         dimensions.nbranches = len(sorted_branches)
         self.mesh1d.set_values('nbranchorder', (np.ones(dimensions.nbranches, dtype=int) * -1).tolist())
         self.mesh1d.set_values('nbranchlengths', sorted_branches.geometry.length + 1e-12)
-        self.mesh1d.description1d['network_branch_ids'] = sorted_branches.index.tolist()
-        self.mesh1d.description1d['network_branch_long_names'] = sorted_branches.index.tolist()
+        self.mesh1d.description1d['network_branch_ids'] = sorted_branches.index.astype(str).tolist()
+        self.mesh1d.description1d['network_branch_long_names'] = sorted_branches.index.astype(str).tolist()
         
         # Add network branch geometry
         coords = [line.coords[:] for line in sorted_branches.geometry]
-        geomx, geomy = list(zip(*list(itertools.chain(*coords))))
+        geomx, geomy = list(zip(*list(itertools.chain(*coords))))[:2]
         dimensions.ngeometry = len(geomx)
         self.mesh1d.set_values('nbranchgeometrynodes', [len(lst) for lst in coords])
         self.mesh1d.set_values('ngeopointx', geomx)
         self.mesh1d.set_values('ngeopointy', geomy)
 
-        branch_names = sorted_branches.index.tolist()
+        branch_names = sorted_branches.index.astype(str).tolist()
         branch_longnames = 'long_' + sorted_branches.index
 
         network_edge_nodes = []
@@ -822,11 +882,11 @@ class Network:
             
         # Parse nodes
         dimensions.nnodes = len(nodes)
-        nodex, nodey = list(zip(*nodes))
+        nodex, nodey = list(zip(*nodes))[:2]
         self.mesh1d.set_values('nnodex', nodex)
         self.mesh1d.set_values('nnodey', nodey)
-        self.mesh1d.description1d['network_node_ids'].extend([f'{x:.0f}_{y:.0f}' for x, y in nodes])
-        self.mesh1d.description1d["network_node_long_names"].extend([f'x={x:.0f}_y={y:.0f}' for x, y in nodes])
+        self.mesh1d.description1d['network_node_ids'].extend([f'{xy[0]:.0f}_{xy[1]:.0f}' for xy in nodes])
+        self.mesh1d.description1d["network_node_long_names"].extend([f'x={xy[0]:.0f}_y={xy[1]:.0f}' for xy in nodes])
 
         # Add edge node data to mesh
         self.mesh1d.set_values('nedge_nodes', np.ravel(network_edge_nodes))
@@ -925,23 +985,30 @@ class Network:
 
     def get_roughness_description(self, roughnesstype, value):
 
+        if np.isnan(value):
+            raise ValueError('Roughness value should not be NaN.')
+
         # Check input
         checks.check_argument(roughnesstype, 'roughness type', (str, int))
         checks.check_argument(value, 'roughness value', (float, int, np.float, np.integer))
 
         # Convert integer to string
         if isinstance(roughnesstype, int):
-            roughnesstype = roughness_gml[roughnesstype]
+            roughnesstype = hydamo_to_dflowfm.roughness_gml[roughnesstype]
     	
         # Get name
-        name = f'{roughnesstype}_{value}'
+        name = f'{roughnesstype}_{float(value)}'
 
         # Check if the description is already known
         if name.lower() in map(str.lower, self.roughness_definitions.keys()):
             return name
 
         # Convert roughness type string to integer for dflowfm
-        delft3dfmtype = roughness_delft3dfm[roughnesstype.lower()]
+        delft3dfmtype = roughnesstype
+
+        if roughnesstype.lower() == 'stricklerks':
+            raise ValueError()
+        print(roughnesstype, value)
 
         # Add to dict
         self.roughness_definitions[name] = {
@@ -1040,7 +1107,7 @@ class Structures:
 
     def add_culvert(self, id, branchid, chainage, leftlevel, rightlevel, crosssection, length, inletlosscoeff,
                     outletlosscoeff, allowedflowdir=0, valveonoff=0, inivalveopen=0.0, losscoeffcount=0,
-                    frictiontype='StricklerKs', frictionvalue=75.0):
+                    frictiontype='Strickler', frictionvalue=75.0):
         """
         Add a culvert to the schematisation.
 
@@ -1080,9 +1147,9 @@ class Structures:
             "valveonoff": valveonoff,
             "inivalveopen": inivalveopen,
             "losscoeffcount": losscoeffcount,
-            "bedfrictiontype": roughness_delft3dfm[frictiontype.lower()],
+            "bedfrictiontype": frictiontype,
             "bedfriction": frictionvalue,
-            "groundfrictiontype": roughness_delft3dfm[frictiontype.lower()],
+            "groundfrictiontype": frictiontype,
             "groundfriction": frictionvalue
         }
 
