@@ -1,16 +1,20 @@
+import logging
 import os
 from ctypes import CDLL, byref, c_char, c_int, pointer
 
 import geopandas as gpd
 import numpy as np
 from scipy.spatial import KDTree, Voronoi
-from shapely.geometry import LineString, Polygon, MultiPolygon, box, Point, MultiLineString
+from shapely.geometry import (
+    LineString, MultiLineString, MultiPolygon, Point, Polygon, box)
 from shapely.ops import unary_union
 from shapely.prepared import prep
 
 from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.cstructures import meshgeom, meshgeomdim
 from delft3dfmpy.io import gridio
+
+logger = logging.getLogger(__name__)
 
 
 class Mesh2D:
@@ -21,7 +25,6 @@ class Mesh2D:
 
         self.meshgeomdim = meshgeomdim(pointer(c_char()), 2, 0, 0, 0, 0, -1, -1, -1, -1, -1, 0)
         self.meshgeom = meshgeom(self.meshgeomdim)
-
 
     def clip_nodes(self, xnodes, ynodes, edge_nodes, polygon):
         """
@@ -142,8 +145,8 @@ class Mesh2D:
         also taken into account.
         """
 
-
         # Select points on faces or nodes
+        logger.info('Creating GeoDataFrame of cell faces.')
         xy = np.c_[self.meshgeom.get_values(f'{where}x'), self.meshgeom.get_values(f'{where}y')]
         cells = self.meshgeom.get_faces()
         facedata = gpd.GeoDataFrame(geometry=[Polygon(cell) for cell in cells])   
@@ -161,6 +164,8 @@ class Mesh2D:
             zvalues[np.isnan(zvalues)] = self.fill_value_z
 
         elif where == 'node':
+
+            logger.info('Generating voronoi polygons around cell centers for determining raster statistics.')
             
             # Creat voronoi polygon
             # Add border to limit polygons
@@ -171,8 +176,9 @@ class Mesh2D:
             # Get lines
             lines = []
             for poly in geometry.as_polygon_list(clippoly):
-                lines.extend([[poly.exterior] + [line for line in poly.interiors]])
-            linesprep = prep(MultiLineString(*lines))
+                lines.append(poly.exterior)
+                lines.extend([line for line in poly.interiors])
+            linesprep = prep(MultiLineString(lines))
             clipprep = prep(clippoly)
 
             # Collect polygons
@@ -265,7 +271,6 @@ class Rectangular(Mesh2D):
         dimensions.dim = 2
         geometries = meshgeom(dimensions)
 
-
         # Clip
         if clipgeo is not None:
             xnodes, ynodes, edge_nodes = self.clip_nodes(xnodes, ynodes, edge_nodes, clipgeo)
@@ -320,13 +325,15 @@ class Rectangular(Mesh2D):
 
         checks.check_argument(polygon, 'polygon', (list, Polygon, MultiPolygon))
 
-        for poly in geometry.as_polygon_list(polygon):
+        polygons = geometry.as_polygon_list(polygon)
+        for i, poly in enumerate(polygons):
+            logger.info(f'Generating grid with cellsize {cellsize} m and rotation {rotation} degrees within polygon {i+1}/{len(polygons)}.')
             bounds = poly.bounds
 
             # In case of a rotation, extend the grid far enough to make sure
             if rotation != 0:
                 # Find a box that contains the whole polygon
-                (x0, y0), xsize, ysize = geometry.minimum_bounds_fixed_rotation(polygon, np.radians(rotation))
+                (x0, y0), xsize, ysize = geometry.minimum_bounds_fixed_rotation(poly, rotation)
             else:
                 xsize = bounds[2] - bounds[0]
                 ysize= bounds[3] - bounds[1]

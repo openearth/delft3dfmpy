@@ -33,8 +33,19 @@ def rotate_coordinates(origin, theta, xcrds, ycrds):
 
 
 def minimum_bounds_fixed_rotation(polygon, angle):
-    """
-    Get the minimum box for a polygon with a given axes rotation.
+    """Get the minimum box for a polygon with a given axes rotation.
+    
+    Parameters
+    ----------
+    polygon : shapely.geometry.Polygon
+        Polygon that is rotated
+    angle : int or float
+        Rotation of the polygon in degrees
+    
+    Returns
+    -------
+    tuple
+        Tuple with origin (x, y), xsize and ysize
     """
     # Determine spinning point
     spinpt = (polygon.envelope.bounds[0], polygon.envelope.bounds[1])

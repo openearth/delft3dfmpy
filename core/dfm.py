@@ -1008,7 +1008,6 @@ class Network:
 
         if roughnesstype.lower() == 'stricklerks':
             raise ValueError()
-        print(roughnesstype, value)
 
         # Add to dict
         self.roughness_definitions[name] = {
