@@ -1,20 +1,15 @@
 import logging
-from collections import namedtuple
 from itertools import product
 
 import geopandas as gpd
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import PIL.Image
 import PIL.ImageDraw
 import rasterio
 from matplotlib import path
-from matplotlib.collections import LineCollection
-from scipy.interpolate import griddata
-from scipy.optimize import brentq
 from shapely import affinity
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon, mapping
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
 from delft3dfmpy.core import checks
 from delft3dfmpy.core.logging import ProgressLogger
