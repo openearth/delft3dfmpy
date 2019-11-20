@@ -34,9 +34,19 @@ Features
 
 Installation
 ------------
-This module can not be installed with pip or conda. To use it:
-1. Clone or download the repository;
-2. Add the delft3dfmpy directory to: the Python working directory, or the site-packages of the Python installation, or add the path within the script with sys.path.append('path/to/delft3dfmpy/parent/directory')
+This module cannot be installed with pip or conda. To use it:
+1.  Clone or download the repository;
+2.  To import the delft3dfmpy module in your script or notebook, add the downloaded delft3dfmpy directory to:
+    * the Python working directory
+    * the site-packages of the Python installation
+    * add the path within the script with sys.path.append('path/to/delft3dfmpy/parent/directory')
+
+To get all the required dependencies working, it is advised to:
+1.  Install a Anaconda Python distribution: https://www.anaconda.com/distribution/
+2.  Create an environment with the required modules, by executing the following command in an anaconda command prompt::
+        conda create --name delft3dfmpy numpy pandas geopandas gdal=2.4.1 rasterio netcdf4 pillow
+3.  Activate the created environment in an anaconda command prompt (activate delft3dfmpy) before running your notebook or script.
+4.  For more information on how to use environments, see: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
 Credits
 -------
