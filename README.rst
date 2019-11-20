@@ -41,12 +41,14 @@ This module cannot be installed with pip or conda. To use it:
 2.  To import the delft3dfmpy module in your script or notebook, Python needs to find the delft3dfmpy module on one of the following directories:
 
     * the Python working directory. This can be checked in Python with::
+
         import os
         print(os.getcwd())
 
     * the site-packages directory of the Python installation in the correct environment (see below). Using anaconda, this is usually C:/users/[name]/AppData/Local/Continuum/Anaconda3/envs/delft3dfmpy/Lib/site-packages
 
     * a user defined directory, added within the script with::
+
         import sys
         sys.path.append('path/to/delft3dfmpy/parent/directory')
 
@@ -57,6 +59,7 @@ To get all the required dependencies working, it is advised to:
 1.  Install a Anaconda Python distribution: https://www.anaconda.com/distribution/
 
 2.  Create an environment with the required modules, by executing the following commands in an anaconda command prompt::
+
         conda config --add channels conda-forge
         conda create --name delft3dfmpy numpy scipy matplotlib pandas geopandas gdal=2.4.1 rasterio netcdf4 pillow
 
