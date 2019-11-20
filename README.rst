@@ -26,7 +26,17 @@ Python package to generate delft3dfm models from standardized data models or oth
 Features
 --------
 
-* TODO
+* Read Hydamo or shape files to Python data structure
+* Build Delft3D FM model from Hydamo or seperately defined elements
+* Generate rectangular meshes with refinement
+* Create 1D 2D connections
+* Write to Delft3D FM model
+
+Installation
+------------
+This module can not be installed with pip or conda. To use it:
+1. Clone or download the repository;
+2. Add the delft3dfmpy directory to: the Python working directory, or the site-packages of the Python installation, or add the path within the script with sys.path.append('path/to/delft3dfmpy/parent/directory')
 
 Credits
 -------

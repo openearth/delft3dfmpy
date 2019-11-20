@@ -1,0 +1,11 @@
+
+__pycache__/__init__.cpython-37.pyc
+converters/__pycache__/hydamo_to_dflowfm.cpython-37.pyc
+core/__pycache__/checks.cpython-37.pyc
+core/__pycache__/dfm.cpython-37.pyc
+core/__pycache__/geometry.cpython-37.pyc
+core/__pycache__/logging.cpython-37.pyc
+core/__pycache__/mesh2d.cpython-37.pyc
+datamodels/__pycache__/common.cpython-37.pyc
+datamodels/__pycache__/cstructures.cpython-37.pyc
+datamodels/__pycache__/hydamo.cpython-37.pyc

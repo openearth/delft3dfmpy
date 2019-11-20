@@ -460,7 +460,7 @@ class CrossSections:
             definition = self.crosssection_def[css['definitionid']]
             minz = shift
             if definition['type'] == 'yz':
-                minz += min(float(z) for z in definition['zvalues'].split())
+                minz += min(float(z) for z in definition['zcoordinates'].split())
             
             data.append([css['branchid'], css['chainage'], minz])
 
@@ -1209,9 +1209,10 @@ class ObservationPoints(ExtendedGeoDataFrame):
         offsets = [None] * len(crds)
         if snap_to_1d:
             snapped_pts = []
-            for i, xy in enumerate(crds):
+            for i, pt in enumerate(crds):
                 # Find nearest branch
-                pt = Point(*xy)
+                if not isinstance(pt, Point):
+                    pt = Point(*pt)
                 dist = network.branches.distance(pt)
                 branchid = dist.idxmin()
                 
@@ -1224,7 +1225,7 @@ class ObservationPoints(ExtendedGeoDataFrame):
                 snapped_pts.append(branch.interpolate(offsets[i]))
                 branches[i] = branchid
         else:
-            snapped_pts = [Point(*crd) for crd in crds]
+            snapped_pts = [Point(*crd) for crd in crds] if not isinstance(crds[0], Point) else crds[:]
     
         # Add to dataframe
         for args in zip(names, branches, offsets, snapped_pts):
