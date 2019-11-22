@@ -1225,7 +1225,7 @@ class ObservationPoints(ExtendedGeoDataFrame):
                 snapped_pts.append(branch.interpolate(offsets[i]))
                 branches[i] = branchid
         else:
-            snapped_pts = [Point(*crd) for crd in crds] if not isinstance(crds[0], Point) else crds[:]
+            snapped_pts = [Point(*crd) if not isinstance(crd, Point) else crd for crd in crds] 
     
         # Add to dataframe
         for args in zip(names, branches, offsets, snapped_pts):

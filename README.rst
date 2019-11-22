@@ -50,7 +50,7 @@ This module cannot be installed with pip or conda. To use it:
     * a user defined directory, added within the script with::
 
         import sys
-        sys.path.append('path/to/delft3dfmpy/parent/directory')
+        sys.path.append('path/to/directory')
 
     If the downloaded directory is named "delft3dfmpy-master", rename it to "delft3dfmpy"
 

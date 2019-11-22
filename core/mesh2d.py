@@ -196,6 +196,11 @@ class Mesh2D:
                     poly = Polygon(crds)
                     if linesprep.intersects(poly):
                         poly = poly.intersection(clippoly)
+                        if isinstance(poly, MultiPolygon):
+                            poly = poly.buffer(0.001)
+                        if isinstance(poly, MultiPolygon):
+                            logger.warning('Got multipolygon when clipping voronoi polygon. Only adding coordinates for largest of the polygons.')
+                            poly = poly[np.argmax([p.area for p in as_polygon_list(poly)])]
                         crds = np.vstack(poly.exterior.coords[:])
                     data.append({'geometry': poly, 'crds': crds})
                     

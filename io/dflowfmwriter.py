@@ -218,7 +218,7 @@ class DFlowFMWriter:
             starttime += datetime.timedelta(seconds=int(self.mdu_parameters['tstart']))
 
             # Write time series
-            series = dct['timeseries']
+            series = dct['timeseries'].copy()
             series.index -= starttime
             data = np.c_[series.index.total_seconds().values / 60, series.values]
 
