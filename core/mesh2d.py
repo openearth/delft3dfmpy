@@ -5,6 +5,7 @@ from ctypes import CDLL, byref, c_char, c_int, pointer
 import geopandas as gpd
 import numpy as np
 from scipy.spatial import KDTree, Voronoi
+from scipy.interpolate import LinearNDInterpolator
 from shapely.geometry import (
     LineString, MultiLineString, MultiPolygon, Point, Polygon, box)
 from shapely.ops import unary_union
@@ -133,7 +134,7 @@ class Mesh2D:
         zvalues = np.ones(getattr(self.meshgeomdim, f'num{where}')) * constant
         self.meshgeom.set_values(f'{where}z', zvalues)
 
-    def altitude_from_raster(self, rasterpath, where='face', stat='mean'):
+    def altitude_from_raster(self, rasterpath, where='face', stat='mean', missing='default'):
         """
         Method to determine level of nodes
 
@@ -160,8 +161,6 @@ class Mesh2D:
             df = geometry.raster_stats_fine_cells(rasterpath, facedata, stats=[stat])
             # Get z values
             zvalues = df[stat].values
-            # Convert NaN to fill value
-            zvalues[np.isnan(zvalues)] = self.fill_value_z
 
         elif where == 'node':
 
@@ -212,11 +211,46 @@ class Mesh2D:
             df = geometry.raster_stats_fine_cells(rasterpath, facedata, stats=[stat])
             # Get z values
             zvalues = df[stat].values
-            # Convert NaN to fill value
-            zvalues[np.isnan(zvalues)] = self.fill_value_z
 
         else:
             raise NotImplementedError()
+
+        isnan = np.isnan(zvalues)
+
+        # If there are no NaN's, return the answer
+        if not isnan.any():
+            # Set values to mesh geometry
+            self.meshgeom.set_values(f'{where}z', zvalues)
+            return None
+
+        # If interpolation or missing, but all are NaN, raise error.
+        elif isnan.all() and missing in ['nearest', 'interpolation']:
+            raise ValueError('Only NaN values found, interpolation or nearest not possible.')
+        
+        # Fill missing values
+        if missing == 'default':
+            # With default value
+            zvalues[isnan] = self.fill_value_z
+
+        elif isinstance(missing, (float, int)):
+            # With a given number
+            zvalues[isnan] = missing
+
+        elif missing == 'nearest':
+            # By looking for the nearest value in the grid
+            # Create a KDTree of the known points
+            tree = KDTree(data=xy[~isnan])
+            idx = tree.query(x=xy[isnan])[1]
+            zvalues[isnan] = zvalues[~isnan][idx]
+
+        elif missing == 'interpolation':
+            # By interpolating
+            isnan = np.isnan(zvalues)
+            interp = LinearNDInterpolator(xy[~isnan], zvalues[~isnan], fill_value=self.fill_value_z)
+            zvalues[isnan] = interp(xy[isnan])
+
+        else:
+            raise ValueError(f'{missing} not recognized. Choose \'default\', \'nearest\', \'interpolation\' or a number with which to fill the missing data.')
 
         # Set values to mesh geometry
         self.meshgeom.set_values(f'{where}z', zvalues)
