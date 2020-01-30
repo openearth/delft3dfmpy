@@ -322,7 +322,7 @@ class DFlowFMWriter:
         # Write water levels at xyz, if the water depth function is called (and xyz thus)
         if any(self.dflowfmmodel.external_forcings.initial_waterlevel_xyz):
             write_fm_file(
-                file=os.path.join(self.output_dir, 'initial_waterlevel_1d.xyz'),
+                file=os.path.join(self.output_dir, initcondfolder, 'initial_waterlevel_1d.xyz'),
                 data=self.dflowfmmodel.external_forcings.initial_waterlevel_xyz
             )
 
