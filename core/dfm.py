@@ -93,8 +93,7 @@ class ExternalForcings:
         self.mdu_parameters = dflowfmmodel.mdu_parameters
 
         # GeoDataFrame for saving boundary conditions
-        self.boundaries = gpd.GeoDataFrame(
-            columns=['code', 'bctype', 'time', 'value', 'geometry', 'filetype', 'operand', 'method', 'branchid'])
+        self.boundaries = {}
         
         # Dataframe for saving time series for structure
         self.structures = pd.DataFrame(columns=['id', 'type', 'parameter', 'time', 'value'])
@@ -132,7 +131,7 @@ class ExternalForcings:
     
     def set_initial_waterdepth(self, depth):
         """
-        Method to set the initial water depth model wide. The water depth is
+        Method to set the initial water depth in the 1d model. The water depth is
         set by determining the water level at the locations of the cross sections.
 
         Parameters
@@ -144,9 +143,6 @@ class ExternalForcings:
         crosssections = self.dflowfmmodel.crosssections
         if not any(crosssections.crosssection_loc) or self.dflowfmmodel.network.mesh1d.empty():
             raise ValueError('Cross sections or network are not initialized.')
-
-        # Open inition water depth file
-        self.mdu_parameters['WaterLevIniFile'] = 'initialconditions/initial_waterlevel.xyz'
 
         # Get water depths from cross sections
         bottom = crosssections.get_bottom_levels()
@@ -180,6 +176,9 @@ class ExternalForcings:
         """
 
         assert bctype in ['discharge', 'waterlevel']
+
+        if name in self.boundaries.keys():
+            raise KeyError(f'A boundary condition with name "{name}" is already present.')
         
         if isinstance(pt, tuple):
             pt = Point(*pt)
@@ -204,20 +203,20 @@ class ExternalForcings:
             values = series
 
         # Add boundary condition
-        self.boundaries.loc[name] = {
+        self.boundaries[name] = {
             'code': name,
             'bctype': bctype+'bnd',
             'value': values,
-            'time': times,
-            'geometry': bcline,
+            'time': times,            
             'filetype': 9,
             'operand': 'O',
             'method': 3,
-            'branchid': branchid
+            'branchid': branchid,
+            'geometry': bcline
         }
-
+        
         # Check if a 1d2d link should be removed
-        self.dflowfmmodel.network.links1d2d.check_boundary_link(self.boundaries.loc[name])
+        self.dflowfmmodel.network.links1d2d.check_boundary_link(self.boundaries[name])
     
     def add_rain_series(self, name, values, times):
         """
@@ -234,7 +233,7 @@ class ExternalForcings:
             Times for the values
         """
         # Add boundary condition
-        self.boundaries.loc[name] = {
+        self.boundaries[name] = {
             'code' : name,
             'bctype' : 'rainfall',
             'filetype' : 1,
@@ -486,7 +485,7 @@ class Links1d2d:
         self.nodes1d = []
         self.faces2d = []
 
-    def generate_1d_to_2d(self, max_distance=np.inf):
+    def generate_1d_to_2d(self, max_distance=np.inf, branchid=None):
         """
         Generate 1d2d links from 1d nodes. Each 1d node is connected to
         the nearest 2d cell. A maximum distance can be specified to remove links
@@ -499,23 +498,25 @@ class Links1d2d:
         get_nearest = KDTree(faces2d)
 
         # Get network geometry
-        all_1d_nodes = self.mesh1d.get_nodes()
+        nodes1d = self.mesh1d.get_nodes()
+        idx = self.mesh1d.get_nodes_for_branch(branchid)
 
         # Get nearest 2d nodes
-        distance, idx_nearest = get_nearest.query(all_1d_nodes)
+        distance, idx_nearest = get_nearest.query(nodes1d[idx])
         close = (distance < max_distance)
         
         # Add link data
-        self.nodes1d.extend(np.arange(len(all_1d_nodes))[close] + 1)
+        nodes1didx = np.arange(len(nodes1d))[idx]
+        self.nodes1d.extend(nodes1didx[close] + 1)
         self.faces2d.extend(idx_nearest[close] + 1)
 
         # Remove conflicting 1d2d links
-        for bc in self.network.dflowfmmodel.external_forcings.boundaries.itertuples():
-            if bc.geometry is None:
+        for bc in self.network.dflowfmmodel.external_forcings.boundaries.values():
+            if bc['geometry'] is None:
                 continue
             self.check_boundary_link(bc)
 
-    def generate_2d_to_1d(self, max_distance=np.inf, intersecting=True):
+    def generate_2d_to_1d(self, max_distance=np.inf, intersecting=True, branchid=None):
         """
         Generate 1d2d links from 2d cells, meaning that for the option:
         1. intersecting = True: each 2d cell crossing a 1d branch is connected to
@@ -532,8 +533,8 @@ class Links1d2d:
         idx = np.arange(len(centers2d), dtype='int')
         # Create KDTree for 1d cells
         nodes1d = self.mesh1d.get_nodes()
-        get_nearest = KDTree(nodes1d)
-
+        nodes1didx = self.mesh1d.get_nodes_for_branch(branchid)
+        get_nearest = KDTree(nodes1d[nodes1didx])
         
         # Make a pre-selection
         if max_distance < np.inf:
@@ -552,7 +553,13 @@ class Links1d2d:
         
         # Find intersecting cells with branches
         logger.info('Determine intersecting or nearest branches.')
-        branches = self.network.branches
+        if branchid is None:
+            branches = self.network.branches
+        elif isinstance(branchid, str):
+            branches = self.network.branches.loc[[branchid]]
+        else:
+            branches = self.network.branches.loc[branchid]
+        
         if intersecting:
             geometry.find_nearest_branch(branches, cells, method='intersecting')
         else:
@@ -567,7 +574,8 @@ class Links1d2d:
         close = (distance < max_distance)
         
         # Add link data
-        self.nodes1d.extend(idx_nearest[close] + 1)
+        nodes1didx = np.where(nodes1didx)[0][idx_nearest]
+        self.nodes1d.extend(nodes1didx[close] + 1)
         self.faces2d.extend(cells.index.values[close])
 
         if not intersecting:
@@ -592,8 +600,8 @@ class Links1d2d:
             self.faces2d.extend(links['face2did'].values.tolist())
 
         # Remove conflicting 1d2d links
-        for bc in self.network.dflowfmmodel.external_forcings.boundaries.itertuples():
-            if bc.geometry is None:
+        for bc in self.network.dflowfmmodel.external_forcings.boundaries.values():
+            if bc['geometry'] is None:
                 continue
             self.check_boundary_link(bc)
 
@@ -613,7 +621,7 @@ class Links1d2d:
         # Find the nearest node with the KDTree
         nodes1d = self.mesh1d.get_nodes()
         get_nearest = KDTree(nodes1d)
-        distance, idx_nearest = get_nearest.query(bc.geometry.centroid)
+        distance, idx_nearest = get_nearest.query(bc['geometry'].centroid)
         node_id = idx_nearest + 1
 
         # Check 1. Determine if the nearest node itself is not a bifurcation
@@ -631,7 +639,7 @@ class Links1d2d:
                 self.nodes1d.pop(loc)
                 self.faces2d.pop(loc)
                 nx, ny = nodes1d[item-1]
-                bcx, bcy = bc.geometry.centroid.coords[0]
+                bcx, bcy = bc['geometry'].centroid.coords[0]
                 logger.info(f'Removed link(s) from 1d node: ({nx:.2f}, {ny:.2f}) because it is too close to boundary condition at ({bcx:.2f}, {bcy:.2f}).')
             
     def get_1d2dlinks(self, as_gdf=False):
@@ -751,6 +759,66 @@ class Network:
         self.branches.set_data(branches[self.branches.required_columns])
         # Copy branches to schematised
         self.schematised.set_data(self.branches[self.schematised.required_columns])
+
+    def snap_branch_ends(self, offset):
+        """
+        Method to snap branch ends to other branch ends within a given offset.
+
+        Parameters
+        offset : float
+            Maximum distance between end points. If the distance is larger, they are not snapped.
+        """
+        # Collect endpoints
+        endpoints = []
+        for branch in self.branches.itertuples():
+            endpoints.append((branch.geometry.coords[0], branch.Index, 0))
+            endpoints.append((branch.geometry.coords[-1], branch.Index, -1))
+
+        # Create KDTree of endpoints
+        snapped = 0
+
+        # For every endpoint determine the distance to the nearest other endpoint
+        for i, (endpoint, branchid, side) in enumerate(endpoints):
+            # Find distance and nearest coordinate of other points
+            other_pts = [pt[0] for j, pt in enumerate(endpoints) if j != i]
+            mindist, minidx = KDTree(other_pts).query(endpoint)
+
+            # Change endpoint if dist is not 0.0 but smaller than offset.
+            if mindist != 0.0 and mindist <= offset:
+               
+                # Change coordinates of branch
+                crds = self.branches.at[branchid, 'geometry'].coords[:]
+                crds[side] = other_pts[minidx]
+                self.branches.at[branchid, 'geometry'] = LineString(crds)
+                snapped += 1
+
+                endpoints[i] = (other_pts[minidx], branchid, side)
+
+        print(f'Snapped {snapped} points.')
+
+    def set_branch_order(self, branchids, idx=None):
+        """
+        Group branch ids so that the cross sections are
+        interpolated along the branch.
+        
+        Parameters
+        ----------
+        branchids : list
+            List of branches to group
+        """
+        # Get the ids (integers) of the branch names given by the user
+        branchidx = np.isin(self.mesh1d.description1d['network_branch_ids'], branchids)
+        # Get current order
+        branchorder = self.mesh1d.get_values('nbranchorder', as_array=True)
+        # Update
+        if idx is None:
+            branchorder[branchidx] = branchorder.max() + 1
+        else:
+            if not isinstance(idx, int):
+                raise TypeError('Expected integer.')
+            branchorder[branchidx] = idx
+        # Save
+        self.mesh1d.set_values('nbranchorder', branchorder)
         
     # generate network and 1d mesh
     def generate_1dnetwork(self, one_d_mesh_distance=40.0, seperate_structures=True):
@@ -799,7 +867,7 @@ class Network:
         self.mesh1d.set_values('ngeopointy', geomy)
 
         branch_names = sorted_branches.index.astype(str).tolist()
-        branch_longnames = 'long_' + sorted_branches.index
+        branch_longnames = ['long_' + s for s in branch_names]
 
         network_edge_nodes = []
         mesh1d_edge_nodes = []

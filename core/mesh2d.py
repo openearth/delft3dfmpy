@@ -215,9 +215,9 @@ class Mesh2D:
         else:
             raise NotImplementedError()
 
-        isnan = np.isnan(zvalues)
 
         # If there are no NaN's, return the answer
+        isnan = np.isnan(zvalues)
         if not isnan.any():
             # Set values to mesh geometry
             self.meshgeom.set_values(f'{where}z', zvalues)

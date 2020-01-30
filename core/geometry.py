@@ -181,8 +181,8 @@ def orthogonal_line(line, offset, width=1.0):
     
     # Determine angle at offset
     angle = np.angle(complex(*np.diff([
-        line.interpolate(offset - 0.001).coords[0],
-        line.interpolate(offset + 0.001).coords[0]
+        line.interpolate(offset - 0.001).coords[0][:2],
+        line.interpolate(offset + 0.001).coords[0][:2]
     ], axis=0)[0])) + 0.5 * np.pi
     
     # Create new line

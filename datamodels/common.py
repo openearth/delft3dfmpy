@@ -102,11 +102,10 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         """
         Check geometry type
         """
-        first_geo = self.geometry.iloc[0]
-        if not isinstance(first_geo, self.geotype):
-            raise TypeError('Geometrietype "{}" vereist. De ingevoerde shapefile heeft geometrietype "{}".'.format(
+        if not all(isinstance(geo, self.geotype) for geo in self.geometry):
+            raise TypeError('Geometrietype "{}" vereist. De ingevoerde shapefile heeft geometrietype(n) {}.'.format(
                 re.findall('([A-Z].*)\'', repr(self.geotype))[0],
-                re.findall('([A-Z].*)\'', repr(type(first_geo)))[0],
+                self.geometry.type.unique().tolist()
             ))
 
     def read_gml(self, gml_path, index_col=None, groupby_column=None, order_column=None, column_mapping={}, check_columns=True, clip=None):
@@ -147,7 +146,14 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         features = [f for f in layer]
 
         # Get geometries
-        geometries = [wkb.loads(f.GetGeometryRef().ExportToWkb()) for f in features]
+        georefs = [f.GetGeometryRef() for f in features]
+        for i, geo in enumerate(georefs):
+            if geo is None:
+                print('Skipping invalid geometry.')
+                del georefs[i]
+                del features[i]
+
+        geometries = [wkb.loads(geo.ExportToWkb()) for geo in georefs]
 
         # Get group by columns
         if groupby_column is not None:
@@ -183,6 +189,9 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
             # Group geometries to lines
             for branch in branches[~singlepoint]:
+                if any(isinstance(pt, int) for pt in lines[branch]):
+                    print(f'Points are not properly assigned for branch "{branch}". Check the GML.')
+                    lines[branch] = [pt for pt in lines[branch] if not isinstance(pt, int)]
                 lines[branch] = LineString(lines[branch])
 
             # Set order for branches with single point to 0, so features are not loaded
@@ -193,7 +202,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             startnrs = [startnr[branch] for branch in groupbyvalues]
             fields = [list(map(f.GetField, range(nfields))) for i, volgnr, f in zip(order, startnrs, features) if i == volgnr]
 
-            # Get geometries in correct order for features
+            # Get geometries in correct order for featuresF
             geometries = [lines[row[columnid]] for row in fields]
 
         else:

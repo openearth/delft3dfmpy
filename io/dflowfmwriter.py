@@ -247,31 +247,31 @@ class DFlowFMWriter:
             shutil.copy2(os.path.join(os.path.dirname(__file__), 'resources', 'template.ext'), self.extfile)
 
         # For all boundary conditions
-        for bc in self.dflowfmmodel.external_forcings.boundaries.itertuples():
+        for bc in self.dflowfmmodel.external_forcings.boundaries.values():
             # Name
-            name = f"{bc.bctype}_{bc.code}"
+            name = f"{bc['bctype']}_{bc['code']}"
 
             # Get time series
-            if bc.time is None:
-                data = [[0, bc.value], [999999, bc.value]]
+            if bc['time'] is None:
+                data = [[0, bc['value']], [999999, bc['value']]]
             else:
-                data = list(zip(bc.time, bc.value))
+                data = list(zip(bc['time'], bc['value']))
 
             # Write pli
-            if bc.filetype == 9:
+            if bc['filetype'] == 9:
                 write_fm_file(
                     file=os.path.join(self.output_dir, name+".pli"),
-                    data=[np.vstack(bc.geometry.coords[:])],
+                    data=[np.vstack(bc['geometry'].coords[:])],
                     names=[name]
                 )
                 filename = f"FILENAME={name}.pli"
                 # Write time series for pli (point 1)
                 write_fm_file(file=os.path.join(self.output_dir, f"{name}_0001.tim"), data=data)
 
-            elif bc.filetype == 1:
+            elif bc['filetype'] == 1:
                 # Write time series
-                write_fm_file(file=os.path.join(self.output_dir, f"{bc.code}.tim"), data=data)
-                filename = f"FILENAME={bc.code}.tim"
+                write_fm_file(file=os.path.join(self.output_dir, f"{bc['code']}.tim"), data=data)
+                filename = f"FILENAME={bc['code']}.tim"
 
             else:
                 raise NotImplementedError()
@@ -279,11 +279,11 @@ class DFlowFMWriter:
             # Add to ext file
             with open(self.extfile, 'a') as f:
                 f.write((
-                    f"QUANTITY={bc.bctype}\n"
+                    f"QUANTITY={bc['bctype']}\n"
                     f"{filename}\n"
-                    f"FILETYPE={bc.filetype}\n"
-                    f"METHOD={bc.method}\n"
-                    f"OPERAND={bc.operand}\n\n"
+                    f"FILETYPE={bc['filetype']}\n"
+                    f"METHOD={bc['method']}\n"
+                    f"OPERAND={bc['operand']}\n\n"
                 ))
 
     def write_initial_conditions(self):
@@ -322,9 +322,19 @@ class DFlowFMWriter:
         # Write water levels at xyz, if the water depth function is called (and xyz thus)
         if any(self.dflowfmmodel.external_forcings.initial_waterlevel_xyz):
             write_fm_file(
-                file=os.path.join(self.output_dir, self.mdu_parameters['WaterLevIniFile']),
+                file=os.path.join(self.output_dir, 'initial_waterlevel_1d.xyz'),
                 data=self.dflowfmmodel.external_forcings.initial_waterlevel_xyz
             )
+
+            # Add to ext file
+            with open(self.extfile, 'a') as f:
+                f.write((
+                    "QUANTITY=initialwaterlevel1d\n"
+                    f"FILENAME={initcondfolder}\initial_waterlevel_1d.xyz\n"
+                    "FILETYPE=7\n"
+                    "METHOD=5\n"
+                    "OPERAND=O\n\n"
+                ))
 
     def objects_to_ldb(self, scalefactor=1.0):
         """

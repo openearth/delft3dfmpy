@@ -247,6 +247,14 @@ class meshgeom(Structure):
         return not bool(self.meshgeomdim.numnode)
 
     def get_nodes(self):
+        """
+        Return nodes.
+        
+        Returns
+        -------
+        np.ndarray
+            Numpy array with x and y coordinates of nodes.
+        """
 
         # Get nodes
         nodes = np.c_[
@@ -255,6 +263,37 @@ class meshgeom(Structure):
         ]
 
         return nodes
+
+    def get_nodes_for_branch(self, branchid):
+        """
+        Return index of nodes on branch(es).
+
+        Note that each nodes belongs to a single branch in the network.
+        This can provide unexpected results on intersections.
+        
+        Parameters
+        ----------
+        branchid : str or list
+            Branchid for which to return the nodes.
+        
+        Returns
+        -------
+        np.ndarray
+            boolean array with True for nodes that are on the branch(es)
+        """        
+        if branchid is None:
+            return np.ones(len(self.get_values('nodex')), dtype=bool)
+
+        # Convert to list if needed
+        if isinstance(branchid, str):
+            branchid = [branchid]
+        # Get the ids (integers) of the branch names given by the user
+        branchidx = np.where(np.isin(self.description1d['network_branch_ids'], branchid))[0] + 1
+        # Select which of the nodes are in the branches
+        idx = np.isin(self.get_values('branchidx'), branchidx)
+        
+        return idx
+
 
     def get_segments(self):
 

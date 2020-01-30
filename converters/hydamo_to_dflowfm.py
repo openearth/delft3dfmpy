@@ -163,10 +163,12 @@ def generate_culverts(culverts):
         # Generate cross section definition name
         if culvert.vormcode == 1 or culvert.vormcode == 'rond' or culvert.vormcode == 5 or culvert.vormcode == 'ellipsvormig':
             crosssection = {'shape': 'circle', 'diameter': culvert.hoogteopening}
-            # definition = f'circ_d{culvert.hoogteopening:.3f}'
+            
         elif culvert.vormcode == 3 or culvert.vormcode == 'rechthoekig' or culvert.vormcode == 99 or culvert.vormcode == 'onbekend':
             crosssection = {'shape': 'rectangle', 'height': culvert.hoogteopening, 'width': culvert.breedteopening, 'closed': 1}
-            # definition = f'rect_h{culvert.hoogteopening:.3f}_w{culvert.breedteopening:.3f}'
+        
+        else:
+            print(f'Culvert {culvert.code} is skipped, it has an unknown shape: {culvert.vormcode}.')
 
         # Set cross section definition
         culverts_dfm.at[culvert.Index, 'crosssection'] = crosssection
