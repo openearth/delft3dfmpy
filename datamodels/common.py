@@ -8,6 +8,8 @@ from osgeo import ogr
 from shapely import wkb
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
+from copy import deepcopy
+
 from delft3dfmpy.core import geometry
 
 class ExtendedGeoDataFrame(gpd.GeoDataFrame):
@@ -33,6 +35,25 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         self.required_columns = required_columns[:]
         self.geotype = geotype
 
+    def copy(self, deep=True):
+        """
+        Create a copy
+        """
+
+        index = self.index.tolist() if not deep else deepcopy(self.index.tolist())
+        columns = self.columns.tolist() if not deep else deepcopy(self.columns.tolist())
+
+        edf = ExtendedGeoDataFrame(
+            geotype=self.geotype,
+            required_columns=[],
+            index=index,
+            columns=columns,
+        )
+        edf.required_columns.extend(self.required_columns[:])
+        edf.loc[:, :] = self.values if not deep else deepcopy(self.values)
+        
+        return edf
+    
     def delete_all(self):
         """
         Empty the dataframe
