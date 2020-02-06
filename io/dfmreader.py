@@ -29,8 +29,9 @@ class StructuresIO:
                 id=pump.code,
                 branchid=pump.branch_id,
                 chainage=pump.branch_offset,
-                direction=1,
-                nrstages=1,
+                orientation='positive',
+                numstages=1,
+                controlside='suctionSide',
                 capacity=pump.maximalecapaciteit,
                 startlevelsuctionside=pump.startlevelsuctionside,
                 stoplevelsuctionside=pump.stoplevelsuctionside,
@@ -51,7 +52,7 @@ class StructuresIO:
                 chainage=weir.branch_offset,
                 crestlevel=weir.laagstedoorstroomhoogte,
                 crestwidth=weir.laagstedoorstroombreedte,
-                dischargecoeff=weir.afvoercoefficient
+                corrcoeff=weir.afvoercoefficient
             )
 
     def culverts_from_hydamo(self, culverts):
@@ -73,6 +74,9 @@ class StructuresIO:
     	        length=culvert.geometry.length,
     	        inletlosscoeff=culvert.intreeverlies,
     	        outletlosscoeff=culvert.uittreeverlies,
+                allowedflowdir='both', 
+                valveonoff=0, 
+                numlosscoeff=0,
                 frictiontype=hydamo_to_dflowfm.roughness_gml[culvert.ruwheidstypecode],
                 frictionvalue=culvert.ruwheidswaarde
             )

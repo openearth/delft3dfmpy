@@ -334,12 +334,12 @@ class CrossSections:
         self.crosssection_def[name] = {
             'id' : name,
             'type': 'yz',
-            'yzcount': len(z),
-            'ycoordinates': list_to_str(length),
-            'zcoordinates': list_to_str(z),
-            'sectioncount': 1,
-            'frictionids': roughnessname,
-            'frictionpositions': list_to_str([length[0], length[-1]])
+            'yzCount': len(z),
+            'yCoordinates': list_to_str(length),
+            'zCoordinates': list_to_str(z),
+            'sectionCount': 1,
+            'frictionIds': roughnessname,
+            'frictionPositions': list_to_str([length[0], length[-1]])
         }
 
         return name
@@ -459,7 +459,7 @@ class CrossSections:
             definition = self.crosssection_def[css['definitionid']]
             minz = shift
             if definition['type'] == 'yz':
-                minz += min(float(z) for z in definition['zcoordinates'].split())
+                minz += min(float(z) for z in definition['zCoordinates'].split())
             
             data.append([css['branchid'], css['chainage'], minz])
 
@@ -1145,35 +1145,35 @@ class Structures:
         # Create the io class
         self.io = dfmreader.StructuresIO(self)
 
-    def add_pump(self, id, branchid, chainage, direction, nrstages, capacity, startlevelsuctionside, stoplevelsuctionside, locationfile):
+    def add_pump(self, id, branchid, chainage, orientation, numstages, controlside, capacity, startlevelsuctionside, stoplevelsuctionside, locationfile):
         self.pumps[id] = {
             "type": "pump",
             'id': id,
             'branchid': branchid,
             'chainage': chainage,
-            'direction': direction,
-            'nrstages': nrstages,
+            'orientation': orientation,
+            'numstages': numstages,
+            'controlSide': controlside,
             'capacity': capacity,
-            'startlevelsuctionside': startlevelsuctionside,
-            'stoplevelsuctionside': stoplevelsuctionside,
+            'startlevelSuctionSide': startlevelsuctionside,
+            'stoplevelSuctionSide': stoplevelsuctionside,
             'locationfile': f'pump_{id}.pli'
         }
 
-    def add_weir(self, id, branchid, chainage, crestlevel, crestwidth, dischargecoeff=1.0, latdiscoeff=1.0, allowedflowdir=0):
+    def add_weir(self, id, branchid, chainage, crestlevel, crestwidth, corrcoeff=1.0, usevelocityheight='true'):
         self.weirs[id] = {
             "type": "weir",
             'id': id,
             'branchid': branchid,
             'chainage': chainage,
-            'crestlevel': crestlevel,
-            'crestwidth': crestwidth,
-            'dischargecoeff': dischargecoeff,
-            'latdiscoeff': latdiscoeff,
-            'allowedflowdir': allowedflowdir
+            'crestLevel': crestlevel,
+            'crestWidth': crestwidth,
+            'corrCoeff': corrcoeff,            
+            'useVelocityHeight': usevelocityheight
         }
 
     def add_culvert(self, id, branchid, chainage, leftlevel, rightlevel, crosssection, length, inletlosscoeff,
-                    outletlosscoeff, allowedflowdir=0, valveonoff=0, inivalveopen=0.0, losscoeffcount=0,
+                    outletlosscoeff, allowedflowdir='both', valveonoff=0, numlosscoeff=0,
                     frictiontype='Strickler', frictionvalue=75.0):
         """
         Add a culvert to the schematisation.
@@ -1204,20 +1204,18 @@ class Structures:
             "id": id,
             "branchid": branchid,
             "chainage": chainage,
-            "allowedflowdir": allowedflowdir,
-            "leftlevel": leftlevel,
-            "rightlevel": rightlevel,
-            "csdefid": definition,
+            "allowedFlowDir": allowedflowdir,
+            "leftLevel": leftlevel,
+            "rightLevel": rightlevel,
+            "csDefId": definition,
             "length": round(length, 3),
-            "inletlosscoeff": inletlosscoeff,
-            "outletlosscoeff": outletlosscoeff,
-            "valveonoff": valveonoff,
-            "inivalveopen": inivalveopen,
-            "losscoeffcount": losscoeffcount,
-            "bedfrictiontype": frictiontype,
-            "bedfriction": frictionvalue,
-            "groundfrictiontype": frictiontype,
-            "groundfriction": frictionvalue
+            "inletLossCoeff": inletlosscoeff,
+            "outletLossCoeff": outletlosscoeff,
+            "valveOnOff": valveonoff,            
+            "numLossCoeff": numlosscoeff,
+            "bedFrictionType": frictiontype,
+            "bedFriction": frictionvalue
+            
         }
 
     def as_dataframe(self, pumps=False, weirs=False, culverts=False):
