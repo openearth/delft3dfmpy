@@ -20,7 +20,7 @@ Python package to generate delft3dfm models from standardized data models or oth
 
 
 * Free software: MIT license
-* Documentation: https://delft3dfmpy.readthedocs.io.
+* Documentation: https://dhydamo.readthedocs.io.
 
 
 Features

@@ -6,6 +6,7 @@ import pandas as pd
 from shapely.geometry import LineString
 
 from delft3dfmpy.core import checks, geometry
+from delft3dfmpy.datamodels.common import ExtendedDataFrame, ExtendedGeoDataFrame
 
 logger = logging.getLogger(__name__)
 
@@ -80,15 +81,15 @@ def generate_pumps(pompen, sturing, gemalen):
             raise NotImplementedError('Sturing not implemented for anything else than water level (1).')
 
         # Add levels for suction side
-        pumps_dfm.at[idx, 'startlevelsuctionside'] = pump_control['streefwaarde'] + pump_control['bovenmarge']
-        pumps_dfm.at[idx, 'stoplevelsuctionside'] = pump_control['streefwaarde'] - pump_control['ondermarge']
+        pumps_dfm.at[idx, 'startlevelsuctionside'] = pump_control['bovenmarge'] # pump_control['streefwaarde'] + pump_control['bovenmarge']
+        pumps_dfm.at[idx, 'stoplevelsuctionside'] = pump_control['ondermarge'] #pump_control['streefwaarde'] - pump_control['ondermarge']
 
     # Add name of .pli file for the pump
     pumps_dfm['locationfile'] = 'pump_'+pumps_dfm['code']+'.pli'
 
     return pumps_dfm
 
-def generate_weirs(weirs):
+def generate_weirs(weirs, afsluitmiddel=None, sturing=None):
     """
     Generate weirs from Hydamo input
 
@@ -110,50 +111,159 @@ def generate_weirs(weirs):
     """
 
     weirs_dfm = weirs.copy().astype('object')
-
     logger.info('Currently only simple weirs can be applied. From Hydamo the attributes \'laagstedoorstroomhoogte\' and \'kruinbreedte\' are used to define the weir dimensions.')
 
     return weirs_dfm
 
-    ### THE CODE BELOW IS NOT REACHED. IT CAN BE USED WHEN UNIVERSAL WEIRS BECOME AVAILABLE IN DFLOWFM
+def generate_orifices(orifices, afsluitmiddel=None, sturing=None):
+    """
+    Generate orifices from Hydamo input
 
-    # # Create copy of geometry object with properties
-    # self.weirs.set_data(
-    #     self.geometries.weirs.reindex(columns=self.weirs.columns, fill_value='').astype('object'), index_col='code')
+    Parameters
+    ----------
+    orifices : gpd.GeoDataFrame
+        GeoDataFrame with geometry and attributes for weirs.
+    
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with orifice attributes suitable for dflowfm
+    """
 
-    for weir in weirs.itertuples():
+    orifices_dfm = orifices.copy().astype('object')
+    
+    return orifices_dfm
 
-        # Check levels
-        if weir.laagstedoorstroomhoogte >= weir.hoogstedoorstroomhoogte:
-            weirs.at[weir.Index, 'weirtype'] = 'weir'
 
+def generate_uweirs(uweirs, yz_profiles=None, parametrised_profiles=None):
+   """
+   Generate universal weirs from Hydamo input
+
+   Crest level is determined from the Hydamo laagstedoorstroomhoogte attribute. The (relative) profile is determined from the crossection with codegerelateerdobject pointing to the universal weir.
+    
+   Parameters
+   ---------
+   uweirs : gpd.GeoDataFrame
+       GeoDataFrame with geometry and attributes for universal weirs.
+    
+   Returns
+   -------
+   pd.DataFrame
+       DataFrame with universal weir attributes suitable for dflowfm
+
+   """
+   
+   uweirs_dfm = uweirs.copy().astype('object')
+   uweirs_dfm['crosssection'] = [{} for _ in range(len(uweirs_dfm))]
+
+   for uweir in uweirs.itertuples():    
+       
+       # first search in yz-profiles
+       prof=np.empty(0)
+       if yz_profiles is not None:
+            if 'codegerelateerdobject' in yz_profiles:  
+                prof = yz_profiles[yz_profiles['codegerelateerdobject']==uweir.code]   
+                if not prof.empty:                    
+                    counts = len(prof.geometry[0].coords[:])
+                    xyz = np.vstack(prof.geometry[0].coords[:])
+                    length = np.r_[0, np.cumsum(np.hypot(np.diff(xyz[:, 0]), np.diff(xyz[:, 1])))]
+                    yzvalues = np.c_[length, xyz[:, -1]-np.min(xyz[:,-1])]            
+                
+       if (prof.empty) & (parametrised_profiles is not None):
+            if 'codegerelateerdobject' in parametrised_profiles:  
+                # if not found, check the parametrised profiles
+                prof = parametrised_profiles[parametrised_profiles['codegerelateerdobject']==uweir.code]           
+                nulls = pd.isnull(prof[['bodembreedte', 'bodemhoogtebenedenstrooms', 'bodemhoogtebovenstrooms','taludhellinglinkerzijde','taludhellingrechterzijde','hoogteinsteeklinkerzijde','hoogteinsteekrechterzijde']]).any(axis=1).values
+                if nulls:
+                   raise ValueError(f'Insufficient fields avaialable in parametrised profile defintion {prof.code}.')
+                bodemhoogte = float((prof.bodemhoogtebenedenstrooms + prof.bodemhoogtebovenstrooms)/2.)
+                zvalues = [ float(prof.hoogteinsteeklinkerzijde-bodemhoogte), 0., 0., float( prof.hoogteinsteekrechterzijde-bodemhoogte )]
+                yvalues = list( np.cumsum( [0.,float((prof.hoogteinsteeklinkerzijde-bodemhoogte)/prof.taludhellinglinkerzijde),float(prof.bodembreedte), float((prof.hoogteinsteekrechterzijde-bodemhoogte)/prof.taludhellingrechterzijde) ] ) )           
+                yzvalues = list(zip(yvalues,zvalues))
+                counts = len(zvalues)
+           
+       if len(prof)==0:
+           # return an error it is still not found
+           raise ValueError(f'{uweir.code} is not found in any cross-section.')
+    
+       uweirs_dfm.at[uweir.Index, 'numlevels'] = counts
+       uweirs_dfm.at[uweir.Index, 'yvalues'] = ' '.join([f'{yz[0]:7.3f}' for yz in yzvalues])
+       uweirs_dfm.at[uweir.Index, 'zvalues'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])        
+             
+   return uweirs_dfm
+            
+        # # Check levels
+        # if weir.laagstedoorstroomhoogte >= weir.hoogstedoorstroomhoogte:
+        #     weirs.at[weir.Index, 'weirtype'] = 'weir'
+
+        # else:
+        #     weirs.at[weir.Index, 'weirtype'] = 'weir'
+        #     # The universal weir is not supported yet in D-Hydro!
+        #     # self.weirs.at[weir.Index, 'weirtype'] = 'universal weir'
+
+        #     # Create y,z-values
+        #     yzvalues = [
+        #         (-0.5 * weir.kruinbreedte, weir.hoogstedoorstroomhoogte),
+        #         (-0.5 * weir.hoogstedoorstroombreedte, weir.hoogstedoorstroomhoogte),
+        #         (-0.5 * weir.laagstedoorstroombreedte, weir.laagstedoorstroomhoogte),
+        #         (0.5 * weir.laagstedoorstroombreedte, weir.laagstedoorstroomhoogte),
+        #         (0.5 * weir.hoogstedoorstroombreedte, weir.hoogstedoorstroomhoogte),
+        #         (0.5 * weir.kruinbreedte, weir.hoogstedoorstroomhoogte)
+        #     ]
+
+        #     # Remove duplicate values
+        #     counts = [yzvalues.count(yz) for yz in yzvalues]
+        #     while any([c > 1 for c in counts]):
+        #         yzvalues.remove(yzvalues[counts.index(max(counts))])
+        #         counts = [yzvalues.count(yz) for yz in yzvalues]
+
+        #     # Add values
+        #     weirs.at[weir.Index, 'ycoordinates'] = ' '.join([f'{yz[0]:7.3f}' for yz in yzvalues])
+        #     weirs.at[weir.Index, 'zcoordinates'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])
+        #     weirs.at[weir.Index, 'levelscount'] = len(yzvalues)
+
+def generate_bridges(bridges, yz_profiles=None, parametrised_profiles=None):
+    """
+    Generate bridges from Hydamo input
+
+    Parameters
+    
+    ----------
+    bridges : gpd.GeoDataFrame
+        GeoDataFrame with geometry and attributes for bridges.
+    
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with weir attributes suitable for dflowfm
+    """
+
+    bridges_dfm = bridges.copy().astype('object')
+    bridges_dfm['crosssection'] = [{} for _ in range(len(bridges_dfm))]
+    bridges_dfm['bedlevel'] = [{} for _ in range(len(bridges_dfm))]
+    
+    for bridge in bridges.itertuples():        
+        # first search in yz-profiles
+        prof = yz_profiles[yz_profiles['codegerelateerdobject']==bridge.code]
+        if len(prof) > 0:
+            bedlevel = np.min([c[2] for c in prof.geometry[0].coords[:]])  
+            profile_id=prof.code.values[0]
         else:
-            weirs.at[weir.Index, 'weirtype'] = 'weir'
-            # The universal weir is not supported yet in D-Hydro!
-            # self.weirs.at[weir.Index, 'weirtype'] = 'universal weir'
-
-            # Create y,z-values
-            yzvalues = [
-                (-0.5 * weir.kruinbreedte, weir.hoogstedoorstroomhoogte),
-                (-0.5 * weir.hoogstedoorstroombreedte, weir.hoogstedoorstroomhoogte),
-                (-0.5 * weir.laagstedoorstroombreedte, weir.laagstedoorstroomhoogte),
-                (0.5 * weir.laagstedoorstroombreedte, weir.laagstedoorstroomhoogte),
-                (0.5 * weir.hoogstedoorstroombreedte, weir.hoogstedoorstroomhoogte),
-                (0.5 * weir.kruinbreedte, weir.hoogstedoorstroomhoogte)
-            ]
-
-            # Remove duplicate values
-            counts = [yzvalues.count(yz) for yz in yzvalues]
-            while any([c > 1 for c in counts]):
-                yzvalues.remove(yzvalues[counts.index(max(counts))])
-                counts = [yzvalues.count(yz) for yz in yzvalues]
-
-            # Add values
-            weirs.at[weir.Index, 'ycoordinates'] = ' '.join([f'{yz[0]:7.3f}' for yz in yzvalues])
-            weirs.at[weir.Index, 'zcoordinates'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])
-            weirs.at[weir.Index, 'levelscount'] = len(yzvalues)
-
-def generate_culverts(culverts):
+            # if not found, check the parametrised profiles
+            prof = parametrised_profiles[parametrised_profiles['codegerelateerdobject']==bridge.code]
+            bedlevel = (prof['bodemhoogtebovenstrooms'] + prof['bodemhoogtebenedenstrooms'])/2.
+           
+        if len(prof)==0:
+            # return an error it is still not found
+            raise ValueError(f'{bridge.code} is not found in any cross-section.')
+        
+        profile_id=prof.code.values[0]
+        bridges_dfm.at[bridge.Index, 'crosssection'] = profile_id
+        bridges_dfm.at[bridge.Index, 'bedlevel'] = float(bedlevel)
+             
+    return bridges_dfm
+          
+def generate_culverts(culverts,afsluitmiddel):
 
     culverts_dfm = culverts.copy()
     culverts_dfm['crosssection'] = [{} for _ in range(len(culverts_dfm))]
@@ -169,17 +279,37 @@ def generate_culverts(culverts):
         
         else:
             print(f'Culvert {culvert.code} is skipped, it has an unknown shape: {culvert.vormcode}.')
-
+        
         # Set cross section definition
+        culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'both'
+        if afsluitmiddel is not None:
+            if not afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code].empty:
+                if len(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code])!=1:
+                    raise IndexError(f'Multiple (or no) instances of afsluitmiddel associated with culvert {culvert.code}')
+                if int(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['soortafsluitmiddelcode'])==5:
+                    culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'positive'
+            
         culverts_dfm.at[culvert.Index, 'crosssection'] = crosssection
 
     return culverts_dfm
+
+def generate_compounds(idlist, structurelist):
+    
+    compounds_dfm = ExtendedDataFrame(required_columns=['code','structurelist'])
+    compounds_dfm.set_data(pd.DataFrame(np.zeros((len(idlist),3)), columns=['code','numstructures','structurelist'], dtype='str'),index_col='code')
+    compounds_dfm.index = idlist
+    for ii,compound in enumerate(compounds_dfm.itertuples()):
+        compounds_dfm.at[compound.Index, 'code'] = idlist[ii]
+        compounds_dfm.at[compound.Index, 'numstructures'] = len(structurelist[ii])
+        compounds_dfm.at[compound.Index, 'structurelist'] = ';'.join([f'{s}' for s in structurelist[ii]])
+    
+    return compounds_dfm
 
 def dwarsprofiel_to_yzprofiles(crosssections):
     """
     Function to convert hydamo cross sections 'dwarsprofiel' to
     dflowfm input.
-    
+    d
     Parameters
     ----------
     crosssections : gpd.GeoDataFrame
@@ -210,17 +340,17 @@ def dwarsprofiel_to_yzprofiles(crosssections):
     
     return cssdct
 
-def parameterised_to_profiles(parameterised, branches):
+def parametrised_to_profiles(parametrised, branches):
     """
     Generate parametrised cross sections for all branches,
     or the branches missing a cross section.
 
     Parameters
     ----------
-    parameterised : pd.DataFrame
-        GeoDataFrame with geometries and attributes of parameterised profiles.
+    parametrised : pd.DataFrame
+        GeoDataFrame with geometries and attributes of parametrised profiles.
     branches : list
-        List of branches for which the parameterised profiles are derived
+        List of branches for which the parametrised profiles are derived
 
     Returns
     -------
@@ -228,18 +358,25 @@ def parameterised_to_profiles(parameterised, branches):
         Dictionary with attributes of cross sections, usable for dflowfm
     """
 
-    checks.check_argument(parameterised, 'parameterised', (pd.DataFrame, gpd.GeoDataFrame))
+    checks.check_argument(parametrised, 'parametrised', (pd.DataFrame, gpd.GeoDataFrame))
     checks.check_argument(branches, 'branches', (list, tuple))
 
     # Find
-    if branches is not None:
-        parambranches = parameterised.reindex(index=branches, columns=parameterised.required_columns + ['css_type'])
+    if len(branches) != 0:
+         parambranches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.columns.tolist()+['css_type'])
+         parambranches.set_data(parametrised[np.isin(parametrised.code, branches)], index_col='code', check_columns=True)
     else:
-        parambranches = parameterised.reindex(columns=parameterised.required_columns + ['css_type'])
-
+        parambranches = parametrised
+     #   
+    #else:
+        #parambranches = parametrised.reindex(columns=parametrised.requiredcolumns + ['css_type'])
+    #    parambranches = parametrised[np.isin(parametrised.code,branches)]# ['css_type'])
+   
+   
     # Drop profiles for which not enough data is available to write (as rectangle)
-    nulls = pd.isnull(parambranches[['bodembreedte', 'bodemhoogtebenedenstrooms', 'bodemhoogtebovenstrooms']]).any(axis=1).values
-    parambranches.drop(parambranches.index[nulls], inplace=True)
+    #nulls = pd.isnull(parambranches[['bodembreedte', 'bodemhoogtebenedenstrooms', 'bodemhoogtebovenstrooms']]).any(axis=1).values
+    #parambranches = parambranches.drop(ExtendedGeoDataFrame(geotype=LineString), parambranches.index[nulls], index_col='code',axis=0)
+    #parambranches.drop(parambranches.index[nulls], inplace=True)
 
     # Determine characteristics
     botlev = (parambranches['bodemhoogtebenedenstrooms'] + parambranches['bodemhoogtebovenstrooms']) / 2.0
@@ -254,7 +391,7 @@ def parameterised_to_profiles(parameterised, branches):
 
     # Determine profile type
     parambranches.loc[:, 'css_type'] = 'trapezium'
-    nulls = pd.isnull(parambranches[parameterised.required_columns]).any(axis=1).values
+    nulls = pd.isnull(parambranches[parametrised.required_columns]).any(axis=1).values
     parambranches.loc[nulls, 'css_type'] = 'rectangle'
 
     cssdct = {}
@@ -305,11 +442,11 @@ def generate_boundary_conditions(boundary_conditions, schematised):
     for bndcnd in boundary_conditions.itertuples():
 
         # Find nearest branch for geometry
-        extended_line = geometry.extend_linestring(
-            line=schematised.at[bndcnd.branch_id, 'geometry'], near_pt=bndcnd.geometry, length=1.0)
+        # extended_line = geometry.extend_linestring(
+        #     line=schematised.at[bndcnd.branch_id, 'geometry'], near_pt=bndcnd.geometry, length=1.0)
 
-        # Create intersection line for boundary condition
-        bcline = LineString(geometry.orthogonal_line(line=extended_line, offset=0.1, width=0.1))
+        # # Create intersection line for boundary condition
+        # bcline = LineString(geometry.orthogonal_line(line=extended_line, offset=0.1, width=0.1))
 
         if bndcnd.typerandvoorwaardecode in [0, 'waterstand']:
             bctype = 'waterlevel'
@@ -319,10 +456,10 @@ def generate_boundary_conditions(boundary_conditions, schematised):
         # Add boundary condition
         bcdct[bndcnd.code] = {
             'code': bndcnd.code,
-            'bctype': bctype+'bnd',
+            'bctype': bctype,#+'bnd',
             'value': bndcnd.waterstand if not np.isnan(bndcnd.waterstand) else bndcnd.debiet,
             'time': None,
-            'geometry': bcline,
+            'geometry': bndcnd.geometry,#bcline,
             'filetype': 9,
             'operand': 'O',
             'method': 3,

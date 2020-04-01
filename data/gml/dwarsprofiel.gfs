@@ -6,17 +6,17 @@
     <GeometryType>-2147483647</GeometryType>
     <SRSName>EPSG:28992</SRSName>
     <DatasetSpecificInfo>
-      <FeatureCount>355768</FeatureCount>
-      <ExtentXMin>123881.97900</ExtentXMin>
-      <ExtentXMax>177606.21700</ExtentXMax>
-      <ExtentYMin>359293.88300</ExtentYMin>
-      <ExtentYMax>416066.34100</ExtentYMax>
+      <FeatureCount>2115</FeatureCount>
+      <ExtentXMin>139971.58100</ExtentXMin>
+      <ExtentXMax>142095.00200</ExtentXMax>
+      <ExtentYMin>392135.21900</ExtentYMin>
+      <ExtentYMax>395316.01700</ExtentYMax>
     </DatasetSpecificInfo>
     <PropertyDefn>
       <Name>code</Name>
       <ElementPath>code</ElementPath>
       <Type>String</Type>
-      <Width>32</Width>
+      <Width>26</Width>
     </PropertyDefn>
     <PropertyDefn>
       <Name>statusobjectcode</Name>
@@ -50,7 +50,7 @@
       <Name>profielcode</Name>
       <ElementPath>profielcode</ElementPath>
       <Type>String</Type>
-      <Width>29</Width>
+      <Width>23</Width>
     </PropertyDefn>
     <PropertyDefn>
       <Name>typeprofielcode</Name>
@@ -71,6 +71,12 @@
       <Name>ruwheidswaardehoog</Name>
       <ElementPath>ruwheidswaardehoog</ElementPath>
       <Type>Integer</Type>
+    </PropertyDefn>
+    <PropertyDefn>
+      <Name>codegerelateerdobject</Name>
+      <ElementPath>codegerelateerdobject</ElementPath>
+      <Type>String</Type>
+      <Width>11</Width>
     </PropertyDefn>
   </GMLFeatureClass>
 </GMLFeatureClassList>

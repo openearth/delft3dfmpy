@@ -128,7 +128,7 @@ class UgridWriter:
         ntw_node_y.standard_name = 'projection_y_coordinate'
         ntw_node_y.long_name = "y coordinates of the network connection nodes"
         ntw_node_y.units = 'm'
-        ntw_node_y[:] = ntw_node_x[:] = cmesh1d.get_values('nnodey', as_array=True)
+        ntw_node_y[:] = cmesh1d.get_values('nnodey', as_array=True)
 
         ntw_branch_id_name = ncfile.createVariable("network_branch_ids", "c", ("nnetwork_branches", "idstrlength"))
         ntw_branch_id_name.standard_name = 'network_branch_id_name'

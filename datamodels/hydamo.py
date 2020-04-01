@@ -5,7 +5,7 @@ import geopandas as gpd
 import pandas as pd
 
 from delft3dfmpy.datamodels.common import ExtendedDataFrame, ExtendedGeoDataFrame
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
 
 class HyDAMO:
     """
@@ -50,21 +50,37 @@ class HyDAMO:
         self.weirs = ExtendedGeoDataFrame(geotype=Point, required_columns=[
             'code',
             'geometry',
+            'soortstuwcode',
+            'soortregelbaarheidcode',
             'laagstedoorstroomhoogte',
             'laagstedoorstroombreedte',
             'afvoercoefficient'
+        ])         
+        
+        # Bridges
+        self.bridges = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',
+            'naam',
+            'geometry',
+            'hoogtebovenzijde',
+            'hoogteonderzijde',
+            'lengte',
+            'dwarsprofielcode',
+            'intreeverlies',
+            'uittreeverlies',            
+            'ruwheidstypecode',
+            'ruwheidswaarde'                   
         ])
-
+        
         # Orifices
-        # self.orifices = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
-        #     'code',
-        #     'geometry',
-        #     'hoogteopening',
-        #     'breedteopening',
-        #     'indpeilregulpeilscheidend',
-        #     'hoogtebinnenonderkantbenedenstrooms',
-        #     'hoogtebinnenonderkantbovenstrooms'
-        # ])
+        self.orifices = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+             'code',
+             'geometry',
+             'laagstedoorstroomhoogte',
+             'laagstedoorstroombreedte',
+             'schuifhoogte',
+             'afvoercoefficient'
+         ])
 
         # Culverts
         self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
@@ -106,12 +122,25 @@ class HyDAMO:
             'ondermarge',
             'codegerelateerdobject'
         ])
+        self.afsluitmiddel = ExtendedDataFrame(required_columns=[
+            'code',
+            'soortafsluitmiddelcode',
+            'codegerelateerdobject'
+        ])
 
         # Hydraulische randvoorwaarden
         self.boundary_conditions = ExtendedGeoDataFrame(geotype=Point, required_columns=[
             'code',
             'typerandvoorwaardecode',
             'geometry'
+        ])
+        
+        # RR catchments
+        self.catchments = ExtendedGeoDataFrame(geotype=Polygon, required_columns=[
+            'code',
+            'geometry',
+            'lateraleknoopcode'
+            
         ])
 
     def to_pickle(filename, overwrite=False):

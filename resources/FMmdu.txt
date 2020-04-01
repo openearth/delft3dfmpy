@@ -8,12 +8,12 @@ MDUFormatVersion                  = 1.06                # File format version (d
 AutoStart                         = 0                   # Autostart simulation after loading MDU (0: no, 1: autostart, 2: autostartstop)
 
 [geometry]
-NetFile                           =                     # Unstructured grid file *_net.nc
+NetFile                           = # Unstructured grid file *_net.nc
 OneDNetworkFile                   =                     # 1d networkfile
 BedlevelFile                      =                     # street_level.xyz , Bedlevels points file e.g. *.xyz, only needed for bedlevtype not equal 3
 DryPointsFile                     =                     # Dry points file *.xyz (third column dummy z values), or dry areas polygon file *.pol (third column 1/-1: inside/outside)
 WaterLevIniFile                   =                     # Initial water levels sample file *.xyz
-LandBoundaryFile                  =                     # Land boundaries file *.ldb, used for visualization
+LandBoundaryFile                  =        # Land boundaries file *.ldb, used for visualization
 ThinDamFile                       =                     # Polyline file *_thd.pli, containing thin dams
 FixedWeirFile                     =                     # Polyline file *_fxw.pliz, containing fixed weirs with rows x, y, crest level, left ground level, right ground level
 Gulliesfile                       =                     # Polyline file *_gul.pliz, containing lowest bed level along talweg x, y, z level
@@ -21,6 +21,7 @@ VertplizFile                      =                     # Vertical layering file
 ProflocFile                       =                     # Channel profile location file *_proflocation.xyz with rows x, y, z, profile number ref
 ProfdefFile                       =                     # Channel profile definition file *_profdefinition.def with definition for all profile numbers
 ProfdefxyzFile                    =                     # Channel profile definition file _profdefinition.def with definition for all profile numbers
+IniFieldFile                      =                     # Initial data
 Uniformwidth1D                    = 1.                  # Uniform width for channel profiles not specified by profloc
 Uniformheight1D                   = 1.                  # Uniform height for channel profiles not specified by profloc
 ManholeFile                       =                     # File *.ini containing manholes
@@ -29,7 +30,7 @@ ShipdefFile                       =                     # File *.shd containing 
 StructureFile                     = structure.ini       # File *.ini containing structures
 CrossLocFile                      = cross_section_locations.ini      # Name and location of the file containing the locations of the cross sections
 CrossDefFile                      = cross_section_definitions.ini    # Name and location of the file containing the definitions of the cross sections
-frictFile                         =                     # Name and location of the file containing the roughness data
+frictFile                         = roughness\r001.ini;roughness\r002.ini;roughness\r003.ini;roughness\r004.ini# Name and location of the file containing the roughness data
 WaterLevIni                       = -10.                # Initial water level at missing s0 values
 BedlevUni                         = 7.                  # Uniform bed level used at missing z values if BedlevType > 2
 BedlevType                        = 1                   # Bathymetry specification
@@ -98,7 +99,7 @@ PavBnd                            =                     # Average air pressure o
 Pavini                            =                     # Average air pressure for initial water level correction (N/m2) (only applied if > 0)
 
 [time]
-RefDate                           = 20180101            # Reference date (yyyymmdd)
+RefDate                           = 20000101            # Reference date (yyyymmdd)
 Tzone                             = 0.                  # Time zone assigned to input time series
 DtUser                            = 60.                 # Time interval (s) for external forcing update
 DtNodal                           = 60.                 # Time interval (s) for updating nodal factors in astronomical boundary conditions
@@ -108,26 +109,26 @@ DtInit                            = 60.                 # Initial computation ti
 Timestepanalysis                  = 0                   # 0=no, 1=see file *.steps
 Autotimestepdiff                  = 0                   # 0 = no, 1 = yes (Time limitation based on explicit diffusive term)
 Tunit                             = S                   # Time unit for start/stop times (D, H, M or S)
-TStart                            = 0.                  # Start time w.r.t. RefDate (in TUnit)
-TStop                             = 1731600.            # Stop  time w.r.t. RefDate (in TUnit)
+TStart                            = 0.0                 # Start time w.r.t. RefDate (in TUnit)
+TStop                             = 1728000.0           # Stop  time w.r.t. RefDate (in TUnit)
 
 [restart]
 RestartFile                       =                     # Restart netcdf-file, either *_rst.nc or *_map.nc
 RestartDateTime                   =                     # Restart date and time (YYYYMMDDHHMMSS) when restarting from *_map.nc
 
 [external forcing]
-ExtForceFile                      = hydamo.ext          # Old format for external forcings file *.ext, link with tim/cmp-format boundary conditions specification
-ExtForceFileNew                   =                     # New format for external forcings file *.ext, link with bc-format boundary conditions specification
+ExtForceFile                      = # Old format for external forcings file *.ext, link with tim/cmp-format boundary conditions specification
+ExtForceFileNew                   = # New format for external forcings file *.ext, link with bc-format boundary conditions specification
 
 [output]
 OutputDir                         =                     # Output directory of map-, his-, rst-, dat- and timings-files, default: DFM_OUTPUT_<modelname>. Set to . for current dir.
 FlowGeomFile                      =                     # Flow geometry NetCDF *_flowgeom.nc
-ObsFile                           =                     # Points file *.xyn with observation stations with rows x, y, station name
+ObsFile                           =       # Points file *.xyn with observation stations with rows x, y, station name
 CrsFile                           =                     # Polyline file *_crs.pli defining observation cross sections
 FouFile                           =                     # Fourier analysis input file *.fou
 HisFile                           =                     # HisFile name *_his.nc
 MapFile                           =                     # MapFile name *_map.nc
-HisInterval                       = 3600. 0. 0.         # History output times, given as "interval" "start period" "end period" (s)
+HisInterval                       = 120. 0. 0.          # History output times, given as "interval" "start period" "end period" (s)
 XLSInterval                       = 0.                  # Interval (s) between XLS history
 MapInterval                       = 3600. 0. 0.         # Map file output, given as "interval" "start period" "end period" (s)
 RstInterval                       = 86400. 0. 0.        # Restart file output times, given as "interval" "start period" "end period" (s)
@@ -165,6 +166,7 @@ Wrimap_chezy                      = 1                   # Write the chezy roughn
 Wrimap_turbulence                 = 1                   # Write vicww, k and eps to map file (1: yes, 0: no)
 Wrimap_wind                       = 1                   # Write wind velocities to map file (1: yes, 0: no)
 Wrimap_tidal_potential            = 1                   # Write tidal potential to map file (1: yes, 0: no)
+Wrihis_structure_compound         = 1                   # Write output for compound structures
 MapOutputTimeVector               =                     # File (*.mpt) containing fixed map output times (s) w.r.t. RefDate
 FullGridOutput                    = 0                   # Full grid output mode (0: compact, 1: full time-varying grid data)
 EulerVelocities                   = 0                   # Euler velocities output (0: GLM, 1: Euler velocities)

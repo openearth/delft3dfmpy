@@ -6,17 +6,17 @@
     <GeometryType>1</GeometryType>
     <SRSName>EPSG:28992</SRSName>
     <DatasetSpecificInfo>
-      <FeatureCount>33</FeatureCount>
-      <ExtentXMin>134761.76600</ExtentXMin>
-      <ExtentXMax>166564.82900</ExtentXMax>
-      <ExtentYMin>367489.73700</ExtentYMin>
-      <ExtentYMax>408782.18100</ExtentYMax>
+      <FeatureCount>2</FeatureCount>
+      <ExtentXMin>141103.83300</ExtentXMin>
+      <ExtentXMax>141150.30100</ExtentXMax>
+      <ExtentYMin>393599.67500</ExtentYMin>
+      <ExtentYMax>395101.77600</ExtentYMax>
     </DatasetSpecificInfo>
     <PropertyDefn>
       <Name>code</Name>
       <ElementPath>code</ElementPath>
       <Type>String</Type>
-      <Width>19</Width>
+      <Width>9</Width>
     </PropertyDefn>
     <PropertyDefn>
       <Name>naam</Name>

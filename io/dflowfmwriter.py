@@ -19,26 +19,31 @@ class DFlowFMWriter:
 
     def __init__(self, dflowfmmodel, output_dir, name):
         self.dflowfmmodel = dflowfmmodel
-        # self.geometries = parent.geometries
-        # self.boundary_conditions = parent.boundary_conditions
-        self.output_dir = output_dir
+        self.output_dir = os.path.join(output_dir, 'fm')
         if not os.path.exists(self.output_dir):
-            os.mkdir(self.output_dir)
+            os.makedirs(self.output_dir)        
+            
         self.name = name
-
 
         self.mdu_parameters = dflowfmmodel.mdu_parameters
         self.mdu_parameters['NetFile'] = self.name + "_net.nc"
-        self.mdu_parameters['ExtForceFile'] = self.name + ".ext"
-
-        self.mdufile = os.path.join(output_dir, self.name +'.mdu')
-        self.extfile = os.path.join(output_dir, self.mdu_parameters['ExtForceFile'])
-        self.netfile = os.path.join(output_dir, self.mdu_parameters['NetFile'])
-
+        
+        self.mdu_parameters['ExtForceFileNew'] = self.name + "_new.ext"
+        
+        self.mdufile = os.path.join(self.output_dir, self.name +'.mdu')        
+        self.extfile_new = os.path.join(self.output_dir, self.mdu_parameters['ExtForceFileNew'])
+        self.netfile = os.path.join(self.output_dir, self.mdu_parameters['NetFile'])
+       
+            
     def write_all(self):  # write all fm files from HyDAMO
-
-        if os.path.exists(self.extfile):
-            os.remove(self.extfile)
+        """        
+        Wrapper to write all components to DFM. Remove existing files and create new ones. Note that the old format ext-file is not used anymore,.
+        """
+        if os.path.exists(self.extfile_new):
+            os.remove(self.extfile_new)
+       
+        with open(self.extfile_new,'w') as f:
+            self._write_header(f, 'extForce', 2.01)
 
         # Write grid in Ugrid format to netcdf
         ugridWriter = UgridWriter()
@@ -69,7 +74,7 @@ class DFlowFMWriter:
         if any(self.dflowfmmodel.external_forcings.laterals):
             self.write_laterals()
 
-    def _write_dict(self, f, dct, header):
+    def _write_dict(self, f, dct, header,extra_linebreak=True):
         """
         Write a dictionary to file, without transforming with mapping
         """
@@ -77,9 +82,12 @@ class DFlowFMWriter:
         f.write(f'[{header}]\n')
         for key, value in dct.items():
             f.write(f'{key} = {value}\n')
-        f.write('\n')
+        if extra_linebreak: f.write('\n')
 
     def writeMdFiles(self):
+        """
+        Copy MDU file form resouces.
+        """
         srcMdu = os.path.join(os.path.dirname(__file__), '..', 'resources', 'FMmdu.txt')
         targetMdu = os.path.join(self.output_dir, f'{self.name}.mdu')
 
@@ -157,7 +165,9 @@ class DFlowFMWriter:
 
         filepath = os.path.join(self.output_dir, 'structure.ini')
         with open(filepath, 'w') as f:
-
+            # write header
+            self._write_header(f, filetype='structures', fileversion=2.00)
+            
             # Culverts
             if any(self.dflowfmmodel.structures.culverts):
                 for _, dct in self.dflowfmmodel.structures.culverts.items():
@@ -168,7 +178,12 @@ class DFlowFMWriter:
                 for _, dct in self.dflowfmmodel.structures.weirs.items():
                     self._write_dict(f, dct=dct, header='structure')
 
-            # Pumps
+            # Bridges
+            if any(self.dflowfmmodel.structures.bridges):
+                for _, dct in self.dflowfmmodel.structures.bridges.items():
+                    self._write_dict(f, dct=dct, header='structure')
+            
+            # Pumps           
             if any(self.dflowfmmodel.structures.pumps):
                 branches = self.dflowfmmodel.network.branches
 
@@ -180,6 +195,21 @@ class DFlowFMWriter:
                     branch = self.dflowfmmodel.network.schematised.at[dct['branchid'], 'geometry']
                     line = orthogonal_line(line=branch, offset=branch.project(nearest_pt), width=0.1)
                     write_fm_file(os.path.join(self.output_dir, dct['locationfile']), [np.vstack(line)], [pump_id])
+            
+            # Universal weirs
+            if any(self.dflowfmmodel.structures.uweirs):
+                    for _, dct in self.dflowfmmodel.structures.uweirs.items():
+                        self._write_dict(f, dct=dct, header='structure')
+            
+            # Orifices
+            if any(self.dflowfmmodel.structures.orifices):
+                    for _, dct in self.dflowfmmodel.structures.orifices.items():
+                        self._write_dict(f, dct=dct, header='structure')
+            
+            # Compound structures
+            if any(self.dflowfmmodel.structures.compounds):
+                    for _, dct in self.dflowfmmodel.structures.compounds.items():
+                        self._write_dict(f, dct=dct, header='structure')
 
         # Write structure time series
         for bcnd in self.dflowfmmodel.external_forcings.structures.itertuples():
@@ -193,7 +223,7 @@ class DFlowFMWriter:
 
     def write_laterals(self):
         """
-        Write laterals to files.
+        Write laterals to files. Note that the .pol files are deprececated; locations are now in the ext-file.
         """
         external_forcings = self.dflowfmmodel.external_forcings
 
@@ -201,52 +231,53 @@ class DFlowFMWriter:
             raise KeyError('Specify reference date before writing laterals.')
 
         # Create directory for laterals if it does not yet exist
-        if not os.path.exists(os.path.join(self.output_dir, 'laterals')):
-            os.mkdir(os.path.join(self.output_dir, 'laterals'))
+        if not os.path.exists(os.path.join(self.output_dir, 'lateral')):
+            os.mkdir(os.path.join(self.output_dir, 'lateral'))
 
         for name, dct in external_forcings.laterals.items():
             
             # Get coordinates of polygon around point
             point = Point(dct['x'], dct['y'])
-            crds = np.vstack(box(*point.buffer(1.0).bounds).exterior.coords[:])
+            crds = np.vstack(box(*point.buffer(10.0).bounds).exterior.coords[:])
 
-            # Write polygon to boundaries folder
-            write_fm_file(os.path.join(self.output_dir, 'laterals', f'lateral_{name}.pol'), [crds], [name])
+            if 'timeseries' in dct:             
+                # Determine starttime from mdu parameters
+                starttime = datetime.datetime.strptime(str(self.mdu_parameters['refdate']), '%Y%m%d')
+                starttime += datetime.timedelta(seconds=int(self.mdu_parameters['tstart']))
 
-            # Determine starttime from mdu parameters
-            starttime = datetime.datetime.strptime(str(self.mdu_parameters['refdate']), '%Y%m%d')
-            starttime += datetime.timedelta(seconds=int(self.mdu_parameters['tstart']))
+                # Write time series - this should probably be written to a .bc file
+                series = dct['timeseries'].copy()
+                series.index -= starttime
+                data = np.c_[series.index.total_seconds().values / 60, series.values]
 
-            # Write time series
-            series = dct['timeseries'].copy()
-            series.index -= starttime
-            data = np.c_[series.index.total_seconds().values / 60, series.values]
-
-            write_fm_file(
-                file=os.path.join(self.output_dir, 'laterals', f"lateral_{name}_0001.tim"),
-                data=data,
-            )
-
+                write_fm_file(
+                    file=os.path.join(self.output_dir, 'lateral', f"lateral_{name}_0001.tim"),
+                    data=data,
+                )
+                discharge_kw = f'lateral/lateral_{name}_0001.tim'
+            else:
+                discharge_kw = 'REALTIME'
+                
             # Add to external forcing file
-            with open(self.extfile, 'a') as dst:
-                dst.write((
-                    f"QUANTITY=lateraldischarge1d\n"
-                    f"FILENAME=laterals/lateral_{name}.pol\n"
-                    f"FILETYPE=10\n"
-                    f"METHOD=1\n"
-                    f"OPERAND=O\n\n"
-                ))
-
+            with open(self.extfile_new, 'a') as f:
+                dct = {'id':f'{name}','name':f'{name}',
+                       'type':'discharge',
+                       'locationType':'1d',
+                       'numCoordinates':len(crds[:,0]),
+                       'xCoordinates':' '.join([str(x) for x in crds[:,0]]),
+                       'yCoordinates':' '.join([str(y) for y in crds[:,1]]),
+                       'discharge':f'{discharge_kw}'
+                      }
+                self._write_dict(f,dct,'Lateral')
+            
     def write_boundary_conditions(self):
         """
-        Write boundary conditions to ext file
+        Write boundary conditions to (new format) ext file and the time series to a .bc file.
         """
-
-        # Copy external forcing file (*.ext)
-        if not os.path.exists(self.extfile):
-            shutil.copy2(os.path.join(os.path.dirname(__file__), 'resources', 'template.ext'), self.extfile)
-
         # For all boundary conditions
+        with open(os.path.join(self.output_dir, 'boundaries.bc'), 'w') as f:
+            self._write_header(f, 'boundConds', 1.01)
+            
         for bc in self.dflowfmmodel.external_forcings.boundaries.values():
             # Name
             name = f"{bc['bctype']}_{bc['code']}"
@@ -264,81 +295,87 @@ class DFlowFMWriter:
                     data=[np.vstack(bc['geometry'].coords[:])],
                     names=[name]
                 )
-                filename = f"FILENAME={name}.pli"
+                filename = f"{name}.pli"
                 # Write time series for pli (point 1)
-                write_fm_file(file=os.path.join(self.output_dir, f"{name}_0001.tim"), data=data)
+                #write_fm_file(file=os.path.join(self.output_dir, f"{name}_0001.tim"), data=data)
 
-            elif bc['filetype'] == 1:
-                # Write time series
-                write_fm_file(file=os.path.join(self.output_dir, f"{bc['code']}.tim"), data=data)
-                filename = f"FILENAME={bc['code']}.tim"
+            # elif bc['filetype'] == 1:
+            #     # Write time series
+            #     write_fm_file(file=os.path.join(self.output_dir, f"{bc['code']}.tim"), data=data)
+            #     filename = f"FILENAME={bc['code']}.tim"
 
             else:
                 raise NotImplementedError()
 
             # Add to ext file
-            with open(self.extfile, 'a') as f:
-                f.write((
-                    f"QUANTITY={bc['bctype']}\n"
-                    f"{filename}\n"
-                    f"FILETYPE={bc['filetype']}\n"
-                    f"METHOD={bc['method']}\n"
-                    f"OPERAND={bc['operand']}\n\n"
-                ))
+            with open(self.extfile_new, 'a') as f:
+                dct = {'Quantity':f"{bc['bctype']}",'LocationFile':filename,'ForcingFile':'boundaries.bc'}
+                self._write_dict(f, dct, 'Boundary')                 
+                 
+            refd = str(self.dflowfmmodel.mdu_parameters["refdate"])                      
+            with open(os.path.join(self.output_dir, 'boundaries.bc'), 'a') as f:
+                f.write(f'\n[Forcing]\n'
+                        f'name       = {name}_0001\n'
+                        f'function   = timeseries\n'
+                        f'time-interpolation = linear\n'
+                        f'quantity   = time\n'
+                        f'unit       = minutes since {refd[0:4]}-{refd[4:6]}-{refd[6:9]} 00:00:00\n'
+                        f'quantity   = {bc["bctype"]}\n'
+                        f'unit       = {bc["unit"]}\n'
+                       )                                      
+            write_fm_file(file=os.path.join(self.output_dir, 'boundaries.bc'), data=data, mode='a')
 
     def write_initial_conditions(self):
 
-        # Copy external forcing file (*.ext)
-        if not os.path.exists(self.extfile):
-            shutil.copy2(os.path.join(os.path.dirname(__file__), '..', 'resources', 'template.ext'), self.extfile)
-
+        """
+        Two options exist: waterlevels per polygon or water depths per point. Both are written in the new format - an iniFieldFie is created pointing to the data.
+        """
+        # initial files are not in the ext-file in the new format...
+        self.dflowfmmodel.mdu_parameters['IniFieldFile'] = 'initialconditions/initialFields.ini'
+        
         # Create folder for initial conditions if it does not exist yet
         initcondfolder = 'initialconditions'
         initcondpath = os.path.join(self.output_dir, initcondfolder)
         if not os.path.exists(initcondpath):
             os.mkdir(initcondpath)
-
+        with open(os.path.join(initcondpath,'initialFields.ini'),'w') as f:                      
+            self._write_header(f, 'iniField',2.00)
+        
         # Write water levels within polygons
         for row in self.dflowfmmodel.external_forcings.initial_waterlevel_polygons.itertuples():
-
-            # Add to ext file
-            with open(self.extfile, 'a') as f:
-                f.write((
-                    "QUANTITY=initialwaterlevel\n"
-                    f"FILENAME={initcondfolder}\{row.Index}.pol\n"
-                    "FILETYPE=10\n"
-                    "METHOD=4\n"
-                    "OPERAND=O\n"
-                    f"VALUE={row.waterlevel}\n\n"
-                ))
-
-            # Write pol file
+            with open(os.path.join(initcondpath,'initialFields.ini'),'a') as f:                                      
+                dct  = {'quantity': 'waterlevel',
+                        'dataFile': f'{row.Index}.pol', 
+                        'dataFileType': 'polygon',
+                        'value':'f{row.waterlevel}', 
+                        'interpolationMethod': 'constant'
+                        }                
+                self._write_dict(f,dct,'Initial')
+                                    
+                # Write pol file
             write_fm_file(
-                file=os.path.join(initcondpath, row.Index+".pol"),
-                data=[np.vstack(row.geometry.exterior.coords[:])],
-                names=[row.Index]
-            )
+                file=os.path.join(initcondpath, row.Index+".pol"),                                            data=[np.vstack(row.geometry.exterior.coords[:])], names=[row.Index]   
+                )
 
         # Write water levels at xyz, if the water depth function is called (and xyz thus)
-        if any(self.dflowfmmodel.external_forcings.initial_waterlevel_xyz):
+        if any(self.dflowfmmodel.external_forcings.initial_waterlevel_xyz):            
+            
+            with open(os.path.join(initcondpath,'initialFields.ini'),'a') as f:                                      
+                dct  = {'quantity': 'waterlevel',
+                        'dataFile': 'initialconditions/initial_waterlevel_1d.xyz',
+                        'interpolationMethod': 'triangulation',
+                        'dataFileType': 'sample'
+                        }                
+                self._write_dict(f,dct,'Initial')
+                        
             write_fm_file(
-                file=os.path.join(self.output_dir, initcondfolder, 'initial_waterlevel_1d.xyz'),
+                file=os.path.join(initcondpath,'initial_waterlevel_1d.xyz'),
                 data=self.dflowfmmodel.external_forcings.initial_waterlevel_xyz
-            )
-
-            # Add to ext file
-            with open(self.extfile, 'a') as f:
-                f.write((
-                    "QUANTITY=initialwaterlevel1d\n"
-                    f"FILENAME={initcondfolder}\initial_waterlevel_1d.xyz\n"
-                    "FILETYPE=7\n"
-                    "METHOD=5\n"
-                    "OPERAND=O\n\n"
-                ))
-
+            )  
+               
     def objects_to_ldb(self, scalefactor=1.0):
         """
-        Method to write weirs, pumps and cross sections to lbd
+        Method to write weirs, bridges, pumps, universal weires, and cross sections to lbd
         """
         # Write cross sections
         coords = []
@@ -346,7 +383,7 @@ class DFlowFMWriter:
 
         network = self.dflowfmmodel.network
         crosssections = self.dflowfmmodel.crosssections
-        structures = self.dflowfmmodel.structures.as_dataframe(weirs=True, pumps=True, culverts=True)
+        structures = self.dflowfmmodel.structures.as_dataframe(weirs=True, pumps=True, bridges=True, culverts=True, uweirs=True, orifices=True, compounds=True)
 
         for name, css in crosssections.crosssection_loc.items():
             sch_branch = network.schematised.at[css['branchid'], 'geometry']
@@ -360,7 +397,9 @@ class DFlowFMWriter:
         
         if structures is not None:
             for structure in structures.itertuples():
-
+                # compounds have no coordinates themselves
+                if structure.type == 'compound':
+                    continue
                 sch_branch = network.schematised.at[structure.branchid, 'geometry']
                 geo_branch = network.branches.at[structure.branchid, 'geometry']
                 # Get offset on schematised branch
@@ -379,12 +418,42 @@ class DFlowFMWriter:
                     ringcoords += [ringcoords[0]]
                     coords.append(ringcoords)
                     names.append(structure.Index)
-
+                    
+                elif structure.structype == 'bridge':                    
+                    line1 = orthogonal_line(line=sch_branch, offset=offset-5., width=10.0)
+                    line2 = orthogonal_line(line=sch_branch, offset=offset+5., width=10.0)
+                    ringcoords = LineString(line1).coords[:] + LineString(line2).coords[::-1]
+                    ringcoords += [ringcoords[0]]
+                    coords.append(ringcoords)
+                    names.append(structure.Index)
+                
+                elif structure.structype == 'uweir':                    
+                    line1 = orthogonal_line(line=sch_branch, offset=offset-5., width=15.0)
+                    line2 = orthogonal_line(line=sch_branch, offset=offset+5., width=1.0)
+                    ringcoords = LineString(line1).coords[:] + LineString(line2).coords[::-1]
+                    ringcoords += [ringcoords[0]]
+                    coords.append(ringcoords)                   
+                    names.append(structure.Index)
+ 
+                elif structure.structype == 'orifice':                    
+                    line1 = orthogonal_line(line=sch_branch, offset=offset+5., width=15.0)
+                    line2 = orthogonal_line(line=sch_branch, offset=offset-5., width=1.0)
+                    ringcoords = LineString(line1).coords[:] + LineString(line2).coords[::-1]
+                    ringcoords += [ringcoords[0]]
+                    coords.append(ringcoords)                   
+                    names.append(structure.Index)
+                                
                 elif structure.structype == 'culvert':
                     # Get circle coordinates
                     coords.append(sch_branch.interpolate(offset).buffer(5.0).simplify(0.5).exterior.coords[:])
                     names.append(structure.Index)
-
+                    
+                elif structure.structype == 'orifice':
+                    line1 = orthogonal_line(line=sch_branch, offset=offset, width=5.0)
+                    line2 = orthogonal_line(line=LineString(line1), offset=offset, width=5.0)
+                    coords.append(LineString(line1).coords[:]+LineString(line2).coords[:])
+                    names.append(structure.Index)                    
+       
                 else:
                     raise TypeError('Structure type not recognized')
 
@@ -444,7 +513,6 @@ def _format_row(row):
     return string
 
 def write_fm_file(file, data, names=None, mode='w'):
-
     string = ''
     if names is not None:
         for geometry, name in zip(data, names):

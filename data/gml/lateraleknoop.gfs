@@ -6,17 +6,17 @@
     <GeometryType>1</GeometryType>
     <SRSName>EPSG:28992</SRSName>
     <DatasetSpecificInfo>
-      <FeatureCount>5372</FeatureCount>
-      <ExtentXMin>123969.14699</ExtentXMin>
-      <ExtentXMax>177602.45815</ExtentXMax>
-      <ExtentYMin>360168.52992</ExtentYMin>
-      <ExtentYMax>411563.27498</ExtentYMax>
+      <FeatureCount>30</FeatureCount>
+      <ExtentXMin>139977.48535</ExtentXMin>
+      <ExtentXMax>142024.47580</ExtentXMax>
+      <ExtentYMin>392163.10310</ExtentYMin>
+      <ExtentYMax>395070.29476</ExtentYMax>
     </DatasetSpecificInfo>
     <PropertyDefn>
       <Name>code</Name>
       <ElementPath>code</ElementPath>
       <Type>String</Type>
-      <Width>22</Width>
+      <Width>17</Width>
     </PropertyDefn>
     <PropertyDefn>
       <Name>statusobjectcode</Name>

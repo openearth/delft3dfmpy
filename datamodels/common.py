@@ -34,7 +34,16 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         self.required_columns = required_columns[:]
         self.geotype = geotype
-
+        
+    def drop(self,edf, item, index_col=None,axis=None):
+        #edf = ExtendedGeoDataFrame(geotype=LineString)
+        temp = gpd.GeoDataFrame()        
+        for field in self.iteritems(): 
+            temp[field[0]] = field[1]        
+        temp.drop(item,axis=axis, inplace=True)  
+        edf.set_data(temp, index_col=index_col, check_columns=True)              
+        return edf
+                
     def copy(self, deep=True):
         """
         Create a copy
@@ -62,13 +71,17 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.iloc[:, 0] = np.nan
             self.dropna(inplace=True)
 
-    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None):
+    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True):
         """
         Import function, extended with type checks. Does not destroy reference to object.
         """
         # Read GeoDataFrame
         gdf = gpd.read_file(path)
-
+        
+        if 'MultiPolygon' in str(gdf.geometry.type):
+            gdf = gdf[gdf.geometry.type != 'MultiPolygon']                
+            print('Features of type \"Multipolygon\" encountered: they are skipped.')
+        
         # Check number of entries
         if gdf.empty:
             raise IOError('Imported shapefile contains no rows.')
@@ -78,14 +91,14 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             gdf.rename(columns=column_mapping, inplace=True)
 
         # Add data to class GeoDataFrame
-        self.set_data(gdf, index_col=index_col, check_columns=check_columns)
+        self.set_data(gdf, index_col=index_col, check_columns=check_columns, check_geotype=check_geotype)
 
         # Clip if extent is provided
         if clip is not None:
             self.clip(clip)
 
 
-    def set_data(self, gdf, index_col=None, check_columns=True):
+    def set_data(self, gdf, index_col=None, check_columns=True, check_geotype=True):
 
         if not self.empty:
             self.delete_all()
@@ -107,7 +120,8 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.index.name = index_col
         
         # Check geometry types
-        self._check_geotype()
+        if check_geotype:
+            self._check_geotype()
 
     def _check_columns(self, gdf):
         """
@@ -129,7 +143,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
                 self.geometry.type.unique().tolist()
             ))
 
-    def read_gml(self, gml_path, index_col=None, groupby_column=None, order_column=None, column_mapping={}, check_columns=True, clip=None):
+    def read_gml(self, gml_path, index_col=None, groupby_column=None, order_column=None, column_mapping={}, check_columns=True, check_geotype=True, clip=None):
         """
         Read GML file to GeoDataFrame.
 
@@ -234,7 +248,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         gdf.rename(columns=column_mapping, inplace=True)
 
         # Add data to class GeoDataFrame
-        self.set_data(gdf, index_col=index_col, check_columns=check_columns)
+        self.set_data(gdf, index_col=index_col, check_columns=check_columns, check_geotype=check_geotype)
 
         if clip is not None:
             self.clip(clip)

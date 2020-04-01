@@ -1,61 +1,47 @@
 <GMLFeatureClassList>
   <GMLFeatureClass>
-    <Name>hydroobject</Name>
-    <ElementPath>hydroobject</ElementPath>
+    <Name>fme_waterlopen_weerstand</Name>
+    <ElementPath>fme_waterlopen_weerstand</ElementPath>
     <!--LINESTRING-->
     <GeometryType>2</GeometryType>
-    <SRSName>EPSG:28992</SRSName>
+    <SRSName>urn:ogc:def:crs:EPSG::28992</SRSName>
     <DatasetSpecificInfo>
-      <FeatureCount>10342</FeatureCount>
-      <ExtentXMin>123960.19400</ExtentXMin>
-      <ExtentXMax>177609.75600</ExtentXMax>
-      <ExtentYMin>359289.13700</ExtentYMin>
-      <ExtentYMax>416086.97900</ExtentYMax>
+      <FeatureCount>16</FeatureCount>
+      <ExtentXMin>139971.19300</ExtentXMin>
+      <ExtentXMax>142033.92900</ExtentXMax>
+      <ExtentYMin>391886.56200</ExtentYMin>
+      <ExtentYMax>395446.43000</ExtentYMax>
     </DatasetSpecificInfo>
     <PropertyDefn>
       <Name>code</Name>
       <ElementPath>code</ElementPath>
       <Type>String</Type>
-      <Width>22</Width>
+      <Width>17</Width>
     </PropertyDefn>
     <PropertyDefn>
       <Name>naam</Name>
       <ElementPath>naam</ElementPath>
       <Type>String</Type>
-      <Width>40</Width>
+      <Width>8</Width>
     </PropertyDefn>
     <PropertyDefn>
-      <Name>statusobjectcode</Name>
-      <ElementPath>statusobjectcode</ElementPath>
+      <Name>CAT_CATEGO</Name>
+      <ElementPath>CAT_CATEGO</ElementPath>
       <Type>Integer</Type>
     </PropertyDefn>
     <PropertyDefn>
-      <Name>objectbegintijd</Name>
-      <ElementPath>objectbegintijd</ElementPath>
+      <Name>INI_WDEPTH</Name>
+      <ElementPath>INI_WDEPTH</ElementPath>
+      <Type>Real</Type>
+    </PropertyDefn>
+    <PropertyDefn>
+      <Name>_netw_id</Name>
+      <ElementPath>_netw_id</ElementPath>
       <Type>Integer</Type>
-      <Subtype>Integer64</Subtype>
     </PropertyDefn>
     <PropertyDefn>
-      <Name>objecteindtijd</Name>
-      <ElementPath>objecteindtijd</ElementPath>
-      <Type>Integer</Type>
-      <Subtype>Integer64</Subtype>
-    </PropertyDefn>
-    <PropertyDefn>
-      <Name>hyperlink</Name>
-      <ElementPath>hyperlink</ElementPath>
-      <Type>String</Type>
-      <Width>10</Width>
-    </PropertyDefn>
-    <PropertyDefn>
-      <Name>administratiefgebied</Name>
-      <ElementPath>administratiefgebied</ElementPath>
-      <Type>String</Type>
-      <Width>6</Width>
-    </PropertyDefn>
-    <PropertyDefn>
-      <Name>ruwheidstypecode</Name>
-      <ElementPath>ruwheidstypecode</ElementPath>
+      <Name>fr_voorjr</Name>
+      <ElementPath>fr_voorjr</ElementPath>
       <Type>Integer</Type>
     </PropertyDefn>
     <PropertyDefn>
@@ -64,9 +50,20 @@
       <Type>Integer</Type>
     </PropertyDefn>
     <PropertyDefn>
+      <Name>fr_najaar</Name>
+      <ElementPath>fr_najaar</ElementPath>
+      <Type>Integer</Type>
+    </PropertyDefn>
+    <PropertyDefn>
       <Name>ruwheidswaardehoog</Name>
       <ElementPath>ruwheidswaardehoog</ElementPath>
       <Type>Integer</Type>
+    </PropertyDefn>
+    <PropertyDefn>
+      <Name>S_NAAM</Name>
+      <ElementPath>S_NAAM</ElementPath>
+      <Type>String</Type>
+      <Width>6</Width>
     </PropertyDefn>
   </GMLFeatureClass>
 </GMLFeatureClassList>

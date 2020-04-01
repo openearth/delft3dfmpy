@@ -1,0 +1,24 @@
+What is new in version 0.2.0
+
+Bug fixes
+- Spelling of 'parametrised' is harmonised throughout the package and notebook;
+- node coordinates for the 1D-connection nodes were not correctly written to the netcdf, now they are;
+
+1D
+- new structures added:
+	- bridges (must have an associated crossection);
+	- universal weirs (weir is universal if it has an associated crossection);
+	- orifices;
+	- compound structures;
+- culvert length is derived from HyDAMO setting in the GML file instead of the line geometry;
+- pumps now expect their margins in m+NAP instead of cm. I.e., the margins are now used directly to set the start/stoplevelsuctionside. Previously they were related to the 'streefwaarde';
+- boundary conditions can be added to the model as 'dfmmodel.external_forcings.io.from_hydamo(hydamo.boundary_conditions)' instead of running 'add_boundary_condition' in a loop. This does not work (yet) for time series, only for constant boundary conditions;
+- the module was breaking down when pandas was updated to version 1.0.1. Workarounds were immplemented to avoid this.
+- the old format .ext-file has been abandoned; all laterals and boundary conditions are now in the new format .ext file. Initial conditions are referred to from the MDU file.
+
+2D
+- method 'from_netcdf' added to mesh2d, so a more complex mesh geometry can be added from existing netcdf;
+
+RR
+- functionality has been implemented to generate also the RR-components of a coupled RR-FM D-HYDRO model.
+

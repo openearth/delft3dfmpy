@@ -148,7 +148,6 @@ class Mesh2D:
 
         # Select points on faces or nodes
         logger.info('Creating GeoDataFrame of cell faces.')
-        xy = np.c_[self.meshgeom.get_values(f'{where}x'), self.meshgeom.get_values(f'{where}y')]
         cells = self.meshgeom.get_faces()
         facedata = gpd.GeoDataFrame(geometry=[Polygon(cell) for cell in cells])   
 
@@ -258,7 +257,10 @@ class Mesh2D:
     def set_missing_z_value(self, value):
         self.missing_z_value = value
 
-
+    def geom_from_netcdf(self, file):
+        gridio.from_netcdf_old(self.meshgeom, file)
+        self._find_cells(self.meshgeom)
+                               
 class Rectangular(Mesh2D):
 
     def __init__(self):

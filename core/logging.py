@@ -1,7 +1,7 @@
 import logging
 import sys
 
-def initialize_logger(logfile='delft3dfmpy.log', level=logging.INFO, include_console=False):
+def initialize_logger(logfile='dhydamo.log', level=logging.INFO, include_console=False):
 
     handlers = [logging.FileHandler(logfile, mode='w')]
     if include_console:
@@ -14,7 +14,7 @@ def initialize_logger(logfile='delft3dfmpy.log', level=logging.INFO, include_con
         handlers=handlers
     )
     
-    logging.info("Running delft3dfm model generator.")
+    logging.info("Running dhydamo model generator.")
 
 class ProgressLogger:
 

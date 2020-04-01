@@ -1,0 +1,11 @@
+KASD id 'Default' nm 'Default kas initialisation' nc 10 kk 'Default kasklassen' ki 'Default kas initialisation data' kg 'Default kasgebruik data' kasd
+KASD id 'Low' nm 'Low kas initialisation' nc 10 kk 'Default kasklassen' ki 'Low kas initialisation data' kg 'Low kasgebruik data' kasd
+KASD id 'Periodic test' nm 'Periodic test' nc 10 kk 'Default kasklassen' ki 'Periodic kas initialisation data' kg 'Periodic kasgebruik data' kasd
+KASD id 'My own mix' nm 'My own mix' nc 10 kk 'Default kasklassen' ki 'Low kas initialisation data' kg 'Periodic kasgebruik data' kasd
+
+KLAS id 'Default kasklassen'
+ nm '<500 m3/ha' ' 500-1000' '1000-1500' '1500-2000' '2000-2500' '2500-3000' '3000-4000' '4000-5000' '5000-6000' '>6000-m3/ha'
+ mxstorage 0  500   1000 1500 2000 2500 3000 4000 5000 6000
+ mxdepth   0. 0.5     1.  1.5   2.  2.5  3.   4.    5.   5.
+ evap      0   0      0    1    1    1   1    1     1    1
+klas

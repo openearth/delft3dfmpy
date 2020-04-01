@@ -14,7 +14,6 @@ from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
 from delft3dfmpy.datamodels.cstructures import meshgeom, meshgeomdim
 from delft3dfmpy.io import dfmreader
-
 logger = logging.getLogger(__name__)
 
 class DFlowFMModel:
@@ -93,7 +92,7 @@ class ExternalForcings:
         self.mdu_parameters = dflowfmmodel.mdu_parameters
 
         # GeoDataFrame for saving boundary conditions
-        self.boundaries = {}
+        self.boundaries = {} #gpd.GeoDataFrame()
         
         # Dataframe for saving time series for structure
         self.structures = pd.DataFrame(columns=['id', 'type', 'parameter', 'time', 'value'])
@@ -177,6 +176,7 @@ class ExternalForcings:
 
         assert bctype in ['discharge', 'waterlevel']
 
+        unit = 'm3/s' if bctype=='discharge' else 'm'
         if name in self.boundaries.keys():
             raise KeyError(f'A boundary condition with name "{name}" is already present.')
         
@@ -211,6 +211,7 @@ class ExternalForcings:
             'filetype': 9,
             'operand': 'O',
             'method': 3,
+            'unit' : unit,
             'branchid': branchid,
             'geometry': bcline
         }
@@ -255,8 +256,13 @@ class ExternalForcings:
             if structure_id not in weirnames:
                 raise IndexError(f'"{structure_id}" not in index: "{",".join(weirnames)}"')
             self.dflowfmmodel.structures.weirs[structure_id][parameter] = filename
+        if structure_type == 'orifice':
+            orificenames = list(self.dflowfmmodel.structures.orifices.keys())
+            if structure_id not in orificenames:
+                raise IndexError(f'"{structure_id}" not in index: "{",".join(orificenames)}"')
+            self.dflowfmmodel.structures.orifices[structure_id][parameter] = filename        
         else:
-            raise NotImplementedError('Only implemented for weirs.')
+            raise NotImplementedError('Only implemented for weirs and orifices.')
 
         # Add boundary condition
         self.structures.loc[structure_id] = {
@@ -413,11 +419,11 @@ class CrossSections:
         self.crosssection_def[name] = {
             'id' : name,
             'type': 'zw',
-            'numlevels': 2,
+            'numLevels': 2,
             'levels': levels,
-            'flowwidths': flowwidths,
-            'totalwidths': flowwidths,
-            'frictionid': roughnessname
+            'flowWidths': flowwidths,
+            'totalWidths': flowwidths,
+            'frictionId': roughnessname
         }
 
         return name
@@ -431,7 +437,7 @@ class CrossSections:
             'branchid': branchid,
             'chainage': chainage,
             'shift': shift,
-            'definitionid': definition,
+            'definitionId': definition,
         }
 
     def get_branches_without_crosssection(self):
@@ -442,6 +448,16 @@ class CrossSections:
         no_crosssection = branches.index[~np.isin(branches.index, list(branch_ids))]
 
         return no_crosssection.tolist()
+
+    def get_structures_without_crosssection(self):
+        struc_ids =  [dct['id'] for _, dct in self.crosssection_def.items()]
+        bridge_ids = [dct['csDefId'] for _, dct in self.dflowfmmodel.structures.bridges.items()] 
+        no_cross_bridge = np.asarray(bridge_ids)[~np.isin(bridge_ids , struc_ids)].tolist() 
+        no_crosssection = no_cross_bridge        
+        #uweir_ids = [dct['numlevels'] for _, dct in self.dflowfmmodel.structures.uweirs.items()]                
+        #no_cross_uweir = uweirs.index[~np.isin(uweirs.index, list(uweir_ids))]        
+        #no_crosssection = no_crosssection.append(no_cross_uweir)
+        return no_crosssection
 
     def get_bottom_levels(self):
         """Method to determine bottom levels from cross sections"""
@@ -456,7 +472,7 @@ class CrossSections:
             shift = css['shift']
 
             # Get depth from definition if yz and shift
-            definition = self.crosssection_def[css['definitionid']]
+            definition = self.crosssection_def[css['definitionId']]
             minz = shift
             if definition['type'] == 'yz':
                 minz += min(float(z) for z in definition['zCoordinates'].split())
@@ -841,7 +857,7 @@ class Network:
         edge_nodes_dict = {}
 
         # Check if any structures present (if not, structures will be None)
-        structures = self.dflowfmmodel.structures.as_dataframe(weirs=True, culverts=True, pumps=True)
+        structures = self.dflowfmmodel.structures.as_dataframe(weirs=True, bridges=True, culverts=True, pumps=True, uweirs=True, orifices=True, compounds=True)
 
         # If offsets are not predefined, generate them base on one_d_mesh_distance
         if not self.offsets:
@@ -1138,7 +1154,11 @@ class Structures:
     def __init__(self, dflowfmmodel):
         self.pumps = {}
         self.weirs = {}
+        self.bridges = {}
+        self.uweirs= {}
         self.culverts = {}
+        self.orifices = {}
+        self.compounds = {}
         
         self.dflowfmmodel = dflowfmmodel
 
@@ -1160,18 +1180,85 @@ class Structures:
             'locationfile': f'pump_{id}.pli'
         }
 
-    def add_weir(self, id, branchid, chainage, crestlevel, crestwidth, corrcoeff=1.0, usevelocityheight='true'):
+    def add_weir(self, id, branchid, chainage, crestlevel, crestwidth, allowedflowdir='both', corrcoeff=1.0, usevelocityheight='true'):
         self.weirs[id] = {
             "type": "weir",
             'id': id,
             'branchid': branchid,
             'chainage': chainage,
+            'allowedFlowDir': allowedflowdir,
             'crestLevel': crestlevel,
             'crestWidth': crestwidth,
-            'corrCoeff': corrcoeff,            
-            'useVelocityHeight': usevelocityheight
+            'corrCoeff': corrcoeff,
+            'useVelocityHeight': usevelocityheight            
         }
 
+    def add_orifice(self, id, branchid, chainage, crestlevel, crestwidth, gateloweredgelevel, corrcoeff=1.0, usevelocityheight='true'):
+        self.orifices[id] = {
+            "type": "orifice",
+            'id': id,
+            'branchid': branchid,
+            'chainage': chainage,
+            'crestLevel': crestlevel,
+            'crestWidth': crestwidth,
+            'gateLowerEdgeLevel': gateloweredgelevel,
+            'corrCoeff': corrcoeff,
+            'useVelocityHeight': usevelocityheight            
+        }
+    
+    def add_bridge(self, id, branchid, chainage, length, bedlevel, upperheight, lowerheight,crosssection,
+                   inletlosscoeff,outletlosscoeff,allowedflowdir='both',
+                   frictiontype='Strickler', frictionvalue=75.0):
+        """
+        Add a bridge to the schematisation.
+
+        Note that the cross section should be handed as dictionary. This should contain the
+        shape (circle, rectangle) and the required arguments.
+        
+        For now, we use the smae cross sections as culverts. This needs to be refined.       
+        
+        """     
+         
+        
+        # Check the content of the cross section dictionary
+        #checks.check_dictionary(crosssection, required='shape', choice=['diameter', ['width', 'height', 'closed']])
+
+        self.bridges[id] = {
+            "type": "bridge",
+            "id": id,
+            "branchid": branchid,
+            "chainage": chainage,            
+            "allowedFlowDir": allowedflowdir,
+            "csDefId": crosssection,
+            "bedLevel": bedlevel,
+            "inletLossCoeff": inletlosscoeff,
+            "outletLossCoeff": outletlosscoeff,            
+            "frictionType": frictiontype,
+            "friction": frictionvalue,
+            "length":length
+        }
+        
+    def add_uweir(self, id, branchid, chainage, crestlevel, numlevels, yvalues, zvalues, allowedflowdir='both', dischargecoeff=1.0):
+        
+        """
+        Add a universal weir to the schematisation.
+
+                
+        """            
+        
+        self.uweirs[id] = {
+            "type": "universalWeir",
+            "id": id,
+            "branchid": branchid,
+            "chainage": chainage,            
+            "allowedFlowDir": allowedflowdir,            
+            "numLevels": numlevels,            
+            "yValues": yvalues,
+            "zValues": zvalues,            
+            "crestLevel": crestlevel,
+            "dischargeCoeff": dischargecoeff                        
+        }
+        
     def add_culvert(self, id, branchid, chainage, leftlevel, rightlevel, crosssection, length, inletlosscoeff,
                     outletlosscoeff, allowedflowdir='both', valveonoff=0, numlosscoeff=0,
                     frictiontype='Strickler', frictionvalue=75.0):
@@ -1214,16 +1301,23 @@ class Structures:
             "valveOnOff": valveonoff,            
             "numLossCoeff": numlosscoeff,
             "bedFrictionType": frictiontype,
-            "bedFriction": frictionvalue
-            
+            "bedFriction": frictionvalue            
+        }
+        
+    def add_compound(self, id, numstructures, structurelist):
+        self.compounds[id] = {
+            "type": "compound",
+            "id": id,
+            "numStructures": numstructures,
+            "structureIds": structurelist            
         }
 
-    def as_dataframe(self, pumps=False, weirs=False, culverts=False):
+    def as_dataframe(self, pumps=False, weirs=False, bridges=False, culverts=False, uweirs=False, orifices=False, compounds=False):
         """
         Returns a dataframe with the structures. Specify with the keyword arguments what structure types need to be returned.
         """
         dfs = []
-        for df, descr, add in zip([self.culverts, self.weirs, self.pumps], ['culvert', 'weir', 'pump'], [culverts, weirs, pumps]):
+        for df, descr, add in zip([self.culverts, self.weirs, self.bridges, self.pumps, self.uweirs, self.orifices, self.compounds], ['culvert', 'weir','bridge', 'pump', 'uweir','orifice','compound'], [culverts, weirs, bridges, pumps, uweirs, orifices, compounds]):
             if any(df) and add:
                 df = pd.DataFrame.from_dict(df, orient='index')
                 df.insert(loc=0, column='structype', value=descr, allow_duplicates=True)
@@ -1240,6 +1334,7 @@ class ObservationPoints(ExtendedGeoDataFrame):
         self._metadata.append('dflowfmmodel')
         self.dflowfmmodel = dflowfmmodel
 
+        
     def add_point(self, crd, name, snap_to_1d=True):
         """
         Method to add a single observation points. Uses
@@ -1294,9 +1389,12 @@ class ObservationPoints(ExtendedGeoDataFrame):
             snapped_pts = [Point(*crd) if not isinstance(crd, Point) else crd for crd in crds] 
     
         # Add to dataframe
-        for args in zip(names, branches, offsets, snapped_pts):
-            self.loc[args[0], :] = args
-
+        dfpoints = ExtendedGeoDataFrame(geotype=Point, required_columns=self.columns.tolist())    
+        dfpoints.set_data(pd.DataFrame(zip(names, branches, offsets, snapped_pts), columns=self.columns), index_col="name", check_columns=True)
+        self.dflowfmmodel.observation_points = dfpoints
+        # for args in zip(names, branches, offsets, snapped_pts):
+        #    dfpoints.loc[args[0], :] = args
+            
 def list_to_str(lst):
     string = ' '.join([f'{number:6.3f}' for number in lst])
     return string
