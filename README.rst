@@ -27,10 +27,11 @@ Features
 --------
 
 * Read Hydamo or shape files to Python data structure
-* Build Delft3D FM model from Hydamo or seperately defined elements
+* Build Delft3D RR/FM model from Hydamo or seperately defined elements
 * Generate rectangular meshes with refinement
 * Create 1D 2D connections
-* Write to Delft3D FM model
+* Genererate an rainfall-runoff model from raster input
+* Write to Delft3D FM model, coupled with RR or standalone
 
 Installation
 ------------
