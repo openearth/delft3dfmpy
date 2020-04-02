@@ -148,6 +148,7 @@ class Mesh2D:
 
         # Select points on faces or nodes
         logger.info('Creating GeoDataFrame of cell faces.')
+        xy = np.c_[self.meshgeom.get_values(f'{where}x'), self.meshgeom.get_values(f'{where}y')]
         cells = self.meshgeom.get_faces()
         facedata = gpd.GeoDataFrame(geometry=[Polygon(cell) for cell in cells])   
 
