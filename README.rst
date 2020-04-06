@@ -33,6 +33,8 @@ Features
 * Genererate an rainfall-runoff model from raster input
 * Write to Delft3D FM model, coupled with RR or standalone
 
+Note that the RR-part has been newly developed and it not yet fully tested, especially on larger catchments. It is able to produce a complete, running model for the Moergestelsbroek (see notebooks/), but no larger areas has been modelled yet.
+
 Installation
 ------------
 This module cannot be installed with pip or conda. To use it:
