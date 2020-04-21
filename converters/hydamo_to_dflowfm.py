@@ -278,7 +278,8 @@ def generate_culverts(culverts,afsluitmiddel):
             crosssection = {'shape': 'rectangle', 'height': culvert.hoogteopening, 'width': culvert.breedteopening, 'closed': 1}
         
         else:
-            print(f'Culvert {culvert.code} is skipped, it has an unknown shape: {culvert.vormcode}.')
+            crosssection = {'shape': 'circle', 'diameter': 0.40}
+            print(f'Culvert {culvert.code} has an unknown shape: {culvert.vormcode}. Applying a default profile (round - 40cm)')
         
         # Set cross section definition
         culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'both'
@@ -294,7 +295,7 @@ def generate_culverts(culverts,afsluitmiddel):
     return culverts_dfm
 
 def generate_compounds(idlist, structurelist):
-    
+    # probably the coordinates should all be set to those of the first structure    
     compounds_dfm = ExtendedDataFrame(required_columns=['code','structurelist'])
     compounds_dfm.set_data(pd.DataFrame(np.zeros((len(idlist),3)), columns=['code','numstructures','structurelist'], dtype='str'),index_col='code')
     compounds_dfm.index = idlist
@@ -305,7 +306,7 @@ def generate_compounds(idlist, structurelist):
     
     return compounds_dfm
 
-def dwarsprofiel_to_yzprofiles(crosssections):
+def dwarsprofiel_to_yzprofiles(crosssections, branches):
     """
     Function to convert hydamo cross sections 'dwarsprofiel' to
     dflowfm input.
@@ -324,16 +325,27 @@ def dwarsprofiel_to_yzprofiles(crosssections):
 
     for css in crosssections.itertuples():
         # The cross sections from hydamo are all yz profiles
+        
         # Determine yz_values
         xyz = np.vstack(css.geometry.coords[:])
         length = np.r_[0, np.cumsum(np.hypot(np.diff(xyz[:, 0]), np.diff(xyz[:, 1])))]
         yz = np.c_[length, xyz[:, -1]]
-
+        
+        # determine thalweg
+        if branches is not None:
+            branche_geom = branches[branches.code==css.branch_id].geometry.values        
+            thalweg_xyz = css.geometry.intersection(branche_geom[0]).coords[:][0]                
+            # and the Y-coordinate of the thalweg
+            thalweg = np.hypot( thalweg_xyz[0]-xyz[0,0], thalweg_xyz[1]-xyz[0,1])
+        else: 
+            thalweg = 0.0
+        
         # Add to dictionary
         cssdct[css.code] = {
             'branchid': css.branch_id,
             'chainage': css.branch_offset,
             'yz': yz,
+            'thalweg':thalweg,
             'ruwheidstypecode': css.ruwheidstypecode,
             'ruwheidswaarde': css.ruwheidswaarde
         }
@@ -404,6 +416,7 @@ def parametrised_to_profiles(parametrised, branches):
                 'maximumflowwidth': round(branch.maxflowwidth, 1),
                 'bottomwidth': round(branch.bodembreedte, 3),
                 'closed': 0,
+                'thalweg': 0.0,
                 'ruwheidstypecode': int(branch.ruwheidstypecode) if isinstance(branch.ruwheidstypecode, float) else branch.ruwheidstypecode,
                 'ruwheidswaarde': branch.ruwheidswaarde,
                 'bottomlevel': branch.bottomlevel
@@ -414,6 +427,7 @@ def parametrised_to_profiles(parametrised, branches):
                 'height': 5.0,
                 'width': round(branch.bodembreedte, 3),
                 'closed': 0,
+                'thalweg': 0.0,
                 'ruwheidstypecode': int(branch.ruwheidstypecode) if isinstance(branch.ruwheidstypecode, float) else branch.ruwheidstypecode,
                 'ruwheidswaarde': branch.ruwheidswaarde,
                 'bottomlevel': branch.bottomlevel

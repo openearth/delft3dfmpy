@@ -59,8 +59,8 @@ class HyDAMO:
         
         # Bridges
         self.bridges = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-            'code',
-            'naam',
+            'code',            
+            #'name',
             'geometry',
             'hoogtebovenzijde',
             'hoogteonderzijde',
@@ -142,7 +142,22 @@ class HyDAMO:
             'lateraleknoopcode'
             
         ])
+        
+        # RR overflows
+        self.overflows = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',
+            'geometry',
+            'codegerelateerdobject',
+            'fractie'
+            
+        ])
 
+        # RR sewer areas
+        self.sewer_areas = ExtendedGeoDataFrame(geotype=Polygon, required_columns=[
+            'code',
+            'geometry'            
+        ])
+            
     def to_pickle(filename, overwrite=False):
         # Check if path exists
         if os.path.exists(filename) and not overwrite:

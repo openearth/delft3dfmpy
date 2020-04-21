@@ -311,7 +311,7 @@ class CrossSections:
         self.default_definition = definition
         self.default_definition_shift = shift
 
-    def add_yz_definition(self, yz, roughnesstype, roughnessvalue, name=None):
+    def add_yz_definition(self, yz=None, thalweg=None, roughnesstype=None, roughnessvalue=None, name=None):
         """
         Add xyz crosssection
 
@@ -340,6 +340,7 @@ class CrossSections:
         self.crosssection_def[name] = {
             'id' : name,
             'type': 'yz',
+            'thalweg': np.round(thalweg,decimals=3),
             'yzCount': len(z),
             'yCoordinates': list_to_str(length),
             'zCoordinates': list_to_str(z),
@@ -366,6 +367,7 @@ class CrossSections:
         self.crosssection_def[name] = {
             'id' : name,
             'type': 'circle',
+            'thalweg': 0.0,
             'diameter': diameter,
             'frictionId': roughnessname
         }
@@ -388,6 +390,7 @@ class CrossSections:
         self.crosssection_def[name] = {
             'id' : name,
             'type': 'rectangle',
+            'thalweg': 0.0,
             'height': height,
             'width': width,
             'closed': int(closed),
@@ -419,6 +422,7 @@ class CrossSections:
         self.crosssection_def[name] = {
             'id' : name,
             'type': 'zw',
+            'thalweg': 0.0,
             'numLevels': 2,
             'levels': levels,
             'flowWidths': flowwidths,

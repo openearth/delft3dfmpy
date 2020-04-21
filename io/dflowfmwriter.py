@@ -81,7 +81,7 @@ class DFlowFMWriter:
         # Write header
         f.write(f'[{header}]\n')
         for key, value in dct.items():
-            f.write(f'{key} = {value}\n')
+            f.write(f'\t{key} = {value}\n')
         if extra_linebreak: f.write('\n')
 
     def writeMdFiles(self):
@@ -125,7 +125,7 @@ class DFlowFMWriter:
     def write_crosssection_locations(self):
         # Write cross section locations
         with open(os.path.join(self.output_dir, 'cross_section_locations.ini'), 'w') as f:
-            self._write_header(f, 'crossLoc', fileversion=2.01)
+            self._write_header(f, 'crossLoc', fileversion=1.01)
             for _, series in self.dflowfmmodel.crosssections.crosssection_loc.items():
                 # Write the cross section item
                 self._write_dict(f, dct=series, header='CrossSection')
@@ -144,7 +144,7 @@ class DFlowFMWriter:
                         'definition': self.dflowfmmodel.crosssections.default_definition
                     }
                     # Write the cross section item
-                    self._write_dict(f, dct=dct, header='crosssection')
+                    self._write_dict(f, dct=dct, header='CrossSection')
 
     def _write_header(self, f, filetype, fileversion):
         f.write('[General]\n')
@@ -166,29 +166,29 @@ class DFlowFMWriter:
         filepath = os.path.join(self.output_dir, 'structure.ini')
         with open(filepath, 'w') as f:
             # write header
-            self._write_header(f, filetype='structures', fileversion=2.00)
+            self._write_header(f, filetype='structure', fileversion=2.00)
             
             # Culverts
             if any(self.dflowfmmodel.structures.culverts):
                 for _, dct in self.dflowfmmodel.structures.culverts.items():
-                    self._write_dict(f, dct=dct, header='structure')
+                    self._write_dict(f, dct=dct, header='Structure')
 
             # Weirs
             if any(self.dflowfmmodel.structures.weirs):
                 for _, dct in self.dflowfmmodel.structures.weirs.items():
-                    self._write_dict(f, dct=dct, header='structure')
+                    self._write_dict(f, dct=dct, header='Structure')
 
             # Bridges
             if any(self.dflowfmmodel.structures.bridges):
                 for _, dct in self.dflowfmmodel.structures.bridges.items():
-                    self._write_dict(f, dct=dct, header='structure')
+                    self._write_dict(f, dct=dct, header='Structure')
             
             # Pumps           
             if any(self.dflowfmmodel.structures.pumps):
                 branches = self.dflowfmmodel.network.branches
 
                 for pump_id, dct in self.dflowfmmodel.structures.pumps.items():
-                    self._write_dict(f, dct=dct, header='structure')
+                    self._write_dict(f, dct=dct, header='Structure')
 
                     # Write pli line. This line needs to cross the schematized branch, not the original geometry
                     nearest_pt = branches.at[dct['branchid'], 'geometry'].interpolate(dct['chainage'])
