@@ -72,4 +72,4 @@ To get all the required dependencies working, it is advised to:
 
 Usage
 -----
-The usage is best described by the example notebook: https://github.com/openearth/delft3dfmpy/blob/master/notebook/Usage_introduction_coupled_RRFM.ipynb
+The usage is best described by the example notebook: https://github.com/openearth/delft3dfmpy/blob/master/notebooks/Usage_introduction_coupled_RRFM.ipynb
