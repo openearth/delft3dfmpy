@@ -1023,7 +1023,7 @@ class Network:
             idx = (structures['branchid'] == '')
             if idx.any():
                 logger.warning('Some structures are not linked to a branch.')
-            ids_offsets = ids_offsets.loc[idx, :]
+            ids_offsets = ids_offsets.loc[~idx, :]
 
             # For each branch
             for branch_id, group in ids_offsets.groupby('branchid'):
