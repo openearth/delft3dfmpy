@@ -16,7 +16,7 @@ class UnpavedIO:
     def __init__(self, unpaved):
         self.unpaved = unpaved
 
-    def unpaved_from_input(self, catchments, landuse, surface_level, soiltype,  surface_storage, infiltration_capacity , initial_gwd , meteo_areas):
+    def unpaved_from_input(self, catchments, landuse, surface_level, soiltype,  surface_storage, infiltration_capacity , initial_gwd , meteo_areas, zonalstats_alltouched=None):
         """
         Method to fill an unpaved RR-node from input.        
 
@@ -38,13 +38,16 @@ class UnpavedIO:
             Initial groundwater depth. If a float, it is spatially uniform.
         meteo_areas : shapely polygon object
             Representative area for a given meteo-station. 
+        zonalstats_alltouched: boolean
+            If true, all cells touching a polygon are taken into account in calculating the zonal       statistics
 
         Returns
         -------
         None.
 
         """
-        geconverteerd = hydamo_to_dflowrr.generate_unpaved(catchments, landuse, surface_level, soiltype, surface_storage, infiltration_capacity, initial_gwd, meteo_areas)
+        geconverteerd = hydamo_to_dflowrr.generate_unpaved(catchments, landuse, surface_level, soiltype, surface_storage, infiltration_capacity, initial_gwd, meteo_areas, zonalstats_alltouched=zonalstats_alltouched)
+        
         for unpav in geconverteerd.itertuples():
             self.unpaved.add_unpaved(  
                 id = unpav.code,
@@ -91,14 +94,18 @@ class PavedIO:
     def __init__(self, paved):
         self.paved = paved
 
-    def paved_from_input(self, catchments, landuse, surface_level, street_storage, sewer_storage, pumpcapacity, meteo_areas):
+    def paved_from_input(self, catchments=None, overflows=None, sewer_areas=None, landuse=None, surface_level=None, street_storage=None, sewer_storage=None, pump_capacity=None, meteo_areas=None, zonalstats_alltouched=None):
         """
         Method to create an RR-paved node from input.
         
         Parameters
         ----------
-         catchments : shapely polygon object.
+        catchments : shapely polygon object.
             Catchment areas; every cachtment gets a set of RR-nodes.
+        overflows [optional]: shapely point object
+            locations of overflows, for the case a more complex paved schematisation is adopted.
+        sewer_areas [optional]: shapely polygon object
+            Sewer system areas, for the case a more complex paved schematisation is adopted.
         landuse : raster
             Land use information
         surface_level : raster
@@ -107,19 +114,29 @@ class PavedIO:
             Storage on the street. If a float, it is spatially uniform.
         sewer_storage : float or raster
             Storage on the surface. If a float, it is spatially uniform.
-        pumpcapaicty : TYPE
+        pump_capacity : float or raster
             Sewage pump capacity. If a float, it is spatially uniform.
         meteo_areas : shapely polygon object
             Representative area for a given meteo-station. 
-
+        zonalstats_alltouched: boolean
+            If true, all cells touching a polygon are taken into account in calculating the zonal       statistics
         Returns
         -------
         None.
 
-        """
-               
-        geconverteerd = hydamo_to_dflowrr.generate_paved(catchments, landuse, surface_level, street_storage, sewer_storage, pumpcapacity, meteo_areas)
-        #PAVE id 'pav_Nde_n003' ar 16200 lv 1 sd '1' ss 0 qc 0 1.94E-05 0 qo 2 2 ms 'Station1' aaf 1 is 0 np 0 dw '1' ro 0 ru 0 qh '' pave#
+        """               
+        geconverteerd = hydamo_to_dflowrr.generate_paved(
+            catchments=catchments, 
+            overflows=overflows,
+            sewer_areas=sewer_areas,                                   
+            landuse=landuse, 
+            surface_level=surface_level,
+            street_storage=street_storage,
+            sewer_storage=sewer_storage,
+            pump_capacity=pump_capacity, 
+            meteo_areas=meteo_areas,
+            zonalstats_alltouched=zonalstats_alltouched)
+  
         for pav in geconverteerd.itertuples():
             self.paved.add_paved(
                 id = pav.code,           
@@ -139,7 +156,7 @@ class GreenhouseIO:
     def __init__(self, greenhouse):
         self.greenhouse = greenhouse
 
-    def greenhouse_from_input(self, catchments, landuse, surface_level, roof_storage, meteo_areas ):
+    def greenhouse_from_input(self, catchments, landuse, surface_level, roof_storage, meteo_areas, zonalstats_alltouched=None):
         """
         Method to create an RR greenhouse-node from input.
         
@@ -155,13 +172,14 @@ class GreenhouseIO:
             Storage on the greenhouse roof. If a float, it is spatially uniform.
         meteo_areas : shapely polygon object
             Representative area for a given meteo-station. 
-
+        zonalstats_alltouched: boolean
+            If true, all cells touching a polygon are taken into account in calculating the zonal statistics
         Returns
         -------
         None.
 
         """
-        geconverteerd = hydamo_to_dflowrr.generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_areas)
+        geconverteerd = hydamo_to_dflowrr.generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_areas, zonalstats_alltouched=zonalstats_alltouched)
 
         for gh in geconverteerd.itertuples():
              self.greenhouse.add_greenhouse(
@@ -179,7 +197,7 @@ class OpenwaterIO:
     def __init__(self, openwater):
         self.openwater = openwater
 
-    def openwater_from_input(self, catchments, landuse, meteo_areas):
+    def openwater_from_input(self, catchments, landuse, meteo_areas, zonalstats_alltouched=None):
         """
          Method to create an RR openwater-node from input.
         
@@ -191,13 +209,14 @@ class OpenwaterIO:
             Land use information
         meteo_areas : shapely polygon object
             Representative area for a given meteo-station. 
-
+        zonalstats_alltouched: boolean
+            If true, all cells touching a polygon are taken into account in calculating the zonal statistics
         Returns
         -------
         None.
 
         """
-        geconverteerd = hydamo_to_dflowrr.generate_openwater(catchments, landuse, meteo_areas)
+        geconverteerd = hydamo_to_dflowrr.generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=None)
 
         for ow in geconverteerd.itertuples():
              self.openwater.add_openwater(
@@ -282,7 +301,7 @@ class ExternalForcingsIO:
                  series = cat[1] 
             )
             
-    def boundary_from_input(self, boundary_nodes, catchments):    
+    def boundary_from_input(self, boundary_nodes, catchments, overflows=None):    
         """
         Method to generate RR boundary nodes from input.
 
@@ -292,13 +311,15 @@ class ExternalForcingsIO:
             Lateral nodes in DFM that are associated with RR catchments 
         catchments : shapely polygon object.
             Catchment areas; every cachtment gets a set of RR-nodes.
+        overflows [optional] : shapely point object.
+            Overflows; every overflow location gets a lateral node in DFM.
             
         Returns
         -------
         None.
 
         """
-        geconverteerd = hydamo_to_dflowrr.generate_boundary( boundary_nodes, catchments)
+        geconverteerd = hydamo_to_dflowrr.generate_boundary( boundary_nodes, catchments, overflows=overflows)
         for bn in geconverteerd.itertuples():
              self.external_forcings.add_boundary_node(
                  id = bn.code,

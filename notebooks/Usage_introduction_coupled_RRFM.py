@@ -268,7 +268,8 @@ dfmmodel.network.generate_1dnetwork(one_d_mesh_distance=40.0, seperate_structure
 # Add cross sections from hydamo
 dfmmodel.crosssections.io.from_hydamo(
     dwarsprofielen=hydamo.crosssections,
-    parametrised=hydamo.parametrised_profiles
+    parametrised=hydamo.parametrised_profiles,
+    branches=hydamo.branches
 )
 
 print(f'{len(dfmmodel.crosssections.get_branches_without_crosssection())} branches are still missing a cross section.')
@@ -321,7 +322,7 @@ mesh.altitude_constant(15.0)
 dfmmodel.network.add_mesh2d(mesh)
 
 
-# 2) a more complex mesh can be created in other software (such as SMS) and then imported in the converter: (uncomment to active)
+# 2) a more complex mesh can be created in other software (such as SMS) and then imported in the converter: (uncomment to activate)
 
 # In[11]:
 
@@ -464,6 +465,11 @@ lateral_discharge.drop('lat_986', inplace=True, axis=1)
 #  - paved 
 #  - greenhouse
 #  - open water (not the full Sobek2 open water, but only used to transfer (net) precipitation that falls on open water that is schematized in RR to the 1D/2D network.
+#  
+# At the moment, two options exist for the schematisation of the paved area:
+#  1) simple: the paved fraction of each catchment is modelled with a paved node, directly connected to catchments' boundary node
+#  <br>
+#  2) more complex: serer area polygons and overflow points are used a input as well. For each sewer area, the paved areas in the intersecting catchments are summed. This total area is then distributed over the overflows that are associated with the sewerarea (the column 'lateraleknoopcode') using the area fraction (column 'fractie') for each overflow. In each cathment, paved area that does not intersect with a sewer area gets an unpaved node as in option (1).
 
 # In[19]:
 
@@ -471,6 +477,18 @@ lateral_discharge.drop('lat_986', inplace=True, axis=1)
 # RR-catchments
 hydamo.catchments.read_shp(pad+'gml/afvoergebied_2.shp', index_col='code', 
                            clip=None, check_geotype=False, column_mapping={'lateralekn' : 'lateraleknoopcode', 'administra':'administratiefgebied'})
+
+
+# Optionally, read also sewer areas and overflow locations. If sewer-areas are used, there must also be overflows and vice versa.
+
+# In[20]:
+
+
+hydamo.sewer_areas.read_shp(pad+'gml/rioleringsgebieden.shp', index_col='code',clip=None, check_geotype=False)
+
+hydamo.overflows.read_shp(pad+'gml/overstorten.shp', index_col='code', clip=None,           column_mapping={'codegerel':'codegerelateerdobject', 'Naam':'name' })
+# snap the overflows to 1D branches
+hydamo.overflows.snap_to_branch(hydamo.branches, snap_method='overal', maxdist= 5)
 
 
 # Other input data for RR can be fed by rasters (from which zonal statistics will be extracted) or spatially uniform default values. Three rasters are required: land use, soil type and surface elevation. For each land use type, the area within each catchment is calculated. Surface level is calculated as the median within the catchment, and the most-occurring soil type is used. In all rasters, a NODATA-value of -999 should be used.
@@ -481,23 +499,23 @@ hydamo.catchments.read_shp(pad+'gml/afvoergebied_2.shp', index_col='code',
 
 # An RR-model must first be initialized:
 
-# In[20]:
+# In[21]:
 
 
 drrmodel = DFlowRRModel()
 
 
-# And the necessary (i.e. the one with a catchment associated to them) lateral nodes are also load into the RR model.
+# And the necessary (i.e. the one with a catchment associated to them) lateral nodes are also load into the RR model. Overflows are optional and can be left out.
 
-# In[21]:
+# In[22]:
 
 
-drrmodel.external_forcings.io.boundary_from_input(hydamo.laterals, hydamo.catchments)
+drrmodel.external_forcings.io.boundary_from_input(hydamo.laterals, hydamo.catchments, overflows=hydamo.overflows)
 
 
 # Eventually, water levels can be read from 1D grid points. For now, an observation point is needed for RR to read water levels from. We add an obseration point for each boundary with a catchment, with an offset of 1 m horizontally and vertically. The new point is then snapped to the branche.
 
-# In[22]:
+# In[23]:
 
 
 names = []
@@ -509,12 +527,12 @@ for i in drrmodel.external_forcings.boundary_nodes.items():
 dfmmodel.observation_points.add_points(points, names, snap_to_1d=True)
 
 
-# dfmmodeling RR and FM must be online. RR reades waterlevels from FM observation points and FM gets discharges from lateral nodes of discharge type 'realtime'.
+# dfmmodeling RR and FM must be online. RR reades waterlevels from FM observation points and FM gets discharges from lateral nodes of discharge type 'realtime'. In the call to the function, the overflow locations are appended to the regular lateral locations, so they will be treated the same.
 
-# In[23]:
+# In[24]:
 
 
-dfmmodel.external_forcings.io.read_laterals(hydamo.laterals, lateral_discharges=lateral_discharge, rr_boundaries=drrmodel.external_forcings.boundary_nodes)
+dfmmodel.external_forcings.io.read_laterals(hydamo.laterals.append(hydamo.overflows), lateral_discharges=lateral_discharge, rr_boundaries=drrmodel.external_forcings.boundary_nodes)
 
 
 # #### Unpaved nodes
@@ -565,7 +583,7 @@ dfmmodel.external_forcings.io.read_laterals(hydamo.laterals, lateral_discharges=
 # 
 # And surface elevation needs to be in cm+NAP.
 
-# In[24]:
+# In[25]:
 
 
 # all data and settings to create the RR-model
@@ -576,7 +594,7 @@ soil_file = pad+'rasters/soiltypes250.tif'
 
 # Other parameters can be set by rasters (i.e. spatially distributed) or uniform. If a number is provided, the module will use this number for all catchments, if a string is provided it is interpreted as a raster file name. For unpaved nodes, these parameters are the storage on the surface, the infiltration capacity, and the initial ground water depth (in m below the surface). The parametrisation for Ernst is taken from a list of layer depths, where each depth is assigned the corresponding resistance from the list of layer_resistances. They need to be of equal length.
 
-# In[25]:
+# In[26]:
 
 
 surface_storage = 10.0
@@ -589,18 +607,20 @@ layer_resistances = [30,200,10000]
 
 # Fill the unpaved node with the corresponding ernst definition as follows. 
 # 
-# The last argument to 'unpaved_from_input' contains the polygons that correspond to a meteo-station: here these are identical to each catchment so each catchment gets its own station.  If there are many, small, catchments, it might be more appropriate to use, for instance, Thiessen polygons around gauges. For each catchment, the meteo-station is based on the 'meteo-area;-feature in which the centroid of the catchment falls.
+# The argument 'meteo_areas' to 'unpaved_from_input' contains the polygons that correspond to a meteo-station: here these are identical to each catchment so each catchment gets its own station.  If there are many, small, catchments, it might be more appropriate to use, for instance, Thiessen polygons around gauges. For each catchment, the meteo-station is based on the 'meteo-area;-feature in which the centroid of the catchment falls.
+# 
+# The argument 'zonalstats_alltouched' is rather important. It defines the number of cells in the input rasters that are taken into account for each catchment. If the raster resolution is sufficiently high, its setting does not matter. In the case of coarse rasters, small catchments might end up with no nodes at all if the 'zonalstats_alltouched' is FALSE - it says that only cells that are entirely within the catchment are taken into account. If it TRUE, all cells that are touched by the catchment are taken into account - i.e. some pixels might be counted multiple times. Note that to define average fluxes (meteo, seepage, storages) zonalstats_alltouched is TRUE by default. For elevation, land use and soil types it is FALSE by default, if the argument is omitted.
 
-# In[26]:
+# In[27]:
 
 
 meteo_areas = hydamo.catchments
 
 
-# In[27]:
+# In[28]:
 
 
-drrmodel.unpaved.io.unpaved_from_input(hydamo.catchments, lu_file, ahn_file, soil_file, surface_storage, infiltration_capacity, initial_gwd, meteo_areas)
+drrmodel.unpaved.io.unpaved_from_input(hydamo.catchments, lu_file, ahn_file, soil_file, surface_storage, infiltration_capacity, initial_gwd, meteo_areas, zonalstats_alltouched=True)
 drrmodel.unpaved.io.ernst_from_input(hydamo.catchments, depths=layer_depths, resistance=layer_resistances)
 
 
@@ -613,7 +633,7 @@ drrmodel.unpaved.io.ernst_from_input(hydamo.catchments, depths=layer_depths, res
 # 
 # The meteo-station is assigned in the same way as for unpaved nodes.
 
-# In[28]:
+# In[29]:
 
 
 street_storage = 10.0
@@ -621,12 +641,33 @@ sewer_storage = pad+'rasters/sewstor.tif'
 pumpcapacity = pad+'rasters/pumpcap.tif'
 
 
-# To convert to a model definition:
+# To convert to a model definition, according to the more complex schematistion:
 
-# In[29]:
+# In[30]:
 
 
-drrmodel.paved.io.paved_from_input(hydamo.catchments, lu_file, ahn_file, street_storage, sewer_storage, pumpcapacity, meteo_areas)
+drrmodel.paved.io.paved_from_input(catchments=hydamo.catchments, 
+                                    overflows=hydamo.overflows,
+                                    sewer_areas=hydamo.sewer_areas,                                   
+                                    landuse=lu_file, 
+                                    surface_level=ahn_file,
+                                    street_storage=street_storage,
+                                    sewer_storage=sewer_storage,
+                                    pump_capacity=pumpcapacity, 
+                                    meteo_areas=meteo_areas,
+                                    zonalstats_alltouched=True)
+
+Or, according to the simplest approach:
+# In[31]:
+
+
+# drrmodel.paved.io.paved_from_input(catchments=hydamo.catchments, 
+#                                    landuse=lu_file, 
+#                                    surface_level=ahn_file,
+#                                    street_storage=street_storage,
+#                                    sewer_storage=sewer_storage,
+#                                    pump_capacity=pumpcapacity, 
+#                                    meteo_areas=meteo_areas)
 
 
 # #### Greenhouse nodes
@@ -636,7 +677,7 @@ drrmodel.paved.io.paved_from_input(hydamo.catchments, lu_file, ahn_file, street_
 # 
 # The meteo-station is assigned in the same way as for unpaved nodes.
 
-# In[30]:
+# In[32]:
 
 
 roof_storage = pad+'rasters/roofstor.tif'
@@ -644,10 +685,10 @@ roof_storage = pad+'rasters/roofstor.tif'
 
 # To convert to a model definition:
 
-# In[31]:
+# In[33]:
 
 
-drrmodel.greenhouse.io.greenhouse_from_input(hydamo.catchments, lu_file, ahn_file, roof_storage, meteo_areas)
+drrmodel.greenhouse.io.greenhouse_from_input(hydamo.catchments, lu_file, ahn_file, roof_storage, meteo_areas, zonalstats_alltouched=True)
 
 
 # #### Open water
@@ -656,10 +697,10 @@ drrmodel.greenhouse.io.greenhouse_from_input(hydamo.catchments, lu_file, ahn_fil
 # 
 # The meteo-station is assigned in the same way as for unpaved nodes.
 
-# In[32]:
+# In[34]:
 
 
-drrmodel.openwater.io.openwater_from_input(hydamo.catchments, lu_file, meteo_areas)
+drrmodel.openwater.io.openwater_from_input(hydamo.catchments, lu_file, meteo_areas, zonalstats_alltouched=True)
 
 
 # #### External forcings
@@ -676,7 +717,7 @@ drrmodel.openwater.io.openwater_from_input(hydamo.catchments, lu_file, meteo_are
 # Rastertypes can be any type that is recognized by rasterio (in any case Geotiff and ArcASCII rasters). If the file extension is 'IDF', as is the case in Modflow output, the raster is read using the 'imod'-package.
 # 
 
-# In[33]:
+# In[35]:
 
 
 seepage_folder = pad+'rasters/kwel'
@@ -684,7 +725,7 @@ precip_folder = pad+'rasters/precip'
 evap_folder = pad+'rasters/evap'
 
 
-# In[34]:
+# In[36]:
 
 
 drrmodel.external_forcings.io.seepage_from_input(hydamo.catchments, seepage_folder)
@@ -694,7 +735,7 @@ drrmodel.external_forcings.io.evap_from_input(meteo_areas, evap_folder, dissolve
 
 # We need a function to be able to easily plot all nodes and links
 
-# In[35]:
+# In[37]:
 
 
 def node_geometry(dict):
@@ -704,7 +745,7 @@ def node_geometry(dict):
     links = []
     for i in dict.items():
         if 'ar' in i[1]:
-            if np.sum([int(s) for s in i[1]['ar'].split(' ')])>0:
+            if np.sum([float(s) for s in i[1]['ar'].split(' ')])>0:
                 geoms.append(Point((float(i[1]['px']),float(i[1]['py']))))           
                 links.append(LineString((Point(float(i[1]['px']),float(i[1]['py'])),
                                         Point(float(drrmodel.external_forcings.boundary_nodes[i[1]['boundary_node']]['px']),
@@ -716,7 +757,7 @@ def node_geometry(dict):
 
 # Now all the nodes are filled. The topology is defined as follows: every catchment gets a maximum of four nodes (unpaved, paved, open water and greenhouse). If in the land use map, the appropriate land use does not occur in the catchment, no node is defined. The four nodes are plotted on a horizontal (west-east) line around the catchment centroid in the order of: openwater, unpaved, paved, greenhouse. Every node is connected with the lateral node of the catchnment using a RR-link. The files 3B_NOD.TP and 3B_LINK.TP are created describing this.
 
-# In[36]:
+# In[38]:
 
 
 ## plt.rcParams['axes.edgecolor'] = 'w'
@@ -757,7 +798,7 @@ fig.tight_layout()
 # The 1D/2D model (FM) is written to the sub-folder 'fm'; RR-files are written to 'rr'. An XML-file (dimr-config.xml) describes the coupling between the two. Note that both the GUI and Interaktor do not (yet) support RR, so the only way to carry out a coupled simulation is using DIMR.
 # 
 
-# In[38]:
+# In[39]:
 
 
 # Runtime and output settings

@@ -428,7 +428,6 @@
 <gml:featureMember>
 <nhi:stuw>
 <nhi:code>Weir_RS373-st2</nhi:code>
-<nhi:naam>Stuw Bladiebla</nhi:naam>
 <nhi:statusobjectcode>3</nhi:statusobjectcode>
 <nhi:objectbegintijd>19800101000000</nhi:objectbegintijd>
 <nhi:objecteindtijd>20170727000000</nhi:objecteindtijd>

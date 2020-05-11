@@ -183,7 +183,7 @@ class CrossSectionsIO:
     def __init__(self, crosssections):
         self.crosssections = crosssections
 
-    def from_hydamo(self, dwarsprofielen, parametrised=None):
+    def from_hydamo(self, dwarsprofielen, parametrised=None, branches=None):
         """
         Method to add cross section from hydamo files. Two files
         can be handed to the function, the cross section file (dwarsprofiel) and the
@@ -195,30 +195,37 @@ class CrossSectionsIO:
         """
 
         # first, make a selection as to use only the dwarsprofielen/parametrised that are related to branches, not structures
-        if 'codegerelateerdobject' not in dwarsprofielen:
-            dwarsprofielen['codegerelateerdobject'] = np.empty((len(dwarsprofielen)))*np.nan
-        dp_branches = ExtendedGeoDataFrame(geotype=LineString, columns = dwarsprofielen.required_columns+['codegerelateerdobject'])
-        dp_branches.set_data(dwarsprofielen[dwarsprofielen.codegerelateerdobject.isna()], index_col='code', check_columns=True)
-        
-        if 'codegerelateerdobject' not in parametrised:
-            parametrised['codegerelateerdobject'] = np.empty((len(parametrised)))*np.nan
-        if len(parametrised)>0:        
-            par_branches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns+['codegerelateerdobject'])
-            par_branches.set_data(parametrised[parametrised.codegerelateerdobject.isna()], index_col='code', check_columns=True)
+        if dwarsprofielen is not None:
+            if 'codegerelateerdobject' not in dwarsprofielen:
+                dwarsprofielen['codegerelateerdobject'] = np.empty((len(dwarsprofielen)))*np.nan
+            dp_branches = ExtendedGeoDataFrame(geotype=LineString, columns = dwarsprofielen.required_columns+['codegerelateerdobject'])
+            dp_branches.set_data(dwarsprofielen[dwarsprofielen.codegerelateerdobject.isna()], index_col='code', check_columns=True)
+        else:     
+            dp_branches = ExtendedGeoDataFrame(geotype=LineString)
+            
+        if parametrised is not None:
+            if 'codegerelateerdobject' not in parametrised:
+                parametrised['codegerelateerdobject'] = np.empty((len(parametrised)))*np.nan
+            if len(parametrised)>0:        
+                par_branches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns+['codegerelateerdobject'])
+                par_branches.set_data(parametrised[parametrised.codegerelateerdobject.isna()], index_col='code', check_columns=True)
+            else:
+                par_branches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns+['codegerelateerdobject'])
+            # Assign cross-sections to branches
+            nnocross = len(self.crosssections.get_branches_without_crosssection())
+            logger.info(f'Before adding the number of branches without cross section is: {nnocross}.')
         else:
-            par_branches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns+['codegerelateerdobject'])
-        # Assign cross-sections to branches
-        nnocross = len(self.crosssections.get_branches_without_crosssection())
-        logger.info(f'Before adding the number of branches without cross section is: {nnocross}.')
-
-        # 1. Collect cross sections from 'dwarsprofielen'
-        crosssections = hydamo_to_dflowfm.dwarsprofiel_to_yzprofiles(dp_branches)               
+            par_branches = ExtendedGeoDataFrame(geotype=LineString)
+            
+        if not dp_branches.empty:
+            # 1. Collect cross sections from 'dwarsprofielen'
+            crosssections = hydamo_to_dflowfm.dwarsprofiel_to_yzprofiles(dp_branches, branches)               
         
-        for name, css in crosssections.items():
-            # Add definition
-            self.crosssections.add_yz_definition(yz=css['yz'], name=name, roughnesstype=css['ruwheidstypecode'], roughnessvalue=css['ruwheidswaarde'])
-            # Add location
-            self.crosssections.add_crosssection_location(branchid=css['branchid'], chainage=css['chainage'], definition=name)
+            for name, css in crosssections.items():
+                # Add definition
+                self.crosssections.add_yz_definition(yz=css['yz'], thalweg=css['thalweg'], name=name, roughnesstype=css['ruwheidstypecode'], roughnessvalue=css['ruwheidswaarde'])
+                # Add location
+                self.crosssections.add_crosssection_location(branchid=css['branchid'], chainage=css['chainage'], definition=name)
         
         # Check the number of branches with cross sections
         no_crosssection = self.crosssections.get_branches_without_crosssection()
@@ -268,21 +275,22 @@ class CrossSectionsIO:
         nnocross = len(self.crosssections.get_structures_without_crosssection())        
         logger.info(f'Before adding the number of structures without cross section is: {nnocross}.')    
         
-        # and subsets for structures    
-        dp_structures = ExtendedGeoDataFrame(geotype=LineString)
-        dp_structures.set_data(dwarsprofielen[~dwarsprofielen.codegerelateerdobject.isna()], index_col='code', check_columns=True)
+        if dwarsprofielen is not None:
+            # and subsets for structures    
+            dp_structures = ExtendedGeoDataFrame(geotype=LineString)
+            dp_structures.set_data(dwarsprofielen[~dwarsprofielen.codegerelateerdobject.isna()], index_col='code', check_columns=True)
         
-        # 1. Collect cross sections from 'dwarsprofielen'
-        crosssections = hydamo_to_dflowfm.dwarsprofiel_to_yzprofiles(dp_structures)               
+            # 1. Collect cross sections from 'dwarsprofielen'
+            crosssections = hydamo_to_dflowfm.dwarsprofiel_to_yzprofiles(dp_structures, None)               
         
-        for name, css in crosssections.items():        
-            self.crosssections.add_yz_definition(yz=css['yz'], name=name, roughnesstype=css['ruwheidstypecode'], roughnessvalue=css['ruwheidswaarde'])
+            for name, css in crosssections.items():        
+                self.crosssections.add_yz_definition(yz=css['yz'], thalweg=css['thalweg'], name=name, roughnesstype=css['ruwheidstypecode'], roughnessvalue=css['ruwheidswaarde'])
         
-        if len(parametrised)>0:
+        if parametrised is not None:
             par_structures = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns + ['codegerelateerdobject'])
             par_structures.set_data(parametrised[~parametrised.codegerelateerdobject.isna()], index_col='code', check_columns=True)            
         else:
-            par_structures = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns + ['codegerelateerdobject'])
+            par_structures = ExtendedGeoDataFrame(geotype=LineString)
       
         no_crosssection = self.crosssections.get_structures_without_crosssection()        
         nnocross = len(no_crosssection)
@@ -351,6 +359,7 @@ class ExternalForcingsIO:
             DataFrame with lateral discharges. The index should be a time object (datetime or similar).
         """
 
+        if rr_boundaries is None: rr_boundaries = []
         # Check argument
         checks.check_argument(locations, 'locations', gpd.GeoDataFrame, columns=['geometry'])
         if lateral_discharges.any:
@@ -365,9 +374,9 @@ class ExternalForcingsIO:
         nodes1d = network1d.get_nodes()
         get_nearest = KDTree(nodes1d)
         lateral_crds = np.vstack([loc.geometry.coords[0] for loc in locations.itertuples()])
-        
-        _, nearest_idx = get_nearest.query(lateral_crds)            
-        
+                
+        _, nearest_idx = get_nearest.query(lateral_crds[:,0:2])
+
         # Get time series and add to dictionary
         for crd, lateral in zip(nodes1d[nearest_idx], locations.itertuples()):
         

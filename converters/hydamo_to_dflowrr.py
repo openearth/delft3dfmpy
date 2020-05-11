@@ -14,22 +14,24 @@ import os
 import imod
 
 logger = logging.getLogger(__name__)
-def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_storage, infiltration_capacity, initial_gwd, meteo_areas):    
+def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_storage, infiltration_capacity, initial_gwd, meteo_areas, zonalstats_alltouched=None):    
     """ 
     Combine all data to form a complete UNPAVED definition. ALso the coordinates for the networ topology are included.
     Zonal statistics are applied to land use, to get the areas per type. The classificition described in the notebook is assumed. From the elevation grid, the median value per catchment is assumed, and for soil type the dominant soil type in the catchment is used. Other parameters can be prescribed as as float (spatially uniform) or as a raster name, in which case the mean value per catchment is used.
     
     """
+    all_touched=False if zonalstats_alltouched is None else zonalstats_alltouched
+               
     # required rasters
     warnings.filterwarnings('ignore')
     lu_rast, lu_affine = read_raster(landuse, static=True)
-    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True)   
+    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)   
     
     rast, affine = read_raster(soiltype, static=True)    
-    soiltypes = zonal_stats(catchments, soiltype, affine = affine, stats='majority',all_touched=True)
+    soiltypes = zonal_stats(catchments, soiltype, affine = affine, stats='majority',all_touched=all_touched)
     
     rast, affine = read_raster(surface_level, static=True)
-    mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median",all_touched=True)    
+    mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median",all_touched=all_touched)    
         
     # optional rasters
     if not isinstance(surface_storage, float):                
@@ -66,10 +68,14 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
     # 12 braak       14 fallow    
     sobek_indices = [3,5,4,2,15,10,9,1,11,12,13,14]
     for num, cat in enumerate(catchments.itertuples()):    
-        
+        # if no rasterdata could be obtained for this catchment, skip it.
+        if mean_elev[num]['median'] is None: 
+            continue        
+        tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
+        ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code   
         # find corresponding meteo-station
-        ms = [ms for ms in meteo_areas.itertuples() if ms.geometry.contains(cat.geometry.centroid)]
-        ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]
+        #ms = [ms for ms in meteo_areas.itertuples() if ms.geometry.contains(cat.geometry.centroid)]
+        #ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]
         mapping = np.zeros(16, dtype=int)
         for i in range(1,12):
             if i in lu_counts[num]: mapping[sobek_indices[i-1]-1] = lu_counts[num][i]*px_area            
@@ -92,7 +98,7 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
             unpaved_drr.at[cat.code, 'initial_gwd'] = f'{initial_gwd:.2f}'  
         else:
             unpaved_drr.at[cat.code, 'initial_gwd'] = f'{ini_gwds[num]["mean"]:.2f}'
-        unpaved_drr.at[cat.code, 'meteostat'] = ms[0]
+        unpaved_drr.at[cat.code, 'meteostat'] = ms
         unpaved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-10:.0f}'
         unpaved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
         unpaved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                
@@ -112,38 +118,116 @@ def generate_ernst(catchments, depths, resistance):
         ernst_drr.at[cat.code, 'lvs'] = ' '.join([str(depth) for depth in depths])
     return ernst_drr     
 
-def generate_paved(catchments, landuse, surface_level, street_storage, sewer_storage, pump_capacity, meteo_areas):
+def generate_paved( catchments=None, 
+                    overflows=None,
+                    sewer_areas=None,                                   
+                    landuse=None, 
+                    surface_level=None,
+                    street_storage=None,
+                    sewer_storage=None,
+                    pump_capacity=None, 
+                    meteo_areas=None,
+                    zonalstats_alltouched=None):
     """ 
         Combine all data to form a complete PAVED definition. ALso the coordinates for the networ topology are included.
     Zonal statistics are applied to land use, to get the paved area. The classificition described in the notebook is assumed. From the elevation grid, the median value per catchment is assumed. Other parameters can be prescribed as as float (spatially uniform) or as a raster name, in which case the mean value per catchment is used.
     """
-    
+    all_touched=False if zonalstats_alltouched is None else zonalstats_alltouched        
+        
     lu_rast, lu_affine = read_raster(landuse, static=True)
-    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True)   
-    rast, affine = read_raster(surface_level, static=True)
-    mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median",all_touched=True)         
+    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)   
+    sl_rast, sl_affine = read_raster(surface_level, static=True)
+    mean_elev = zonal_stats(catchments, sl_rast, affine=sl_affine, stats="median",all_touched=all_touched)         
     
     if not isinstance( street_storage, float):                
-        rast, affine = read_raster(street_storage, static=True)
-        str_stors = zonal_stats(catchments, rast, affine=affine, stats="mean", all_touched=True)        
+        strs_rast, strs_affine = read_raster(street_storage, static=True)
+        str_stors = zonal_stats(catchments, strs_rast, affine=strs_affine, stats="mean", all_touched=True)        
     if not isinstance( sewer_storage, float):                
-        rast, affine = read_raster(sewer_storage, static=True)
-        sew_stors = zonal_stats(catchments, rast, affine=affine, stats="mean", all_touched=True)        
+        sews_rast, sews_affine = read_raster(sewer_storage, static=True)
+        sew_stors = zonal_stats(catchments, sews_rast, affine=sews_affine, stats="mean", all_touched=True)        
     if not isinstance(pump_capacity, float):     
-        rast, affine = read_raster(pump_capacity, static=True)               
-        pump_caps = zonal_stats(catchments, rast, affine=affine, stats="mean", all_touched=True)    
-        
+        pump_rast, pump_affine = read_raster(pump_capacity, static=True)               
+        pump_caps = zonal_stats(catchments, pump_rast, affine=pump_affine, stats="mean", all_touched=True)    
+    
     # get raster cellsize    
     px_area = lu_affine[0] * -lu_affine[4]
-    
     paved_drr = ExtendedDataFrame(required_columns=['code'])
-    paved_drr.set_data( pd.DataFrame(np.zeros((len(catchments),9)), 
-                                       columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap', 'px', 'py', 'boundary'], dtype="str"), index_col='code')
-    paved_drr.index = catchments.code
-    for num, cat in enumerate(catchments.itertuples()):             
+    if sewer_areas is not None:        
+        # if the parameters area rasters, do the zonal statistics per sewage area as well.
+        if not isinstance( street_storage, float):                
+            str_stors_sa = zonal_stats(sewer_areas, strs_rast,affine=strs_affine,stats="mean", all_touched=True)
+        if not isinstance( sewer_storage, float):                
+            sew_stors_sa = zonal_stats(sewer_areas, sews_rast,affine=sews_affine,stats="mean", all_touched=True)
+        if not isinstance(pump_capacity, float):     
+            pump_caps_sa = zonal_stats(sewer_areas, pump_rast,affine=pump_affine,stats="mean", all_touched=True)
+        mean_sa_elev = zonal_stats(sewer_areas, sl_rast, affine=sl_affine, stats="median",all_touched=True)         
+        
+        # initialize the array of paved nodes, which should contain a node for all catchments and all overflows
+        paved_drr.set_data( pd.DataFrame(np.zeros((len(catchments)+len(overflows),10)), 
+columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat','px', 'py', 'boundary'], dtype="str"), index_col='code')
+        paved_drr.index = catchments.code.append(overflows.code)
+        
+        # find the paved area in the sewer areas
+        for isew, sew in enumerate(sewer_areas.itertuples()):            
+            pav_area = 0
+            for cat_ind, cat in enumerate(catchments.itertuples()):
+                # if no rasterdata could be obtained for this catchment, skip it.
+                if mean_elev[cat_ind]['median'] is None:
+                    continue        
+                if(cat.geometry.intersects(sew.geometry)):
+                    # find the paved area within the intersection and add it to the sewer area sum
+                    intersecting_pixels = zonal_stats(cat.geometry.intersection(sew.geometry), lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)
+                    if intersecting_pixels[0]=={}:
+                        continue
+                    pav_pixels = intersecting_pixels[0][14.0]
+                    pav_area += pav_pixels*int(px_area)
+                    # subtract it fromthe total paved area in this catchment, make sure at least 0 remains
+                    lu_counts[cat_ind][14.0] -=  pav_pixels
+                    if lu_counts[cat_ind][14.0] < 0: lu_counts[cat_ind][14.0]  = 0
+            
+            elev = mean_sa_elev[isew]['median']/100
+            # find overflows related to this sewer area
+            ovf = overflows[overflows.codegerelateerdobject==sew.code]           
+            for ov in ovf.itertuples():                
+                # find corresponding meteo-station
+                tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(sew.geometry.centroid)]
+                ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code                         
+                #ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]                            
+                # add prefix to the overflow id to create the paved-node id
+                paved_drr.at[ov.code, 'code'] = str(ov.code)
+                paved_drr.at[ov.code, 'area'] = str(pav_area * ov.fractie)
+                paved_drr.at[ov.code, 'mvlevel'] = f'{elev:.2f}'         
+                # if a float is given, a standard value is passed. If a string is given, a rastername is assumed to zonal statistics are applied.       
+                if isinstance(street_storage, float):    
+                    paved_drr.at[ov.code, 'streetstor'] = f'{street_storage:.2f}'
+                else:
+                    paved_drr.at[ov.code, 'streetstor'] = f'{str_stors_sa[isew]["mean"]:.2f}'                   
+                if isinstance(sewer_storage, float):    
+                    paved_drr.at[ov.code, 'sewstor'] = f'{sewer_storage:.2f}'
+                else:
+                    paved_drr.at[ov.code, 'sewstor'] = f'{sew_stors_sa[isew]["mean"]:.2f}'            
+                if isinstance(pump_capacity, float):    
+                    paved_drr.at[ov.code, 'pumpcap'] = f'{pump_capacity}'
+                else:
+                    paved_drr.at[ov.code, 'pumpcap'] = f'{pump_caps_sa[isew]["mean"]:.2f}'    
+                paved_drr.at[ov.code,'meteostat'] = ms
+                paved_drr.at[ov.code, 'px'] = f'{ov.geometry.coords[0][0]+10:.0f}'
+                paved_drr.at[ov.code, 'py'] = f'{ov.geometry.coords[0][1]:.0f}'
+                paved_drr.at[ov.code, 'boundary'] = ov.code              
+    else:    
+        # in this case only the catchments are taken into account. A node is created for every catchment nonetheless, but only nodes with a remaining area >0 are written.
+        paved_drr.set_data( pd.DataFrame(np.zeros((len(catchments),10)), 
+                                       columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat', 'px', 'py', 'boundary'], dtype="str"), index_col='code')
+        paved_drr.index = catchments.code
+    
+    for num, cat in enumerate(catchments.itertuples()):                    
+        # if no rasterdata could be obtained for this catchment, skip it.
+        if mean_elev[num]['median'] is None:
+            continue
+        
         # find corresponding meteo-station
-        ms = [ms for ms in meteo_areas.itertuples() if ms.geometry.contains(cat.geometry.centroid)]
-        ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]
+        tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
+        ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code        
             
         elev = mean_elev[num]['median']/100
         paved_drr.at[cat.code, 'code'] = str(cat.code)
@@ -162,22 +246,23 @@ def generate_paved(catchments, landuse, surface_level, street_storage, sewer_sto
             paved_drr.at[cat.code, 'pumpcap'] = f'{pump_capacity}'
         else:
             paved_drr.at[cat.code, 'pumpcap'] = f'{pump_caps[num]["mean"]:.2f}'    
-        paved_drr.at[cat.code,'meteostat'] = ms[0]
+        paved_drr.at[cat.code,'meteostat'] = ms
         paved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+10:.0f}'
         paved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
         paved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
     return paved_drr   
-    
-   
-def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_areas):    
+       
+def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_areas, zonalstats_alltouched=None):    
     """ 
         Combine all data to form a complete GREENHSE defintion. ALso the coordinates for the network topology are included.
     Zonal statistics are applied to land use, to get the paved area. The classificition described in the notebook is assumed. From the elevation grid, the median value per catchment is assumed. Other parameters can be prescribed as as float (spatially uniform) or as a raster name, in which case the mean value per catchment is used.
     """
+    all_touched=False if zonalstats_alltouched is None else zonalstats_alltouched
+        
     lu_rast, lu_affine = read_raster(landuse, static=True)
-    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True)   
+    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=all_touched)   
     rast, affine = read_raster(surface_level, static=True)
-    mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median", all_touched=True) 
+    mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median", all_touched=all_touched) 
     # optional rasters
     if not isinstance(roof_storage, float):                
         rast, affine = read_raster(roof_storage, static=True)
@@ -187,13 +272,17 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
     px_area = lu_affine[0] * -lu_affine[4]
     
     gh_drr = ExtendedDataFrame(required_columns=['code'])
-    gh_drr.set_data( pd.DataFrame(np.zeros((len(catchments),7)), 
-                                       columns=['code','area','mvlevel', 'roofstor', 'px', 'py', 'boundary'], dtype="str"), index_col='code')
+    gh_drr.set_data( pd.DataFrame(np.zeros((len(catchments),8)), 
+                                       columns=['code','area','mvlevel', 'roofstor', 'meteostat','px', 'py', 'boundary'], dtype="str"), index_col='code')
     gh_drr.index = catchments.code
-    for num, cat in enumerate(catchments.itertuples()):             
+    for num, cat in enumerate(catchments.itertuples()):    
+        # if no rasterdata could be obtained for this catchment, skip it.
+        if mean_elev[num]['median'] is None:
+            continue
+                
         # find corresponding meteo-station
-        ms = [ms for ms in meteo_areas.itertuples() if ms.geometry.contains(cat.geometry.centroid)]
-        ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]
+        tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
+        ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code   
             
         elev = mean_elev[num]['median']/100
         gh_drr.at[cat.code, 'code'] = str(cat.code)
@@ -203,54 +292,67 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
             gh_drr.at[cat.code, 'roofstor'] = f'{roof_storage:.2f}'
         else:
             gh_drr.at[cat.code, 'roofstor'] = f'{roofstors[num]["mean"]:.2f}'    
-        gh_drr.at[cat.code, 'meteostat'] = ms[0]
+        gh_drr.at[cat.code, 'meteostat'] = ms
         gh_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+20:.0f}'
         gh_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
         gh_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
     return gh_drr   
 
-def generate_openwater(catchments, landuse, meteo_areas):    
+def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=None):    
     """ 
         Combine all data to form a complete OPENWATE definotion. ALso the coordinates for the network topology are included.
     Zonal statistics are applied to land use, to get the open water area. The classificition described in the notebook is assumed. 
     """
+    all_touched=False if zonalstats_alltouched is None else zonalstats_alltouched
     
     lu_rast, lu_affine = read_raster(landuse, static=True)
-    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True)   
+    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)   
 
     # get raster cellsize    
     px_area = lu_affine[0] * -lu_affine[4]
     
     ow_drr = ExtendedDataFrame(required_columns=['code'])
-    ow_drr.set_data( pd.DataFrame(np.zeros((len(catchments),5)), 
-                                       columns=['code','area','px', 'py', 'boundary'], dtype="str"), index_col='code')
+    ow_drr.set_data( pd.DataFrame(np.zeros((len(catchments),6)), 
+                                       columns=['code','area','meteostat','px', 'py', 'boundary'], dtype="str"), index_col='code')
     ow_drr.index = catchments.code
     for num, cat in enumerate(catchments.itertuples()):    
         # find corresponding meteo-station
-        ms = [ms for ms in meteo_areas.itertuples() if ms.geometry.contains(cat.geometry.centroid)]
-        ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]
+        tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
+        ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code   
         
         ow_drr.at[cat.code, 'code'] = str(cat.code)
         ow_drr.at[cat.code, 'area'] = str(lu_counts[num][13]*int(px_area)) if 13 in lu_counts[num] else '0'        
-        ow_drr.at[cat.code, 'meteostat'] = ms[0]
+        ow_drr.at[cat.code, 'meteostat'] = ms
         ow_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-20:.0f}'
         ow_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
         ow_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
     return ow_drr   
 
-def generate_boundary(boundary_nodes, catchments):
+def generate_boundary(boundary_nodes, catchments, overflows=None):
     """
     Method to create boundary  nodes for RR.
 
     """
+    if overflows is not None:
+        numlats = len(catchments)+len(overflows)
+    else:
+        numlats = len(catchments)
     bnd_drr = ExtendedDataFrame(required_columns=['code'])
-    bnd_drr.set_data( pd.DataFrame(np.zeros((len(catchments),3)), 
+    bnd_drr.set_data( pd.DataFrame(np.zeros((numlats,3)), 
                                        columns=['code', 'px', 'py'], dtype="str"), index_col='code')                                        
-    bnd_drr.index = catchments.code
+    if overflows is not None:
+        bnd_drr.index = catchments.code.append(overflows.code)
+    else:
+        bnd_drr.index = catchments.code
     for num, cat in enumerate(catchments.itertuples()):    
         bnd_drr.at[cat.code, 'code'] = cat.lateraleknoopcode
         bnd_drr.at[cat.code, 'px']  = boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['X'].to_string(index=False).strip()
         bnd_drr.at[cat.code, 'py']  = boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['Y'].to_string(index=False).strip()
+    if overflows is not None:
+        for num, ovf in enumerate(overflows.itertuples()):
+            bnd_drr.at[ovf.code, 'code'] = ovf.code
+            bnd_drr.at[ovf.code, 'px'] = str(ovf.geometry.coords[0][0])
+            bnd_drr.at[ovf.code, 'py'] = str(ovf.geometry.coords[0][1])       
     return bnd_drr    
 
 def generate_seepage(catchments, seepage_folder):    

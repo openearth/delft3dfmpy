@@ -215,13 +215,23 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             for branch, volgnr in zip(groupbyvalues, order):
                 startnr[branch] = min(volgnr, startnr[branch])
 
+            # Determine relative order of points in profile (required if the point numbering is not subsequent)
+            order_rel = []
+            for branch, volgnr in zip(groupbyvalues, order):
+                lst_volgnr = [x[1] for x in zip(groupbyvalues, order) if x[0] == branch]
+                lst_volgnr.sort()
+                for i, x in enumerate(lst_volgnr):
+                    if volgnr == x:
+                        order_rel.append(i)
+
             # Filter branches with too few points
             singlepoint = (counts < 2)
 
             # Assign points
-            for point, volgnr, branch in zip(geometries, order, groupbyvalues):
-                lines[branch][volgnr - startnr[branch]] = point
-
+            for point, volgnr, branch, volgnr_rel in zip(geometries, order, groupbyvalues, order_rel):
+                #lines[branch][volgnr - startnr[branch]] = point
+                lines[branch][volgnr_rel] = point
+                
             # Group geometries to lines
             for branch in branches[~singlepoint]:
                 if any(isinstance(pt, int) for pt in lines[branch]):
