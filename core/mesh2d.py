@@ -194,7 +194,8 @@ class Mesh2D:
             geometries.set_values(var, meshout.get_values(var))
 
         ierr = wrapperGridgeom.ggeo_deallocate()
-
+        return geometries
+        
     def altitude_constant(self, constant, where='face'):
 
         zvalues = np.ones(getattr(self.meshgeomdim, f'num{where}')) * constant
@@ -393,7 +394,7 @@ class Rectangular(Mesh2D):
         geometries.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
 
         # Determine what the cells are
-        self._find_cells(geometries)
+        geometries = self._find_cells(geometries)
 
         # Clip
         if clipgeo is not None:
@@ -525,7 +526,7 @@ class Rectangular(Mesh2D):
             dflowfm_path = 'dflowfm.exe'
 
         # Construct statement
-        statement = f'{dflowfm_path} --refine:hmin={dxmin}:dtmax={dtmax}:connect=1:outsidecell=1 {temppath} temp_ascgrid.asc'
+        statement = f'{dflowfm_path} --refine:hmin={dxmin}:dtmax={dtmax}:connect=1:outsidecell=1 {temppath} temp_ascgrid.asc > log.txt'
         # Execute statement
         os.system(statement)
 
