@@ -58,26 +58,92 @@ class Mesh2D:
 
         return xnodes, ynodes, edge_nodes
 
-    def clean_nodes(self, xnodes, ynodes, edge_nodes, face_nodes):
+   def clean_nodes(self, xnodes, ynodes, edge_nodes, face_nodes):
         """
         Method to clean the nodes. Edges that do not form a cell are deleted.
         """
 
         # Clip
-        node_selection = np.unique(face_nodes)
-        edge_nodes = edge_nodes[np.isin(edge_nodes, node_selection).all(axis=1)]
 
+        node_selection = np.unique(face_nodes)
+        node_selection = node_selection[node_selection!=-999]
+        #Remove all nodes that are not in any face
+        edge_nodes = edge_nodes[np.isin(edge_nodes, node_selection).all(axis=1)]
+        
+                
         if not node_selection.any():
             return None
+        
+        # Remove all segments that are not part of any face
+        import time
+        
+        # Process that requires large computational time, monitor progress (requires tidying)
+        t = time.time()
+
+        # First build arrays for possible pairs, assuming that maximum of 4 nodes is possible.
+        # Sorting is required, as direction is irrelevant.
+        edge_array   = np.sort(edge_nodes, axis= 1)
+        face_array_1 = np.sort(face_nodes[:,[0,1]], axis= 1)
+        face_array_2 = np.sort(face_nodes[:,[0,2]], axis= 1)
+        face_array_3 = np.sort(face_nodes[:,[0,3]], axis= 1)
+        face_array_4 = np.sort(face_nodes[:,[1,2]], axis= 1)
+        face_array_5 = np.sort(face_nodes[:,[1,3]], axis= 1)
+        face_array_6 = np.sort(face_nodes[:,[2,3]], axis= 1)
+
+        # Main loop through all edges.
+        teller = 0
+        toetsing_array = np.zeros((len(edge_nodes), 1), dtype=bool)
+        for edge in edge_array:
+            # Format issues, could cause that not the combination was tested, but only one element.
+            edge = [edge[0],edge[1]]
+
+            
+            Actual comparrison to the array
+            if ((np.where(edge==face_array_1,1,0)).sum(axis=1)==2).any():
+                    toetsing_array[teller] = 1
+                    
+                    # Debugging line, to show which array has found the lines.
+                    #print(1, faces[np.where(edge==face_array_1)[0]])
+            elif ((np.where(edge==face_array_2,1,0)).sum(axis=1)==2).any():
+
+                    toetsing_array[teller] = 1
+                    #print(2, faces[np.where(edge==face_array_2)[0]])
+                
+            elif ((np.where(edge==face_array_3,1,0)).sum(axis=1)==2).any():
+
+                    toetsing_array[teller] = 1
+                    #print(3, faces[np.where(edge==face_array_3)[0]])
+            elif ((np.where(edge==face_array_4,1,0)).sum(axis=1)==2).any():
+
+                    toetsing_array[teller] = 1
+                    #print(4, faces[np.where(edge==face_array_4)[0]])
+            elif ((np.where(edge==face_array_5,1,0)).sum(axis=1)==2).any():
+
+                    toetsing_array[teller] = 1
+                    #print(5, faces[np.where(edge==face_array_5)[0]])
+            elif ((np.where(edge==face_array_6,1,0)).sum(axis=1)==2).any():
+
+                    toetsing_array[teller] = 1
+                    #print(6, faces[np.where(edge==face_array_6)[0]])
+            else:
+                    toetsing_array[teller] = 0
+            teller = teller +1    
+            if teller == round(teller/10000,0)*10000:
+                print (teller, time.time() - t)
+        print (teller, time.time() - t)
+        
+        # Remove all edges that are not part of a face.
+        edge_nodes = edge_nodes[np.isin(toetsing_array, True).all(axis=1)]
 
         xnodes = xnodes[node_selection - 1]
         ynodes = ynodes[node_selection - 1]
 
-        # Make mapping for new id's
-        new_id_mapping = {old_id: new_id + 1 for new_id, old_id in enumerate(node_selection)}
-        edge_nodes = np.reshape([new_id_mapping[old_id] for old_id in edge_nodes.ravel()], edge_nodes.shape)
-        face_nodes = np.reshape([new_id_mapping[old_id] for old_id in face_nodes.ravel()], face_nodes.shape)
-
+            # Make mapping for new id's
+        new_id_mapping = {old_id: new_id + 1 for new_id, old_id in enumerate(node_selection)}    
+            
+        edge_nodes = np.reshape([-999 if old_id == -999 else new_id_mapping[old_id] for old_id in edge_nodes.ravel()], edge_nodes.shape)
+        face_nodes = np.reshape([-999 if old_id == -999 else new_id_mapping[old_id] for old_id in face_nodes.ravel()], face_nodes.shape)
+        
         return xnodes, ynodes, edge_nodes, face_nodes
 
     @staticmethod
