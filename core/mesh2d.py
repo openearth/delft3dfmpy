@@ -339,7 +339,7 @@ class Rectangular(Mesh2D):
                 return None
             # Else, get the arguments from the returned tuple
             else:
-                cleaned = xnodes, ynodes, edge_nodes, face_nodes
+                xnodes, ynodes, edge_nodes, face_nodes = cleaned
 
         # Update dimensions
         dimensions.numnode = len(xnodes)
