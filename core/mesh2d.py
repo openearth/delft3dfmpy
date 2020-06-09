@@ -136,14 +136,36 @@ class Mesh2D:
 
     def altitude_from_raster(self, rasterpath, where='face', stat='mean', missing='default'):
         """
-        Method to determine level of nodes
+        Method to determine level within cell or on nodes. The values are determined by
+        applying a statistic to the pixels within the cell bounds or around the node.
 
-        This function works faster for large amounts of cells, since it does not
-        draw polygons but checks for nearest neighbours (voronoi) based
-        on interpolation.
+        In case of the option 'node' Voronoi polygons are drawn around the nodes. These cells
+        are cut of at the edges of the the grid. This option might take a bit longer, since
+        all the polygons need to be drawn and clipped at the edges.
 
-        Note that the raster is not clipped. Any values outside the bounds are
-        also taken into account.
+        In case of msising values, which can occur:
+        - due to no-data parts in the grid that is sampled
+        - when the cell sizes within which the altitude is determined is smaller than a raster pixel.
+        The missing data can be filled.
+
+        Parameters
+        ----------
+        rasterpath : str
+            Path to raster
+        where : str
+            Locations where the altitude is determined. Can be on the faces, so within the
+            cell boundaries, or node, on the cell edged. Default: 'face'
+        stat : str
+            Statistic to determined from values within polygon bounds. A string is required that
+            describes a function that is known by numpy, such as 'mean' or 'max', without any
+            further arguments (quantile is not possible, since we'd need to specify which quantile).
+            Default: 'mean'
+        missing : str
+            How to fill the missing values.
+            - default: No filling, the missing values will have a NaN-value in the grid
+            - nearest: Fill the missing data with the nearest cell value that has a value
+            - interpolation: Interpolate the missing data with cell values that are present
+             Default: 'default'
         """
 
         # Select points on faces or nodes
@@ -274,6 +296,25 @@ class Rectangular(Mesh2D):
         Generate rectangular grid based on the origin (x0, y0) the cell sizes (dx, dy),
         the number of columns and rows (ncols, nrows) and a rotation in degrees (default=0)
         A geometry (clipgeo) can be given to clip the grid.
+
+        Parameters
+        ----------
+        x0 : int, float
+            x-coordinate of origin
+        y0 : int, float
+            y-coordinate of origin
+        dx : int, float
+            distance between consecutive grid cells in x-direction
+        dy : int, float
+            distance between consecutive grid cells in y-direction
+        ncols : int
+            Number of columns (x-direction) to generate
+        nrows : int
+            Number of rows (y-direction) to generate
+        clipgeo : shapely.geometry.Polygon
+            Optional, polygon within which the grid is clipped.
+        rotation : int, float
+            Rotation of the grid in degrees carthesian.
         """
 
         # Generate x and y spacing
@@ -363,6 +404,13 @@ class Rectangular(Mesh2D):
         Parameters
         ----------
         polygon : (list of) shapely.geometry.Polygon or a shapely.geometry.MultiPolygon
+            Polygon or Polygons within which the grid is generated
+        cellsize : int, float
+            Cell size of the rectangular grid to be generated
+        rotation : int, float
+            Rotation of the grid in degrees carthesian, default 0. Does not work
+            together with grid refinement.
+        
         """
 
         checks.check_argument(polygon, 'polygon', (list, Polygon, MultiPolygon))
@@ -394,12 +442,30 @@ class Rectangular(Mesh2D):
 
     def refine(self, polygon, level, cellsize, keep_grid=False, dflowfm_path=None):
         """
+        Method to refine the grid a number of steps (level) within a given polygon.
+        Both for the level and polygon a list of values can be provided so that the
+        refinement is applied to multiple locations. The fucntion uses the dfm.exe
+        to refine the grid, for which an ascii grid is generated with a refinement
+        factor. For this, the cellsize needs to be known. This is the original cell
+        size, so a 40 m generated grid should provide a cellsize of 40 m, als if
+        you plan to scale down to 10 m cells. If you choose cells of 60 x 40 m,
+        specify 20 m as cell size, the common denominator.
+
         Parameters
         ----------
-        polygon : list of tuples
-            Polygon in which to refine
-        level : int
-            Number of times to refine
+        polygon : (list of) Polygon(s)
+            Polygon in which to refine.
+        level : (list of) int(s)
+            Number of times to split each cell within the
+            polygon in quarters 40 -> 20 -> 10.
+        cellsize : int, float
+            Cell size with which the original grid was generated.
+        keep_grid : bool
+            Whether to keep the grid that is used for refinement.
+            This option can be used for debugging.
+        dflowfm_path : str
+            Path to the Dflow-FM executable. This argument can be specified if
+            the exe can not be found from the environmental variables.
         """
 
         if self.rotated:
