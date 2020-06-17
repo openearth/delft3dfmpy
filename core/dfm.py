@@ -1024,7 +1024,7 @@ class Network:
 
             # Get structure data from dfs
             ids_offsets = structures[['branchid', 'chainage']]
-            idx = (structures['branchid'] == '')
+            idx = (structures['branchid'] != '')
             if idx.any():
                 logger.warning('Some structures are not linked to a branch.')
             ids_offsets = ids_offsets.loc[idx, :]
