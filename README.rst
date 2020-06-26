@@ -30,6 +30,7 @@ Features
 * Build Delft3D FM model from Hydamo or seperately defined elements
 * Generate rectangular meshes with refinement
 * Create 1D 2D connections
+* Create RR model schematisation
 * Write to Delft3D FM model
 
 Installation
