@@ -35,14 +35,14 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         self.required_columns = required_columns[:]
         self.geotype = geotype
         
-    def drop(self,edf, item, index_col=None,axis=None):
-        #edf = ExtendedGeoDataFrame(geotype=LineString)
-        temp = gpd.GeoDataFrame()        
-        for field in self.iteritems(): 
-            temp[field[0]] = field[1]        
-        temp.drop(item,axis=axis, inplace=True)  
-        edf.set_data(temp, index_col=index_col, check_columns=True)              
-        return edf
+    # def drop(self,edf, item, index_col=None,axis=None):
+    #     #edf = ExtendedGeoDataFrame(geotype=LineString)
+    #     temp = gpd.GeoDataFrame()        
+    #     for field in self.iteritems(): 
+    #         temp[field[0]] = field[1]        
+    #     temp.drop(item,axis=axis, inplace=True)  
+    #     edf.set_data(temp, index_col=index_col, check_columns=True)              
+    #     return edf
                 
     def copy(self, deep=True):
         """
@@ -79,8 +79,15 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         gdf = gpd.read_file(path)
         
         if 'MultiPolygon' in str(gdf.geometry.type):
-            gdf = gdf[gdf.geometry.type != 'MultiPolygon']                
-            print('Features of type \"Multipolygon\" encountered: they are skipped.')
+            #gdf = gdf[gdf.geometry.type != 'MultiPolygon']  
+            sfx = ['_'+str(i) for i in range(100)]
+            gdf = gdf.explode()
+            for ftc in gdf.code.unique():                                
+                if len(gdf[gdf.code==ftc])>1:
+                    gdf.loc[gdf.code==ftc,'code'] = [i+sfx[ii] for ii,i in enumerate(gdf[gdf.code==ftc].code)]
+                    print(f'{ftc} is MultiPolygon; split into single parts.')               
+                
+            #print('Features of type \"Multipolygon\" encountered: they are skipped.')
         
         # Check number of entries
         if gdf.empty:
@@ -176,7 +183,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         # Get column names for features
         columns = [layerDefinition.GetFieldDefn(i).GetName() for i in range(nfields)]
-
+              
         # Collect features
         features = [f for f in layer]
 
@@ -188,8 +195,22 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
                 del georefs[i]
                 del features[i]
 
-        geometries = [wkb.loads(geo.ExportToWkb()) for geo in georefs]
-
+        geometries = []
+        new_feats = []
+        for i,f in enumerate(features):
+            geometry = wkb.loads(georefs[i].ExportToWkb())            
+            if(geometry.type=='MultiPolygon'):
+                new_geoms = list(geometry)                                
+                geometries.extend(new_geoms)
+                new_features = [f]*len(new_geoms)
+                new_feats.extend(new_features)                
+            else:
+                geometries.append(geometry)
+                new_feats.append(f)
+        features = new_feats        
+        #geometries = [wkb.loads(geo.ExportToWkb()) for geo in georefs]
+                      
+                
         # Get group by columns
         if groupby_column is not None:
             # Check if the group by column is found
@@ -257,6 +278,13 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         gdf = gpd.GeoDataFrame(fields, columns=columns, geometry=geometries)
         gdf.rename(columns=column_mapping, inplace=True)
 
+        # add a letter to 'exploded' multipolygons
+        sfx = ['_'+str(i) for i in range(100)]
+        for ftc in gdf.code.unique():                                
+            if len(gdf[gdf.code==ftc])>1:
+                gdf.loc[gdf.code==ftc,'code'] = [i+sfx[ii] for ii,i in enumerate(gdf[gdf.code==ftc].code)]
+                print(f'{ftc} is MultiPolygon; split into single parts.')   
+                    
         # Add data to class GeoDataFrame
         self.set_data(gdf, index_col=index_col, check_columns=check_columns, check_geotype=check_geotype)
 

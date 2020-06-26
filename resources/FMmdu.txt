@@ -1,27 +1,31 @@
 # Generated on ....
 # Deltares, D-Flow FM Version ....
 
-[model]
+[General]
 Program                           = D-Flow FM
 Version                           =
-MDUFormatVersion                  = 1.06                # File format version (do not edit this)
+fileType                          = modelDef
+fileVersion                       = 1.09                # File format version (do not edit this)
 AutoStart                         = 0                   # Autostart simulation after loading MDU (0: no, 1: autostart, 2: autostartstop)
+PathsRelativeToParent             = 0                   # Whether or not (1/0) to resolve file names (e.g. inside the *.ext file) relative to their direct parent, instead of to the toplevel MDU working dir. Autostart simulation after loading MDU (0: no, 1: autostart, 2: autostartstop)
 
 [geometry]
-NetFile                           = # Unstructured grid file *_net.nc
+NetFile                           =                     # Unstructured grid file *_net.nc
+BathymetryFile                    =                      
 OneDNetworkFile                   =                     # 1d networkfile
 BedlevelFile                      =                     # street_level.xyz , Bedlevels points file e.g. *.xyz, only needed for bedlevtype not equal 3
 DryPointsFile                     =                     # Dry points file *.xyz (third column dummy z values), or dry areas polygon file *.pol (third column 1/-1: inside/outside)
 WaterLevIniFile                   =                     # Initial water levels sample file *.xyz
-LandBoundaryFile                  =        # Land boundaries file *.ldb, used for visualization
+LandBoundaryFile                  =                     #  Land boundaries file *.ldb, used for visualization
 ThinDamFile                       =                     # Polyline file *_thd.pli, containing thin dams
 FixedWeirFile                     =                     # Polyline file *_fxw.pliz, containing fixed weirs with rows x, y, crest level, left ground level, right ground level
+UseCaching                        = 0                   # Use caching for geometrical/network-related items (0:no, 1: yes)
 Gulliesfile                       =                     # Polyline file *_gul.pliz, containing lowest bed level along talweg x, y, z level
 VertplizFile                      =                     # Vertical layering file *_vlay.pliz with rows x, y, Z, first Z, nr of layers, second Z, layer type
 ProflocFile                       =                     # Channel profile location file *_proflocation.xyz with rows x, y, z, profile number ref
 ProfdefFile                       =                     # Channel profile definition file *_profdefinition.def with definition for all profile numbers
 ProfdefxyzFile                    =                     # Channel profile definition file _profdefinition.def with definition for all profile numbers
-IniFieldFile                      =                     # Initial data
+IniFieldFile                      = initialconditions/initialFields.ini# Initial data
 Uniformwidth1D                    = 1.                  # Uniform width for channel profiles not specified by profloc
 Uniformheight1D                   = 1.                  # Uniform height for channel profiles not specified by profloc
 ManholeFile                       =                     # File *.ini containing manholes
@@ -30,7 +34,8 @@ ShipdefFile                       =                     # File *.shd containing 
 StructureFile                     = structure.ini       # File *.ini containing structures
 CrossLocFile                      = cross_section_locations.ini      # Name and location of the file containing the locations of the cross sections
 CrossDefFile                      = cross_section_definitions.ini    # Name and location of the file containing the definitions of the cross sections
-frictFile                         = roughness\r001.ini;roughness\r002.ini;roughness\r003.ini;roughness\r004.ini# Name and location of the file containing the roughness data
+FrictFile                         =                     # Name and location of the file containing the roughness data
+StorageNodeFile                   =                     # File containing the specification of storage nodes and/or manholes to add extra storage to 1D models.
 WaterLevIni                       = -10.                # Initial water level at missing s0 values
 BedlevUni                         = 7.                  # Uniform bed level used at missing z values if BedlevType > 2
 BedlevType                        = 1                   # Bathymetry specification
@@ -40,32 +45,57 @@ BedlevType                        = 1                   # Bathymetry specificati
                                                         # 4: at nodes, face levels min. of node values
                                                         # 5: at nodes, face levels max. of node values
                                                         # 6: at nodes, face levels max. of cell-center values
+Bedslope                          = 0.                  # bedslopeinclination, sets zk = bedlevuni + x*bedslope ans sets zbndz = xbndz*bedslope
 PartitionFile                     =                     # Domain partition polygon file *_part.pol for parallel run
 AngLat                            = 0.                  # Angle of latitude S-N (deg), 0: no Coriolis
 AngLon                            = 0.                  # Angle of longitude E-W (deg), 0: Greenwich, used in solar heat flux computation.
 Conveyance2D                      = -1                  # -1: R=HU,0: R=H, 1: R=A/P, 2: K=analytic-1D conv, 3: K=analytic-2D conv
 Slotw2D                           = 0.                  # -
 NonLin1D                          = 0
+1D2DLinkFile                      = # File containing the custom parameterization of 1D-2D links. 
+PartitionFile                     = # *_part.pol, polyline(s) x,y
+Blmeanbelow                       = -999.               # if not -999d0, below this level the cell centre bedlevel is the mean of surrouding netnodes
+Blminabove                        = -999.               # if not -999d0, above this level the cell centre bedlevel is the min of surrouding netnodes
+Nonlin2D                          = 0                   # Non-linear 2D volumes, only i.c.m. ibedlevtype = 3 and Conveyance2D>=1
+Sillheightmin                     = 0.0                 # Weir treatment only if both sills larger than this value (m)
+Makeorthocenters                  = 0                   # 1=yes, 0=no switch from circumcentres to orthocentres in geominit
+Dcenterinside                     = 1.                  # limit cell center; 1.0:in cell <-> 0.0:on c/g 
+Bamin                             = 1.d-6               # Minimum gridcell area, i.c.m. cutcells
+OpenBoundaryTolerance             = 3.                  # Search tolerance factor between boundary polyline and grid cells. Unit: in cell size units (i.e., not metres).
+RenumberFlowNodes                 = 1                   # Renumber the flow nodes (1: yes, 0: no)
+Kmx                               = 0                   # Max nr of vertical layers
+Layertype                         = 1                   # 1= all sigma, 2 = all z, 3 = use VertplizFile
+Numtopsig                         = 0                   # Nr of sigmalayers in top of Zlayer model
+SigmaGrowthFactor                 = 1.                  # layer thickness growth factor from bed up
+dxDoubleAt1DEndNodes              = true                # Extend endnodes with half ∆x.
 
 [numerics]
 CFLMax                            = 0.7                 # Maximum Courant number
 AdvecType                         = 33                  # Advection type (0: none, 1: Wenneker, 2: Wenneker q(uio-u), 3: Perot q(uio-u), 4: Perot q(ui-u), 5: Perot q(ui-u) without itself)
 TimeStepType                      = 2                   # Time step handling (0: only transport, 1: transport + velocity update, 2: full implicit step-reduce, 3: step-Jacobi, 4: explicit)
-Icoriolistype                     = 5                   # 0=No, 1=yes, if jsferic then spatially varying, if icoriolistype==6 then constant (anglat)
 Limtypmom                         = 4                   # Limiter type for cell center advection velocity (0: none, 1: minmod, 2: van Leer, 3: Kooren, 4: monotone central)
 Limtypsa                          = 4                   # Limiter type for salinity transport (0: none, 1: minmod, 2: van Leer, 3: Kooren, 4: monotone central)
-TransportMethod                   = 1                   # Transport method (0: Herman's method, 1: transport module)
-TransportTimestepping             = 1                   # Timestepping method in Transport module, 0 = global, 1 = local (default)
-Vertadvtypsal                     = 6                   # Vertical advection type for salinity (0: none, 1: upwind explicit, 2: central explicit, 3: upwind implicit, 4: central implicit, 5: central implicit but upwind for neg. stratif., 6: higher order explicit, no Forester)
-Vertadvtyptem                     = 6                   # Vertical advection type for temperature (0: none, 1: upwind explicit, 2: central explicit, 3: upwind implicit, 4: central implicit, 5: central implicit but upwind for neg. stratif., 6: higher order explicit, no Forester)
+Limtyphu                          = 0                   # Limiter type for waterdepth in continuity eq., 0=no,1=minmod,2=vanLeer,3=Koren,4=Monotone Central
 Icgsolver                         = 4                   # Solver type (1: sobekGS_OMP, 2: sobekGS_OMPthreadsafe, 3: sobekGS, 4: sobekGS + Saadilud, 5: parallel/global Saad, 6: parallel/Petsc, 7: parallel/GS)
-Noderivedtypes                    = 5                   # 0=use der. types. , 1 = less, 2 = lesser, 5 = also dealloc der. types
+Maxdegree                         = 6                   # Maximum degree in Gauss elimination
+FixedWeirScheme                   = 9                   # 6 = semi-subgrid scheme, 8 = Tabellenboek, 9 = Villemonte
+FixedWeirContraction              = 1.                  # flow width = flow width*FixedWeirContraction
+Izbndpos                          = 0                   # Position of z boundary, 0=D3Dflow, 1=on net boundary,2 = on specifiend polyline
 Tlfsmo                            = 0.                  # Fourier smoothing time (s) on water level boundaries
-Slopedrop2D                       = 0.                  # Apply drop losses only if local bed slope > Slopedrop2D, (<=0: no drop losses)
-cstbnd                            = 0                   # Delft-3D type velocity treatment near boundaries for small coastal models (1: yes, 0: no)
+Slopedrop2D                       = 0.                  # Apply drop losses only if local bed slope > Slopedrop2D, (<=0: no drop losses)cstbnd                            = 0                   # Delft-3D type velocity treatment near boundaries for small coastal models (1: yes, 0: no)
+Drop1D                            = 0                   # Limit the down stream water level in the momentum equation to the downstream invert level,
+Chkadvd                           = 0.1                 # Check advection terms if depth < chkadvdp, => less setbacks
+Teta0                             = 0.55                # Theta of time integration, 0.5 < Theta < 1d0
+Qhrelax                           = 0.01                # Relaxation qhbnd ( )
+cstbnd                            = 0                   # Delft-3D type velocity treatment near boundaries for small coastal models (1) or not (0)
+Maxitverticalforestersal          = 0                   # 0 : no vertical filter, > 0 = Max nr of iterations
+Maxitverticalforestertem          = 0                   # 0 : no vertical filter for temp, > 0 = Max nr of iterations
+Turbulencemodel                   = 3                   # 0=no, 1 = constant, 2 = algebraic, 3 = k-eps, 4 = k-tau
+Turbulenceadvection               = 3                   # 0=no, 3 = hor. expl., vert. impl.
+AntiCreep                         = 0                   # Flag for AntiCreep option (0=off, 1=on)
+Maxwaterleveldiff                 = 0.                  # upper bound (in m) on water level changes, <= 0: no bounds
+Maxvelocitydiff                   = 0.                  # upper bound (in m/s) on velocity changes, <= 0: no bounds
 Epshu                             = 1.d-4               # Threshold water depth for wet and dry cells
-jaupwindsrc                       = 1                   # 1st-order upwind advection at sources/sinks (1) or higher-order (0)
-jasfer3D                          = 0                   # corrections for spherical coordinates
 
 [physics]
 UnifFrictCoef                     = 0.03                  # Uniform friction coefficient (0: no friction)
@@ -103,11 +133,8 @@ RefDate                           = 20000101            # Reference date (yyyymm
 Tzone                             = 0.                  # Time zone assigned to input time series
 DtUser                            = 60.                 # Time interval (s) for external forcing update
 DtNodal                           = 60.                 # Time interval (s) for updating nodal factors in astronomical boundary conditions
-DtMax                             = 3600.               # Maximal computation timestep (s)
-Dtfacmax                          = 1.1                 # Max timestep increase factor ( )
+DtMax                             = 30.               # Maximal computation timestep (s)
 DtInit                            = 60.                 # Initial computation timestep (s)
-Timestepanalysis                  = 0                   # 0=no, 1=see file *.steps
-Autotimestepdiff                  = 0                   # 0 = no, 1 = yes (Time limitation based on explicit diffusive term)
 Tunit                             = S                   # Time unit for start/stop times (D, H, M or S)
 TStart                            = 0.0                 # Start time w.r.t. RefDate (in TUnit)
 TStop                             = 1728000.0           # Stop  time w.r.t. RefDate (in TUnit)
@@ -173,7 +200,3 @@ EulerVelocities                   = 0                   # Euler velocities outpu
 Wrirst_bnd                        = 1                   # Write waterlevel, bedlevel and coordinates of boundaries to restart files
 Writepart_domain                  = 1                   # Write partition domain info. for postprocessing
 
-[sediment]
-MorFile                           =                     # Morphology settings file (*.mor)
-SedFile                           =                     # Sediment characteristics file (*.sed)
-Sedimentmodelnr                   =                     # Sediment model nr, (0=no, 1=Krone, 2=SvR2007)

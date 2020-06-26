@@ -179,6 +179,10 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
                     intersecting_pixels = zonal_stats(cat.geometry.intersection(sew.geometry), lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)
                     if intersecting_pixels[0]=={}:
                         continue
+                    if 14.0 not in intersecting_pixels[0]:
+                        print(f'{sew.code} / {cat.code}: no paved area in sewer area!')
+                        continue
+                        
                     pav_pixels = intersecting_pixels[0][14.0]
                     pav_area += pav_pixels*int(px_area)
                     # subtract it fromthe total paved area in this catchment, make sure at least 0 remains
@@ -345,9 +349,14 @@ def generate_boundary(boundary_nodes, catchments, overflows=None):
     else:
         bnd_drr.index = catchments.code
     for num, cat in enumerate(catchments.itertuples()):    
-        bnd_drr.at[cat.code, 'code'] = cat.lateraleknoopcode
-        bnd_drr.at[cat.code, 'px']  = boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['X'].to_string(index=False).strip()
-        bnd_drr.at[cat.code, 'py']  = boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['Y'].to_string(index=False).strip()
+        # print(num, cat.code)
+        if boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode].empty:
+            #raise IndexError(f'{cat.code} not connected to a boundary node. Skipping.')
+            print(f'{cat.code} not connected to a boundary node. Skipping.')
+            continue
+        bnd_drr.at[cat.code, 'code'] = cat.lateraleknoopcode        
+        bnd_drr.at[cat.code, 'px']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].x.iloc[0]).strip()                                                                 
+        bnd_drr.at[cat.code, 'py']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].y.iloc[0]).strip()
     if overflows is not None:
         for num, ovf in enumerate(overflows.itertuples()):
             bnd_drr.at[ovf.code, 'code'] = ovf.code
@@ -357,8 +366,9 @@ def generate_boundary(boundary_nodes, catchments, overflows=None):
 
 def generate_seepage(catchments, seepage_folder):    
     """
-    Method to obtain catchment-average seepage fluxes from rasters. The time step is deduced from the raster filenames.
+    Method to obtain catchment-average seepage fluxes from rasters. The time step is deduced from the raster filenames. 
     
+    We assume seepage is read from Metaswap (m3 per cell). It needs to be converted to mm/day.
     """
     warnings.filterwarnings('ignore')
     file_list = os.listdir(seepage_folder)
@@ -366,13 +376,15 @@ def generate_seepage(catchments, seepage_folder):
     for ifile, file in enumerate(file_list):
         array, affine, time = read_raster(os.path.join(seepage_folder, file))
         times.append(time)           
-        stats = zonal_stats(catchments, array, affine=affine, stats="median", all_touched=True)
+        stats = zonal_stats(catchments, array, affine=affine, stats="mean", all_touched=True)
         if ifile==0:
-            result = pd.DataFrame( [[s['median'] for s in stats]] , columns='sep_'+catchments.code)
+            result = pd.DataFrame( [[s['mean'] for s in stats]] , columns='sep_'+catchments.code)
         else:
-            result = result.append(pd.DataFrame( [[s['median'] for s in stats]], dtype=float, columns='sep_'+catchments.code), ignore_index=True)    
+            result = result.append(pd.DataFrame( [[s['mean'] for s in stats]], dtype=float, columns='sep_'+catchments.code), ignore_index=True)    
     result.index = times 
-    return result
+    # convert units
+    result_mmd = (result / (1e-3*(affine[0]*-affine[4])))/((times[2]-times[1]).total_seconds()/86400.)
+    return result_mmd
 
 def generate_precip(areas, precip_folder):
     """
@@ -393,7 +405,7 @@ def generate_precip(areas, precip_folder):
     result.index = times 
     return result
 
-def generate_evap(areas, evap_folder, dissolve_field=None):    
+def generate_evap(areas, evap_folder):    
     """
     Method to obtain catchment-average evaporation fluxes from rasters. The time step is deduced from the raster filenames. Since only one timeeries is allowed, the meteo areas are dissolved to a user specifield field.
     
@@ -401,7 +413,8 @@ def generate_evap(areas, evap_folder, dissolve_field=None):
     warnings.filterwarnings('ignore')
     file_list = os.listdir(evap_folder)
     # aggregated evap
-    agg_areas = areas.iloc[0:len(areas),:].dissolve(by=dissolve_field,aggfunc='mean')
+    areas['dissolve'] = 1
+    agg_areas = areas.iloc[0:len(areas),:].dissolve(by='dissolve',aggfunc='mean')
     times = []    
     for ifile, file in enumerate(file_list):
         array, affine, time = read_raster(os.path.join(evap_folder, file))

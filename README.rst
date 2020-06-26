@@ -27,13 +27,10 @@ Features
 --------
 
 * Read Hydamo or shape files to Python data structure
-* Build Delft3D RR/FM model from Hydamo or seperately defined elements
+* Build Delft3D FM model from Hydamo or seperately defined elements
 * Generate rectangular meshes with refinement
 * Create 1D 2D connections
-* Genererate an rainfall-runoff model from raster input
-* Write to Delft3D FM model, coupled with RR or standalone
-
-Note that the RR-part has been newly developed and it not yet fully tested, especially on larger catchments. It is able to produce a complete, running model for the Moergestelsbroek (see notebooks/), but no larger areas has been modelled yet.
+* Write to Delft3D FM model
 
 Installation
 ------------
@@ -72,4 +69,4 @@ To get all the required dependencies working, it is advised to:
 
 Usage
 -----
-The usage is best described by the example notebook: https://github.com/openearth/delft3dfmpy/blob/master/notebooks/Usage_introduction_coupled_RRFM.ipynb
+The usage is best described by the example notebook: https://github.com/openearth/delft3dfmpy/blob/master/notebooks/Usage_introduction.ipynb
