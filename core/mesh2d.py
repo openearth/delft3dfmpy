@@ -194,7 +194,6 @@ class Mesh2D:
             geometries.set_values(var, meshout.get_values(var))
 
         ierr = wrapperGridgeom.ggeo_deallocate()
-        return geometries
         
     def altitude_constant(self, constant, where='face'):
 
@@ -394,7 +393,7 @@ class Rectangular(Mesh2D):
         geometries.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
 
         # Determine what the cells are
-        geometries = self._find_cells(geometries)
+        self._find_cells(geometries)
 
         # Clip
         if clipgeo is not None:
