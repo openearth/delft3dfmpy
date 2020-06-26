@@ -21,7 +21,7 @@ Python package to generate delft3dfm models from standardized data models or oth
 
 * Free software: MIT license
 * Documentation: https://dhydamo.readthedocs.io.
-
+* WIKI (in Dutch): https://hkvconfluence.atlassian.net/wiki/spaces/DHYD/pages/222396421/Achtergrond
 
 Features
 --------
