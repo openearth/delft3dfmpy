@@ -98,7 +98,7 @@ class Mesh2D:
             edge = [edge[0],edge[1]]
 
             
-            Actual comparrison to the array
+            #Actual comparrison to the array
             if ((np.where(edge==face_array_1,1,0)).sum(axis=1)==2).any():
                     toetsing_array[teller] = 1
                     
