@@ -11,3 +11,5 @@ datamodels/__pycache__/cstructures.cpython-37.pyc
 datamodels/__pycache__/hydamo.cpython-37.pyc
 io/__pycache__/dflowfmwriter.cpython-37.pyc
 io/__pycache__/dflowfmwriter.cpython-37.pyc
+*.pyc
+.vscode/settings.json

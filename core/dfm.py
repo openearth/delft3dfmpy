@@ -65,17 +65,22 @@ class DFlowFMModel:
                     raise FileExistsError(f'Path "{path}" already exists. Choose another output folder or specify overwrite=True.')
 
         # Links
-        links = self.get_1d2dlinks(as_gdf=True)
+        links = self.network.links1d2d.get_1d2dlinks(as_gdf=True)
         links.crs = {'init': 'epsg:28992'}
         links.to_file(paths[2])
 
         # Mesh2d
-        mesh2d = gpd.GeoDataFrame(geometry=[Polygon(poly) for poly in self.mesh2d.get_faces()], crs='epsg:28992')
+        mesh2d = gpd.GeoDataFrame(geometry=[Polygon(poly) for poly in self.network.mesh2d.get_faces()], crs='epsg:28992')
+        # Add properties
+        # Save
         mesh2d.to_file(paths[1])
 
         # Mesh1d
-        mesh1d = gpd.GeoDataFrame(geometry=[LineString(line) for line in self.mesh1d.get_segments()], crs='epsg:28992')
-        mesh1d.to_file(paths[0])    
+        mesh1d = gpd.GeoDataFrame(geometry=[LineString(line) for line in self.network.mesh1d.get_segments()], crs='epsg:28992')
+        # Add properties
+        mesh1d['node1'], mesh1d['node2'] = self.network.mesh1d.get_values('edge_nodes', as_array=True).T
+        # Save
+        mesh1d.to_file(paths[0])
     
 class ExternalForcings:
     """
@@ -932,6 +937,7 @@ class Network:
             
             # Get offsets from dictionary
             offsets = self.offsets[branch.Index]
+            
             # The number of links on the branch
             nlinks = len(offsets) - 1
             
