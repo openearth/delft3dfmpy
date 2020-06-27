@@ -71,10 +71,15 @@ class DFlowFMModel:
 
         # Mesh2d
         mesh2d = gpd.GeoDataFrame(geometry=[Polygon(poly) for poly in self.network.mesh2d.get_faces()], crs='epsg:28992')
+        # Add properties
+        # Save
         mesh2d.to_file(paths[1])
 
         # Mesh1d
         mesh1d = gpd.GeoDataFrame(geometry=[LineString(line) for line in self.network.mesh1d.get_segments()], crs='epsg:28992')
+        # Add properties
+        mesh1d['node1'], mesh1d['node2'] = self.network.mesh1d.get_values('edge_nodes', as_array=True).T
+        # Save
         mesh1d.to_file(paths[0])
 
 class ExternalForcings:
@@ -531,9 +536,17 @@ class Links1d2d:
         """
         Generate 1d2d links from 1d nodes. Each 1d node is connected to
         the nearest 2d cell. A maximum distance can be specified to remove links
-        that are too long.
+        that are too long. Also the branchid can be specified, if you only want
+        to generate links from certain 1d branches.
+        
+        Parameters
+        ----------
+        max_distance : int, float
+            The maximum length of a link. All longer links are removed.
+        branchid : str or list
+            ID's of branches for which the connection from 1d to 2d is made.
         """
-        logger.info(f'Generating links from 1d to 2d based on distance.')
+       logger.info(f'Generating links from 1d to 2d based on distance.')
         
         # Create KDTree for faces
         faces2d = np.c_[self.mesh2d.get_values('facex'), self.mesh2d.get_values('facey')]
@@ -559,14 +572,30 @@ class Links1d2d:
             self.check_boundary_link(bc)
 
     def generate_2d_to_1d(self, max_distance=np.inf, intersecting=True, branchid=None):
-        """
-        Generate 1d2d links from 2d cells, meaning that for the option:
-        1. intersecting = True: each 2d cell crossing a 1d branch is connected to
+         """
+        Generate 1d2d links from 2d cells. A maximum distance can be specified
+        to remove links that are too long. Also a branchid can be specified to only
+        generate links to certain branches.
+        
+        In case of a 1D and 2D grid that is on top of each other the user might want
+        to generate links only for intersecting cells, where in case of non-overlapping meshes
+        the use might want to use the shortest distance. This behaviour can be specified with
+        the option intersecting:
+        1. intersecting = True: each 2d cell crossing a 1d branch segment is connected to
             the nearest 1d cell.
         2. intersecting = False: each 2d cell is connected to the nearest 1d cell,
-            if the link does not cross another cell.
-        A maximum distance can be specified to remove links that are too long. In
-        case of option 2. setting a max distance will speed up the the process a bit.
+            If the link crosses another cell it is removed.
+        In case of option 2. setting a max distance will speed up the the process a bit.
+
+        Parameters
+        ----------
+        max_distance : int, float
+            Maximum allowed length for a link
+        intersecting : bool
+            Make connections for intersecting 1d and 2d cells or based on
+            nearest neighbours
+        branchid : str or list of str
+            Generate only to specified 1d branches
         """
         logger.info(f'Generating links from 2d to 1d based on {"intersection" if intersecting else "distance"}.')
 
