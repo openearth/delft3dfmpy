@@ -1,11 +1,13 @@
+
 import logging
 import os
 from ctypes import CDLL, byref, c_char, c_int, pointer
+from itertools import combinations
 
 import geopandas as gpd
 import numpy as np
-from scipy.spatial import KDTree, Voronoi
 from scipy.interpolate import LinearNDInterpolator
+from scipy.spatial import KDTree, Voronoi
 from shapely.geometry import (
     LineString, MultiLineString, MultiPolygon, Point, Polygon, box)
 from shapely.ops import unary_union
@@ -54,14 +56,17 @@ class Mesh2D:
         nodeids_in_polygon = np.where(index)[0] + 1
         edge_nodes = edge_nodes[np.isin(edge_nodes, nodeids_in_polygon).all(axis=1)]
 
-        # Remove edges
+        # Remove edges that intersect the clipping polygons. This is needed for when the clipping polygon is narrow,
+        # So it crosses an edge without containing one of the edge nodes
         edges = gpd.GeoDataFrame(geometry=[LineString(line) for line in np.c_[xnodes, ynodes][edge_nodes - 1]])
         isect = np.zeros(len(edge_nodes), dtype=bool)
         for poly in geometry.as_polygon_list(polygon):
             isect = isect | edges.intersects(poly.exterior).values
+            for interior in poly.interiors:
+                isect = isect | edges.intersects(interior).values
         edge_nodes = edge_nodes[~isect]
 
-        # Remove edges that have a 1 count, until None are left
+        # Remove edges that have a 1 count, until none are left
         unique, count = np.unique(edge_nodes, return_counts=True)
         while any(count == 1):
             count1nodes = unique[count == 1]
@@ -78,80 +83,115 @@ class Mesh2D:
 
         return xnodes, ynodes, edge_nodes
 
-   def clean_nodes(self, xnodes, ynodes, edge_nodes, face_nodes):
+    def clip_mesh_by_polygon(self, polygon):
+        """
+        Removes part of the existing mesh within the given polygon.
+
+        Parameters
+        ----------
+        polygon : list, Polygon, MultiPolygon
+            A polygon, multi-polygon or list of multiple polygons or multipolygons.
+            The faces within the polygons are removed.
+        """
+        logger.info('Clipping 2D mesh by polygon.')
+
+        # Check if the input arguments is indeed some kind of polygon
+        checks.check_argument(polygon, 'polygon', (list, Polygon, MultiPolygon))
+        
+        # Get xnodes, ynodes and edge_nodes
+        xnodes = self.meshgeom.get_values('nodex', as_array=True)
+        ynodes = self.meshgeom.get_values('nodey', as_array=True)
+        edge_nodes = self.meshgeom.get_values('edge_nodes', as_array=True)
+
+        # Clip
+        logger.info('Clipping nodes.')
+        xnodes, ynodes, edge_nodes = self.clip_nodes(xnodes, ynodes, edge_nodes, polygon, keep_outside=True)
+
+        # Update dimensions
+        self.meshgeomdim.numnode = len(xnodes)
+        self.meshgeomdim.numedge = len(edge_nodes)
+
+        # Add nodes and links
+        self.meshgeom.set_values('nodex', xnodes)
+        self.meshgeom.set_values('nodey', ynodes)
+        self.meshgeom.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
+
+        # Determine what the cells are
+        logger.info('Finding cell faces within clipped nodes.')
+        self._find_cells(self.meshgeom)
+
+        # Clean nodes, this function deletes nodes based on no longer existing cells
+        face_nodes = self.meshgeom.get_values('face_nodes', as_array=True)
+        logger.info('Removing incomplete faces.')
+        cleaned = self.clean_nodes(xnodes, ynodes, edge_nodes, face_nodes)
+       
+        # If cleaning leaves no whole cells, return None
+        if cleaned is None:
+            raise ValueError('Clipping the grid does not leave any nodes.')
+        # Else, get the arguments from the returned tuple
+        else:
+            xnodes, ynodes, edge_nodes, face_nodes = cleaned
+
+        logger.info('Update mesh with clipped nodes, edges and faces.')
+        # Update dimensions
+        self.meshgeomdim.numnode = len(xnodes)
+        self.meshgeomdim.numedge = len(edge_nodes)
+
+        # Add nodes and links
+        self.meshgeom.set_values('nodex', xnodes)
+        self.meshgeom.set_values('nodey', ynodes)
+        self.meshgeom.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
+        self.meshgeom.set_values('face_nodes', np.ravel(face_nodes).tolist())
+
+    def clean_nodes(self, xnodes, ynodes, edge_nodes, face_nodes):
         """
         Method to clean the nodes. Edges that do not form a cell are deleted.
         """
 
         # Clip
-
         node_selection = np.unique(face_nodes)
         node_selection = node_selection[node_selection!=-999]
+        
         #Remove all nodes that are not in any face
         edge_nodes = edge_nodes[np.isin(edge_nodes, node_selection).all(axis=1)]
-        
                 
         if not node_selection.any():
             return None
         
         # Remove all segments that are not part of any face
-        import time
         
-        # Process that requires large computational time, monitor progress (requires tidying)
-        t = time.time()
-
         # First build arrays for possible pairs, assuming that maximum of 4 nodes is possible.
         # Sorting is required, as direction is irrelevant.
-        edge_array   = np.sort(edge_nodes, axis= 1)
-        face_array_1 = np.sort(face_nodes[:,[0,1]], axis= 1)
-        face_array_2 = np.sort(face_nodes[:,[0,2]], axis= 1)
-        face_array_3 = np.sort(face_nodes[:,[0,3]], axis= 1)
-        face_array_4 = np.sort(face_nodes[:,[1,2]], axis= 1)
-        face_array_5 = np.sort(face_nodes[:,[1,3]], axis= 1)
-        face_array_6 = np.sort(face_nodes[:,[2,3]], axis= 1)
+        edge_array = np.sort(edge_nodes, axis=1)
+
+        # Get combinations of face nodes that can form an edge
+        combs = list(combinations(range(len(face_nodes[0])), 2))
+        face_arrays = []
+        for comb in combs:
+            arr = np.sort(face_nodes[:, comb], axis=1)
+            arr = arr[~(arr == -999).any(axis=1)]
+            face_arrays.append(arr)
 
         # Main loop through all edges.
         teller = 0
         toetsing_array = np.zeros((len(edge_nodes), 1), dtype=bool)
         for edge in edge_array:
             # Format issues, could cause that not the combination was tested, but only one element.
-            edge = [edge[0],edge[1]]
+            edge = [edge[0], edge[1]]
 
-            
-            #Actual comparrison to the array
-            if ((np.where(edge==face_array_1,1,0)).sum(axis=1)==2).any():
-                    toetsing_array[teller] = 1
-                    
+            for i, face_array in enumerate(face_arrays):
+                #Actual comparrison to the array
+                if np.where(edge == face_array, 1, 0).all(axis=1).any():
+                    toetsing_array[teller] = 1                   
                     # Debugging line, to show which array has found the lines.
-                    #print(1, faces[np.where(edge==face_array_1)[0]])
-            elif ((np.where(edge==face_array_2,1,0)).sum(axis=1)==2).any():
-
-                    toetsing_array[teller] = 1
-                    #print(2, faces[np.where(edge==face_array_2)[0]])
-                
-            elif ((np.where(edge==face_array_3,1,0)).sum(axis=1)==2).any():
-
-                    toetsing_array[teller] = 1
-                    #print(3, faces[np.where(edge==face_array_3)[0]])
-            elif ((np.where(edge==face_array_4,1,0)).sum(axis=1)==2).any():
-
-                    toetsing_array[teller] = 1
-                    #print(4, faces[np.where(edge==face_array_4)[0]])
-            elif ((np.where(edge==face_array_5,1,0)).sum(axis=1)==2).any():
-
-                    toetsing_array[teller] = 1
-                    #print(5, faces[np.where(edge==face_array_5)[0]])
-            elif ((np.where(edge==face_array_6,1,0)).sum(axis=1)==2).any():
-
-                    toetsing_array[teller] = 1
-                    #print(6, faces[np.where(edge==face_array_6)[0]])
+                    #print(i, faces[np.where(edge==face_array)[0]])
+                    break
+            # if no match is found (no break):
             else:
-                    toetsing_array[teller] = 0
-            teller = teller +1    
-            if teller == round(teller/10000,0)*10000:
-                print (teller, time.time() - t)
-        print (teller, time.time() - t)
-        
+                toetsing_array[teller] = 0
+            
+            teller = teller + 1
+            
         # Remove all edges that are not part of a face.
         edge_nodes = edge_nodes[np.isin(toetsing_array, True).all(axis=1)]
 
@@ -355,52 +395,6 @@ class Rectangular(Mesh2D):
         self.meshgeomdim.maxnumfacenodes = 4
         self.rotated = False
 
-    def clip_nodes_from_raster(self, clipgeo=None):
-        
-        checks.check_argument(clipgeo, 'polygon', (list, Polygon, MultiPolygon))
-        
-        # Get xnodes, ynodes and edge_nodes
-        xnodes = self.meshgeom.get_values('nodex', as_array=True)
-        ynodes = self.meshgeom.get_values('nodey', as_array=True)
-        edge_nodes = self.meshgeom.get_values('edge_nodes', as_array=True)
-
-        # Clip
-        xnodes, ynodes, edge_nodes = self.clip_nodes(xnodes, ynodes, edge_nodes, clipgeo, keep_outside=True)
-
-        # Update dimensions
-        self.meshgeomdim.numnode = len(xnodes)
-        self.meshgeomdim.numedge = len(edge_nodes)
-
-        # Add nodes and links
-        self.meshgeom.set_values('nodex', xnodes)
-        self.meshgeom.set_values('nodey', ynodes)
-        self.meshgeom.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
-
-        # Determine what the cells are
-        self._find_cells(self.meshgeom)
-
-        # Clean nodes, this function deletes nodes based on no longer existing cells
-        face_nodes = self.meshgeom.get_values('face_nodes', as_array=True)
-        cleaned = self.clean_nodes(xnodes, ynodes, edge_nodes, face_nodes)
-       
-        # If cleaning leaves no whole cells, return None
-        if cleaned is None:
-            raise ValueError('Clipping the grid does not leave any nodes.')
-        # Else, get the arguments from the returned tuple
-        else:
-            xnodes, ynodes, edge_nodes, face_nodes = cleaned
-            
-        # Update dimensions
-        self.meshgeomdim.numnode = len(xnodes)
-        self.meshgeomdim.numedge = len(edge_nodes)
-        self.meshgeomdim.maxnumfacenodes = 4
-
-        # Add nodes and links
-        self.meshgeom.set_values('nodex', xnodes)
-        self.meshgeom.set_values('nodey', ynodes)
-        self.meshgeom.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
-        self.meshgeom.set_values('face_nodes', np.ravel(face_nodes).tolist())
-
     def generate_grid(self, x0, y0, dx, dy, ncols, nrows, clipgeo=None, rotation=0):
         """
         Generate rectangular grid based on the origin (x0, y0) the cell sizes (dx, dy),
@@ -500,29 +494,29 @@ class Rectangular(Mesh2D):
         checks.check_argument(polygon, 'polygon', (list, Polygon, MultiPolygon))
 
         polygons = geometry.as_polygon_list(polygon)
-        for i, poly in enumerate(polygons):
-            logger.info(f'Generating grid with cellsize {cellsize} m and rotation {rotation} degrees within polygon {i+1}/{len(polygons)}.')
-            bounds = poly.bounds
+        
+        logger.info(f'Generating grid with cellsize {cellsize} m and rotation {rotation} degrees.')
+        convex = MultiPolygon(polygons).convex_hull
+        
+        # In case of a rotation, extend the grid far enough to make sure
+        if rotation != 0:
+            # Find a box that contains the whole polygon
+            (x0, y0), xsize, ysize = geometry.minimum_bounds_fixed_rotation(convex, rotation)
+        else:
+            xsize = convex.bounds[2] - convex.bounds[0]
+            ysize= convex.bounds[3] - convex.bounds[1]
+            x0, y0 = convex.bounds[0], convex.bounds[1]
 
-            # In case of a rotation, extend the grid far enough to make sure
-            if rotation != 0:
-                # Find a box that contains the whole polygon
-                (x0, y0), xsize, ysize = geometry.minimum_bounds_fixed_rotation(poly, rotation)
-            else:
-                xsize = bounds[2] - bounds[0]
-                ysize= bounds[3] - bounds[1]
-                x0, y0 = poly.bounds[0], poly.bounds[1]
-
-            self.generate_grid(
-                x0=x0,
-                y0=y0,
-                dx=cellsize,
-                dy=cellsize,
-                ncols=int(xsize / cellsize) + 1,
-                nrows=int(ysize / cellsize) + 1,
-                clipgeo=poly,
-                rotation=rotation
-            )
+        self.generate_grid(
+            x0=x0,
+            y0=y0,
+            dx=cellsize,
+            dy=cellsize,
+            ncols=int(xsize / cellsize) + 1,
+            nrows=int(ysize / cellsize) + 1,
+            clipgeo=polygon,
+            rotation=rotation
+        )
 
     def refine(self, polygon, level, cellsize, debug=False, dflowfm_path=None):
         """

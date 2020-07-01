@@ -546,7 +546,7 @@ class Links1d2d:
         branchid : str or list
             ID's of branches for which the connection from 1d to 2d is made.
         """
-       logger.info(f'Generating links from 1d to 2d based on distance.')
+        logger.info(f'Generating links from 1d to 2d based on distance.')
         
         # Create KDTree for faces
         faces2d = np.c_[self.mesh2d.get_values('facex'), self.mesh2d.get_values('facey')]
@@ -572,7 +572,7 @@ class Links1d2d:
             self.check_boundary_link(bc)
 
     def generate_2d_to_1d(self, max_distance=np.inf, intersecting=True, branchid=None):
-         """
+        """
         Generate 1d2d links from 2d cells. A maximum distance can be specified
         to remove links that are too long. Also a branchid can be specified to only
         generate links to certain branches.
@@ -1167,7 +1167,7 @@ class Network:
         # Convert integer to string
         if isinstance(roughnesstype, int):
             roughnesstype = hydamo_to_dflowfm.roughness_gml[roughnesstype]
-    	
+        
         # Get name
         name = f'{roughnesstype}_{float(value)}'
 
