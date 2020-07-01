@@ -19,7 +19,7 @@
 #  - pumps now expect their margins in m+NAP instead of cm. I.e., the margins are now used directly to set the start/stoplevelsuctionside. Previously they were related to the 'streefwaarde';
 #  - Boundary conditions can be added to the model as 'dfmmodel.external_forcings.io.from_hydamo(hydamo.boundary_conditions)' instead of running 'add_boundary_condition' in a loop. This does not work (yet) for time series, only for constant boundary conditions
 #  - structures bridge, universal weir, compound structure and orifice are added.
-#  - the module was breaking down when pandas was updated to version 1.0.1. Workarounds were immplemented to avoid this.
+#  - the module was breaking down when pandas was updsated to version 1.0.1. Workarounds were immplemented to avoid this.
 #  - funcdtionality has been implemented to generate also the RR-components of a coupled RR-FM D-HYDRO model.
 
 # In[1]:
@@ -83,7 +83,6 @@ pad = 'D:/3640.20/delft3dfmpy.git/trunk/data/'
 
 # In[3]:
 
-
 # initialize the class
 hydamo = HyDAMO(extent_file=pad+'gis/selectie_pilot.shp')
 
@@ -100,7 +99,7 @@ hydamo.crosssections.read_gml(pad+'gml/dwarsprofiel.gml' ,
 
 hydamo.crosssections.snap_to_branch(hydamo.branches, snap_method='intersecting')
 hydamo.crosssections.dropna(axis=0, inplace=True, subset=['branch_offset'])
-hydamo.crosssections = hydamo.crosssections.drop(ExtendedGeoDataFrame(geotype=LineString),'code', index_col='profielcode',axis=1)
+hydamo.crosssections.drop('code', axis=1, inplace=True)
 hydamo.crosssections.rename(columns={'profielcode': 'code'}, inplace=True)
 
 hydamo.parametrised_profiles.read_gml(pad+'gml/NormGeparametriseerdProfiel.gml', column_mapping={'ruwheidswaardelaag': 'ruwheidswaarde'})
@@ -123,8 +122,10 @@ hydamo.culverts.snap_to_branch(hydamo.branches, snap_method='ends', maxdist=5)
 hydamo.culverts.dropna(axis=0, inplace=True, subset=['branch_offset'])
 duikers_rekentijd = ['RS372-KDU3','RS375-KDU2','RS373-KDU7','RS373-KDU20','RS373-KDU22','RS373-KDU19']
 duikers_gemalen = ['OWL32921-KDU3','RS375-KDU6']             
-hydamo.culverts = hydamo.culverts.drop(ExtendedGeoDataFrame(geotype=LineString),duikers_rekentijd, index_col='code', axis=0)
-hydamo.culverts = hydamo.culverts.drop(ExtendedGeoDataFrame(geotype=LineString),duikers_gemalen, index_col='code', axis=0)
+hydamo.culverts.drop(duikers_rekentijd, axis=0, inplace=True)
+hydamo.culverts.drop(duikers_gemalen, axis=0, inplace=True)
+
+hydamo.afsluitmiddel.read_gml(pad+'gml/afsluitmiddel.gml',index_col='code')
 
 # Weirs (including universal weirs)
 hydamo.weirs.read_gml(pad+'gml/stuw.gml')
@@ -523,8 +524,8 @@ points = []
 from shapely.geometry import Point
 for i in drrmodel.external_forcings.boundary_nodes.items():
     names.append('obs_'+i[1]['id'])
-    points.append(Point((float(i[1]['px'])+1.,float(i[1]['py'])+1.)))
-dfmmodel.observation_points.add_points(points, names, snap_to_1d=True)
+    points.append(Point((float(i[1]['px'])+1.,float(i[1]['py'])+1.))) 
+dfmmodel.observation_points.add_points(points, names)
 
 
 # dfmmodeling RR and FM must be online. RR reades waterlevels from FM observation points and FM gets discharges from lateral nodes of discharge type 'realtime'. In the call to the function, the overflow locations are appended to the regular lateral locations, so they will be treated the same.
@@ -657,7 +658,7 @@ drrmodel.paved.io.paved_from_input(catchments=hydamo.catchments,
                                     meteo_areas=meteo_areas,
                                     zonalstats_alltouched=True)
 
-Or, according to the simplest approach:
+#Or, according to the simplest approach:
 # In[31]:
 
 

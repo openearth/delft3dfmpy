@@ -36,8 +36,7 @@ class StructuresIO:
                 controlside='suctionSide',
                 capacity=pump.maximalecapaciteit,
                 startlevelsuctionside=pump.startlevelsuctionside,
-                stoplevelsuctionside=pump.stoplevelsuctionside,
-                locationfile=f'pump_{pump.code}.pli'
+                stoplevelsuctionside=pump.stoplevelsuctionside                
             )
 
     def orifices_from_hydamo(self, orifices):
@@ -55,6 +54,10 @@ class StructuresIO:
                 crestlevel=orifice.laagstedoorstroomhoogte,
                 crestwidth=orifice.laagstedoorstroombreedte,
                 gateloweredgelevel=orifice.schuifhoogte,
+                uselimitflowpos=orifice.uselimitflow,
+                limitflowpos=orifice.limitflow,
+                uselimitflowneg=orifice.uselimitflow,
+                limitflowneg=orifice.limitflow,
                 corrcoeff=orifice.afvoercoefficient                               
             )
             
@@ -145,28 +148,33 @@ class StructuresIO:
         geconverteerd = hydamo_to_dflowfm.generate_culverts(culverts, afsluitmiddel)
 
         # Add to dict
-        for culvert in geconverteerd.itertuples():
-            self.structures.add_culvert(
-                id=culvert.code,
-    	        branchid=culvert.branch_id,
-    	        chainage=culvert.branch_offset,
-    	        leftlevel=culvert.hoogtebinnenonderkantbovenstrooms,
-    	        rightlevel=culvert.hoogtebinnenonderkantbenedenstrooms,
-    	        crosssection=culvert.crosssection,
-    	        length=culvert.lengte,#geometry.length,
-    	        inletlosscoeff=culvert.intreeverlies,
-    	        outletlosscoeff=culvert.uittreeverlies,
-                allowedflowdir=culvert.allowedflowdir,
-                frictiontype=hydamo_to_dflowfm.roughness_gml[culvert.ruwheidstypecode],
-                frictionvalue=culvert.ruwheidswaarde
-            )
+        for culvert in geconverteerd.itertuples():            
+                self.structures.add_culvert(
+                    id=culvert.code,
+        	        branchid=culvert.branch_id,
+        	        chainage=culvert.branch_offset,
+        	        leftlevel=culvert.hoogtebinnenonderkantbovenstrooms,
+        	        rightlevel=culvert.hoogtebinnenonderkantbenedenstrooms,
+        	        crosssection=culvert.crosssection,
+        	        length=culvert.lengte,#geometry.length,
+        	        inletlosscoeff=culvert.intreeverlies,
+        	        outletlosscoeff=culvert.uittreeverlies,
+                    allowedflowdir=culvert.allowedflowdir,
+                    valveonoff=culvert.valveonoff,
+                    numlosscoeff=culvert.numlosscoeff, 
+                    valveopeningheight=culvert.valveopeningheight,
+                    relopening=culvert.relopening,
+                    losscoeff=culvert.losscoeff,                                    
+                    frictiontype=hydamo_to_dflowfm.roughness_gml[culvert.ruwheidstypecode],
+                    frictionvalue=culvert.ruwheidswaarde
+                )
         
     def compound_structures(self, idlist, structurelist):
         """
         Method to add compound structures to the model.
         
         """
-        geconverteerd = hydamo_to_dflowfm.generate_compounds(idlist, structurelist)
+        geconverteerd = hydamo_to_dflowfm.generate_compounds(idlist, structurelist, self.structures)
         
          # Add to dict
         for compound in geconverteerd.itertuples():
@@ -357,12 +365,14 @@ class ExternalForcingsIO:
             GeoDataFrame with at least 'geometry' (Point) and the column 'code'
         lateral_discharges: pd.DataFrame
             DataFrame with lateral discharges. The index should be a time object (datetime or similar).
+        rr_boundaries: pd.DataFrame
+            DataFrame with RR-catchments that are coupled 
         """
 
         if rr_boundaries is None: rr_boundaries = []
         # Check argument
         checks.check_argument(locations, 'locations', gpd.GeoDataFrame, columns=['geometry'])
-        if lateral_discharges.any:
+        if lateral_discharges is not None:
             checks.check_argument(lateral_discharges, 'lateral_discharges', pd.DataFrame)
 
         # Check if network has been loaded
@@ -370,36 +380,47 @@ class ExternalForcingsIO:
         if not network1d.meshgeomdim.numnode:
             raise ValueError('1d network has not been generated or loaded. Do this before adding laterals.')
 
-        # Find nearest 1d node per location
-        nodes1d = network1d.get_nodes()
-        get_nearest = KDTree(nodes1d)
-        lateral_crds = np.vstack([loc.geometry.coords[0] for loc in locations.itertuples()])
-                
-        _, nearest_idx = get_nearest.query(lateral_crds[:,0:2])
-
-        # Get time series and add to dictionary
-        for crd, lateral in zip(nodes1d[nearest_idx], locations.itertuples()):
+        # in case of 3d points, remove the 3rd dimension
+        locations['geometry2'] = [Point([point.geometry.x, point.geometry.y]) for _,point in locations.iterrows()]    
+        locations.drop('geometry', inplace=True, axis=1)
+        locations.rename(columns={'geometry2':'geometry'}, inplace=True)
         
+        # Find nearest 1d node per location and find the nodeid
+        #lateral_crds = np.vstack([loc.geometry.coords[0] for loc in locations.itertuples()])             
+        #nodes1d = network1d.get_nodes()
+        #get_nearest = KDTree(nodes1d)
+        #_, nearest_idx = get_nearest.query(lateral_crds[:,0:2])
+                
+        # Get time series and add to dictionary
+        #for nidx, lateral in zip(nearest_idx, locations.itertuples()):
+        for lateral in locations.itertuples():
+            # crd = nodes1d[nearest_idx]
+            #nid = f'{nodes1d[nidx][0]:g}_{nodes1d[nidx][1]:g}'
+            
             # Check if a time is provided for the lateral
-            if lateral.code in rr_boundaries:
+            if lateral.code in rr_boundaries:                
                 # Add to dictionary
                 self.external_forcings.laterals[lateral.code] = {
-                    'x': crd[0],
-                    'y': crd[1]           
+                    'branchid': lateral.branch_id,
+                    'branch_offset': str(lateral.branch_offset)                    
                 }
             else:
-                if lateral.code not in lateral_discharges.columns:
-                    logger.warning(f'No data found for {lateral.code}. Skipping.')
+                if lateral_discharges is None:
+                    logger.warning(f'No lateral_discharges provied. {lateral.code} expects them. Skipping.')
                     continue
-    
+                else:
+                    if lateral.code not in lateral_discharges.columns:
+                        logger.warning(f'No data found for {lateral.code}. Skipping.')
+                        continue
+                    
                 # Get timeseries
                 series = lateral_discharges.loc[:, lateral.code]
-    
+                
                 # Add to dictionary
-                self.external_forcings.laterals[lateral.code] = {
-                    'x': crd[0],
-                    'y': crd[1],
-                    'timeseries': series
+                self.external_forcings.laterals[lateral.code] = { 
+                    'branchid': lateral.branch_id,
+                    'branch_offset': str(lateral.branch_offset), 
+                    'timeseries': series            
                 }                                   
         
         

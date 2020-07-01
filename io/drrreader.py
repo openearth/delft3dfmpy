@@ -279,7 +279,7 @@ class ExternalForcingsIO:
                  series = cat[1] 
             )
             
-    def evap_from_input(self, areas, evap_folder, dissolve_field=None):        
+    def evap_from_input(self, areas, evap_folder):        
          """
         Method to get evaporation fluxes from raster input.
         
@@ -294,7 +294,7 @@ class ExternalForcingsIO:
         None.
 
         """
-         geconverteerd = hydamo_to_dflowrr.generate_evap( areas, evap_folder, dissolve_field=dissolve_field)
+         geconverteerd = hydamo_to_dflowrr.generate_evap( areas, evap_folder)
          for cat in geconverteerd.iteritems():
             self.external_forcings.add_evap(
                  id = cat[0],                

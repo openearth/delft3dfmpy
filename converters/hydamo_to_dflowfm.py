@@ -81,12 +81,9 @@ def generate_pumps(pompen, sturing, gemalen):
             raise NotImplementedError('Sturing not implemented for anything else than water level (1).')
 
         # Add levels for suction side
-        pumps_dfm.at[idx, 'startlevelsuctionside'] = pump_control['bovenmarge'] # pump_control['streefwaarde'] + pump_control['bovenmarge']
-        pumps_dfm.at[idx, 'stoplevelsuctionside'] = pump_control['ondermarge'] #pump_control['streefwaarde'] - pump_control['ondermarge']
-
-    # Add name of .pli file for the pump
-    pumps_dfm['locationfile'] = 'pump_'+pumps_dfm['code']+'.pli'
-
+        pumps_dfm.at[idx, 'startlevelsuctionside'] = pump_control['bovenmarge'] 
+        pumps_dfm.at[idx, 'stoplevelsuctionside'] = pump_control['ondermarge'] 
+    
     return pumps_dfm
 
 def generate_weirs(weirs, afsluitmiddel=None, sturing=None):
@@ -131,7 +128,12 @@ def generate_orifices(orifices, afsluitmiddel=None, sturing=None):
     """
 
     orifices_dfm = orifices.copy().astype('object')
-    
+    if 'maximaaldebiet' not in orifices_dfm:  
+        orifices_dfm['uselimitflow'] = 'false'
+        orifices_dfm['limitflow'] = 0.0
+    else:
+        orifices_dfm['uselimitflow'] = 'true'
+        orifices_dfm['limitflow'] = orifices_dfm['maximaaldebiet']
     return orifices_dfm
 
 
@@ -267,7 +269,7 @@ def generate_culverts(culverts,afsluitmiddel):
 
     culverts_dfm = culverts.copy()
     culverts_dfm['crosssection'] = [{} for _ in range(len(culverts_dfm))]
-
+        
     for culvert in culverts.itertuples():
 
         # Generate cross section definition name
@@ -283,25 +285,103 @@ def generate_culverts(culverts,afsluitmiddel):
         
         # Set cross section definition
         culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'both'
+        culverts_dfm.at[culvert.Index, 'valveonoff'] = 0
+        culverts_dfm.at[culvert.Index, 'numlosscoeff'] = 0
+        culverts_dfm.at[culvert.Index, 'valveopeningheight'] = 0
+        culverts_dfm.at[culvert.Index, 'relopening'] = 0
+        culverts_dfm.at[culvert.Index, 'losscoeff'] = 0
+        # check whether an afsluitmiddel is present and take action dependent on its settings
         if afsluitmiddel is not None:
             if not afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code].empty:
                 if len(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code])!=1:
                     raise IndexError(f'Multiple (or no) instances of afsluitmiddel associated with culvert {culvert.code}')
                 if int(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['soortafsluitmiddelcode'])==5:
                     culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'positive'
-            
+                if int(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['soortafsluitmiddelcode'])==4:
+                    culverts_dfm.at[culvert.Index, 'valveonoff'] = 1
+                    culverts_dfm.at[culvert.Index, 'valveopeningheight'] = float(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['hoogte'])
+                    culverts_dfm.at[culvert.Index, 'numlosscoeff'] = 1
+                    culverts_dfm.at[culvert.Index, 'relopening'] = float(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['hoogte'])/culvert.hoogteopening
+                    culverts_dfm.at[culvert.Index, 'losscoeff'] = float(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['afvoercoefficient'])
         culverts_dfm.at[culvert.Index, 'crosssection'] = crosssection
 
     return culverts_dfm
+    
+def move_structure(struc, struc_dict, branch, offset):
+    """
+    Function the move a structure if needed for a compound event.
+    
+    Parameters
+    ----------
+    struc : string
+        current sub-structure id
+    struc_dict : dict
+        dict with all structures of a certain type
+    branch : string
+        branch id of the first structure in the compound
+    offset : float
+        chainage of the first structure in the compound
 
-def generate_compounds(idlist, structurelist):
-    # probably the coordinates should all be set to those of the first structure    
+    Returns
+    -------
+    Dict with shifted coordinates.
+
+    """
+    branch2 = struc_dict[struc]['branchid']   
+    if branch2!=branch:
+       logger.warning(f'Structures of not on the same branche. Moving structure {struc} to branch {branch}.')
+    struc_dict[struc]['branchid'] = branch
+    struc_dict[struc]['chainage'] = offset
+    return struc_dict
+
+def generate_compounds(idlist, structurelist, structures):
+    # probably the coordinates should all be set to those of the first structure (still to do)        
     compounds_dfm = ExtendedDataFrame(required_columns=['code','structurelist'])
     compounds_dfm.set_data(pd.DataFrame(np.zeros((len(idlist),3)), columns=['code','numstructures','structurelist'], dtype='str'),index_col='code')
-    compounds_dfm.index = idlist
+    compounds_dfm.index = idlist    
     for ii,compound in enumerate(compounds_dfm.itertuples()):
         compounds_dfm.at[compound.Index, 'code'] = idlist[ii]
         compounds_dfm.at[compound.Index, 'numstructures'] = len(structurelist[ii])
+        
+        # check the substructure coordinates. If they do not coincide, move subsequent structures to the coordinates of the first
+        for s_i, struc in enumerate(structurelist[ii]):            
+            if s_i == 0:                
+                # find out what type the first structure it is and get its coordinates
+                if struc in structures.pumps.keys():
+                    branch = structures.pumps[struc]['branchid']
+                    offset = structures.pumps[struc]['chainage']
+                elif struc in structures.weirs.keys():
+                    branch = structures.weirs[struc]['branchid']
+                    offset = structures.weirs[struc]['chainage']
+                elif struc in structures.uweirs.keys():
+                    branch = structures.uweirs[struc]['branchid']
+                    offset = structures.uweirs[struc]['chainage']
+                elif struc in structures.culverts.keys():
+                    branch = structures.culverts[struc]['branchid']
+                    offset = structures.culverts[struc]['chainage']                    
+                elif struc in structures.bridges.keys():
+                    branch = structures.bridges[struc]['branchid']
+                    offset = structures.bridges[struc]['chainage']                    
+                elif struc in structures.orifices.keys():
+                    branch = structures.orifices[struc]['branchid']
+                    offset = structures.orifices[struc]['chainage']                                        
+                else:
+                    raise IndexError('Structure id not found. Make sure all other structures have been added to the model.')
+            else:
+                # move a subsequent structure to the location of the first
+                 if struc in structures.pumps.keys():                    
+                     structures.pumps = move_structure(struc, structures.pumps, branch, offset)
+                 if struc in structures.weirs.keys():                    
+                     structures.weirs = move_structure(struc, structures.weirs, branch, offset)
+                 if struc in structures.uweirs.keys():                    
+                     structures.uweirs = move_structure(struc, structures.uweirs, branch, offset)
+                 if struc in structures.culverts.keys():                    
+                     structures.culverts = move_structure(struc, structures.culverts, branch, offset)
+                 if struc in structures.bridges.keys():                    
+                     structures.bridges = move_structure(struc, structures.bridges, branch, offset)
+                 if struc in structures.orifices.keys():                    
+                     structures.orifices = move_structure(struc, structures.orifices, branch, offset)                 
+                                     
         compounds_dfm.at[compound.Index, 'structurelist'] = ';'.join([f'{s}' for s in structurelist[ii]])
     
     return compounds_dfm

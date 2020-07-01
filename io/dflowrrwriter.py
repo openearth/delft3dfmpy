@@ -145,7 +145,7 @@ class DFlowRRWriter:
         filepath = os.path.join(self.output_dir, 'Bound3B.3B')
         with open(filepath, 'w') as f:
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
-                f.write('BOUN id \'bnd_'+dct['id']+'\' bl 0 0 is 0 boun\n')
+                f.write('BOUN id \'bnd_'+dct['id']+'\' bl 2 \'0\' is 0 boun\n')
                 
         # BoundaryConditions.bc
         filepath = os.path.join(self.output_dir, 'BoundaryConditions.bc')
@@ -154,7 +154,7 @@ class DFlowRRWriter:
             self._write_dict(f, header, 'General','\n')            
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
                 temp = {"name":'bnd_'+dct['id'], 'function':'constant','quantity':'water_level','unit':'m'} 
-                self._write_dict(f,temp,'Boundary','0\n\n')
+                self._write_dict(f,temp,'Boundary','    0\n\n')
                                    
     def write_unpaved(self):
         """
@@ -416,7 +416,7 @@ class DFlowRRWriter:
                      f.write('\t\t\t<item>\n')                     
                      # FOr now use one observation ponit- until water levels can be read from other nodes
                      #f.write('\t\t\t\t<sourceName>observations/'+str(i[0])+'/water_level</sourceName>\n')
-                     f.write('\t\t\t\t<sourceName>observations/obs_'+str(i[0])+'/water_level</sourceName>\n')
+                     f.write('\t\t\t\t<sourceName>laterals/'+str(i[0])+'/water_level</sourceName>\n')
                      f.write('\t\t\t\t<targetName>catchments/bnd_'+str(i[0])+'/water_level</targetName>\n')
                      f.write('\t\t\t</item>\n')                                  
                  f.write('\t\t<logger>\n')
