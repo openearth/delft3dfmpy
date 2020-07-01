@@ -27,18 +27,38 @@ class Mesh2D:
         self.meshgeomdim = meshgeomdim(pointer(c_char()), 2, 0, 0, 0, 0, -1, -1, -1, -1, -1, 0)
         self.meshgeom = meshgeom(self.meshgeomdim)
 
-    def clip_nodes(self, xnodes, ynodes, edge_nodes, polygon):
+    def clip_nodes(self, xnodes, ynodes, edge_nodes, polygon, keep_outside=False):
         """
         Method that returns a set of nodes that is clipped within a given polygon.
+
+        Parameters
+        ----------
+        xnodes : 
+            X-coordinates of mesh nodes
+        ynodes : 
+            Y-coordinates of mesh nodes
+        edge_nodes : 
+            X-coordinates of mesh nodes
+        polygon : Polygon, Multipolygon or list of
+        
         """
 
-        # Clip nodes
-        index = geometry.points_in_polygon(np.c_[xnodes, ynodes], polygon)
-        edge_nodes = edge_nodes[np.isin(edge_nodes, np.where(index)[0] + 1).all(axis=1)]
+        # Find nodes within one of the polygons
+        index = np.zeros(len(xnodes), dtype=bool)
+        for poly in geometry.as_polygon_list(polygon):
+            index = index | geometry.points_in_polygon(np.c_[xnodes, ynodes], poly)
+        if keep_outside:
+            index = ~index
 
-        # Remove intersecting edges
+        # Filter edge nodes, keep the ones that are within a polygon with both points
+        nodeids_in_polygon = np.where(index)[0] + 1
+        edge_nodes = edge_nodes[np.isin(edge_nodes, nodeids_in_polygon).all(axis=1)]
+
+        # Remove edges
         edges = gpd.GeoDataFrame(geometry=[LineString(line) for line in np.c_[xnodes, ynodes][edge_nodes - 1]])
-        isect = edges.intersects(polygon.exterior).values
+        isect = np.zeros(len(edge_nodes), dtype=bool)
+        for poly in geometry.as_polygon_list(polygon):
+            isect = isect | edges.intersects(poly.exterior).values
         edge_nodes = edge_nodes[~isect]
 
         # Remove edges that have a 1 count, until None are left
@@ -291,6 +311,52 @@ class Rectangular(Mesh2D):
         self.meshgeomdim.maxnumfacenodes = 4
         self.rotated = False
 
+    def clip_nodes_from_raster(self, clipgeo=None):
+        
+        checks.check_argument(clipgeo, 'polygon', (list, Polygon, MultiPolygon))
+        
+        # Get xnodes, ynodes and edge_nodes
+        xnodes = self.meshgeom.get_values('nodex', as_array=True)
+        ynodes = self.meshgeom.get_values('nodey', as_array=True)
+        edge_nodes = self.meshgeom.get_values('edge_nodes', as_array=True)
+
+        # Clip
+        xnodes, ynodes, edge_nodes = self.clip_nodes(xnodes, ynodes, edge_nodes, clipgeo, keep_outside=True)
+
+        # Update dimensions
+        self.meshgeomdim.numnode = len(xnodes)
+        self.meshgeomdim.numedge = len(edge_nodes)
+
+        # Add nodes and links
+        self.meshgeom.set_values('nodex', xnodes)
+        self.meshgeom.set_values('nodey', ynodes)
+        self.meshgeom.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
+
+        # Determine what the cells are
+        self._find_cells(self.meshgeom)
+
+        # Clean nodes, this function deletes nodes based on no longer existing cells
+        face_nodes = self.meshgeom.get_values('face_nodes', as_array=True)
+        cleaned = self.clean_nodes(xnodes, ynodes, edge_nodes, face_nodes)
+       
+        # If cleaning leaves no whole cells, return None
+        if cleaned is None:
+            raise ValueError('Clipping the grid does not leave any nodes.')
+        # Else, get the arguments from the returned tuple
+        else:
+            xnodes, ynodes, edge_nodes, face_nodes = cleaned
+            
+        # Update dimensions
+        self.meshgeomdim.numnode = len(xnodes)
+        self.meshgeomdim.numedge = len(edge_nodes)
+        self.meshgeomdim.maxnumfacenodes = 4
+
+        # Add nodes and links
+        self.meshgeom.set_values('nodex', xnodes)
+        self.meshgeom.set_values('nodey', ynodes)
+        self.meshgeom.set_values('edge_nodes', np.ravel(edge_nodes).tolist())
+        self.meshgeom.set_values('face_nodes', np.ravel(face_nodes).tolist())
+
     def generate_grid(self, x0, y0, dx, dy, ncols, nrows, clipgeo=None, rotation=0):
         """
         Generate rectangular grid based on the origin (x0, y0) the cell sizes (dx, dy),
@@ -440,7 +506,7 @@ class Rectangular(Mesh2D):
                 rotation=rotation
             )
 
-    def refine(self, polygon, level, cellsize, keep_grid=False, dflowfm_path=None):
+    def refine(self, polygon, level, cellsize, debug=False, dflowfm_path=None):
         """
         Method to refine the grid a number of steps (level) within a given polygon.
         Both for the level and polygon a list of values can be provided so that the
@@ -496,7 +562,6 @@ class Rectangular(Mesh2D):
 
         arr = np.ones((nrows * factor, ncols * factor)) * 4**max(level)
 
-
         for poly, lvl in zip(polygon, level):
             mask = geometry.geometry_to_mask(poly, (x0, y0), stepsize, shape=(nrows * factor, ncols * factor))
             arr[mask] = 4 ** (max(level) - lvl)
@@ -509,7 +574,7 @@ class Rectangular(Mesh2D):
             'yllCorner    {3:.6f}\n'
             'CellSize     {4:.6f}\n'
             'nodata_value 0\n'
-        ).format(ncols * factor, nrows * factor, x0, y0, stepsize)
+        ).format(ncols * factor, nrows * factor, x0, y0 + stepsize, stepsize)
 
         values = '\n'.join(' '.join('%d' %x for x in y) for y in arr.squeeze())
 
@@ -525,14 +590,21 @@ class Rectangular(Mesh2D):
             dflowfm_path = 'dflowfm.exe'
 
         # Construct statement
-        statement = f'{dflowfm_path} --refine:hmin={dxmin}:dtmax={dtmax}:connect=1:outsidecell=1 {temppath} temp_ascgrid.asc'
+        statement = f'"{dflowfm_path}" --refine:hmin={dxmin}:dtmax={dtmax}:connect=1:outsidecell=1 {temppath} temp_ascgrid.asc'
+        if debug:
+            statement += ' > log.txt'
         # Execute statement
         os.system(statement)
 
-        if not keep_grid:
+        if not debug:
             os.remove('temp_ascgrid.asc')
 
         # Read geometry and dimensions again
+        if not os.path.exists('out_net.nc'):
+            raise OSError(
+                (f'Could not find "out_net.nc" in directory "{os.getcwd()}". '
+                 f'The file should have been generated with the statement: "{statement}". '
+                 'You can test this manually by running this statement from a command prompt launched from the directory named in this message.'))
         gridio.from_netcdf_old(self.meshgeom, 'out_net.nc')
         
         # Find cells

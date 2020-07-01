@@ -234,21 +234,23 @@ def points_in_polygon(points, polygon):
     extp = path.Path(polygon.exterior)
     intps = [path.Path(interior) for interior in polygon.interiors]
                 
-    # create mask
+    # create first index. Everything within exterior is True
     index = extp.contains_points(boxpoints)
                 
     # set points in holes also to nan
     if intps:
         subset = boxpoints[index]
-        subindex = np.ones(len(subset), dtype=bool)
-
+        # Start with all False
+        subindex = np.zeros(len(subset), dtype=bool)
+    
         for intp in intps:
-            # update mask
-            subindex *= intp.contains_points(subset)
-
-        # Set subindex values in exterior index to False
+            # update mask, set to True where point in interior
+            subindex = subindex | intp.contains_points(subset)
+    
+        # Everything within interiors should be True
+        # So, set everything within interiors (subindex == True), to True
         index[np.where(index)[0][subindex]] = False
-
+    
     # Set index in main index to False
     mainindex[np.where(mainindex)[0][~index]] = False
 
