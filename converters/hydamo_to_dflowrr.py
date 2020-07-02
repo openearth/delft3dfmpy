@@ -80,7 +80,7 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
         for i in range(1,12):
             if i in lu_counts[num]: mapping[sobek_indices[i-1]-1] = lu_counts[num][i]*px_area            
         lu_map = ' '.join(map(str,mapping))        
-        elev = mean_elev[num]['median']/100
+        elev = mean_elev[num]['median']
         unpaved_drr.at[cat.code, 'code'] = str(cat.code)
         unpaved_drr.at[cat.code, 'total_area'] = f'{cat.geometry.area:.0f}'
         unpaved_drr.at[cat.code, 'lu_areas'] = lu_map
@@ -189,7 +189,7 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
                     lu_counts[cat_ind][14.0] -=  pav_pixels
                     if lu_counts[cat_ind][14.0] < 0: lu_counts[cat_ind][14.0]  = 0
             
-            elev = mean_sa_elev[isew]['median']/100
+            elev = mean_sa_elev[isew]['median']
             # find overflows related to this sewer area
             ovf = overflows[overflows.codegerelateerdobject==sew.code]           
             for ov in ovf.itertuples():                
@@ -233,7 +233,7 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
         tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
         ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code        
             
-        elev = mean_elev[num]['median']/100
+        elev = mean_elev[num]['median']
         paved_drr.at[cat.code, 'code'] = str(cat.code)
         paved_drr.at[cat.code, 'area'] = str(lu_counts[num][14]*int(px_area)) if 14 in lu_counts[num] else '0'        
         paved_drr.at[cat.code, 'mvlevel'] = f'{elev:.2f}'         
@@ -288,7 +288,7 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
         tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
         ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code   
             
-        elev = mean_elev[num]['median']/100
+        elev = mean_elev[num]['median']
         gh_drr.at[cat.code, 'code'] = str(cat.code)
         gh_drr.at[cat.code, 'area'] = str(lu_counts[num][15]*int(px_area)) if 15 in lu_counts[num] else '0'        
         gh_drr.at[cat.code, 'mvlevel'] = f'{elev:.2f}' 
