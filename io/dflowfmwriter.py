@@ -273,15 +273,49 @@ class DFlowFMWriter:
         """
    
         for bc in self.dflowfmmodel.external_forcings.boundaries.values():
-         
-            # Get time series
-            if bc['time'] is None:
-                data = [[0, bc['value']], [999999, bc['value']]]
-            else:
-                data = list(zip(bc['time'], bc['value']))
 
             # Add boundary to ext file
             with open(self.extfile_new, 'a') as f:
+                # check whether 2D rainfall has been applied to the 2D model
+                if any('rainfall_2D' in key for key in self.dflowfmmodel.external_forcings.boundaries):
+                    
+                    if bc['bctype'] == 'rainfallbnd':
+                        # get file name of rainfall netcdf
+                        rainfall_netcdf = self.dflowfmmodel.external_forcings.boundaries['rainfall_2D']['file_name']
+
+                        #new: add precipitation netcdf for 2D mesh [Meteo] header
+                        dct_met = {'quantity': 'rainfall',
+                                   'forcingFile': os.path.basename(rainfall_netcdf),
+                                   'forcingFileType': 'netcdf'}
+                        self._write_dict(f, dct_met, 'Meteo')
+    
+                        shutil.copy2(rainfall_netcdf, self.output_dir)
+                 
+                    if bc['bctype'] == 'waterlevelbnd' or bc['bctype'] == 'dischargebnd':
+                    
+                        dct = {'quantity':f"{bc['bctype']}",'nodeId': bc['nodeid'],'forcingFile':'boundaries.bc'}
+                        self._write_dict(f, dct, 'Boundary')
+
+                        # Get time series
+                        if bc['time'] is None:
+                            data = [[0, bc['value']], [999999, bc['value']]]
+                        else:
+                            data = list(zip(bc['time'], bc['value']))
+
+                else:
+                    dct = {'quantity':f"{bc['bctype']}",'nodeId': bc['nodeid'],'forcingFile':'boundaries.bc'}
+                    self._write_dict(f, dct, 'Boundary')
+                
+                    # Get time series
+                    if bc['time'] is None:
+                        data = [[0, bc['value']], [999999, bc['value']]]
+                    else:
+                        data = list(zip(bc['time'], bc['value']))
+                
+                
+                
+            if bc['bctype'] == 'waterlevelbnd' or bc['bctype'] == 'dischargebnd':                 
+
                 dct = {'quantity':f"{bc['bctype']}",'nodeId': bc['nodeid'],'forcingFile':'boundaries.bc'}
                 self._write_dict(f, dct, 'Boundary')                 
                  

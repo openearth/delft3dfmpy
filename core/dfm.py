@@ -146,29 +146,33 @@ class ExternalForcings:
          # Get name is not given as input
         if name is None:
             name = 'wlevpoly{:04d}'.format(len(self.initial_waterlevel_polygons) + 1)
-
         # Add to geodataframe
-        self.initial_waterdepth_polygons.loc[name] = {'waterdepth': depth, 'geometry': polygon}
+        if polygon==None:
+            
+            new_df = pd.DataFrame({'waterdepth': depth, 'geometry': polygon}, index=[name])
+            
+            self.initial_waterdepth_polygons =  new_df
+        else:
+            self.initial_waterdepth_polygons.loc[name] = {'waterdepth': depth, 'geometry': polygon}
         
-    # def set_initial_waterdepth(self, depth):
-    #     """
-    #     Method to set the initial water depth in the 1d model. The water depth is
-    #     set by determining the water level at the locations of the cross sections.
-
-    #     Parameters
-    #     ----------
-    #     depth : float
-    #         Water depth
-    #     """
+    def add_rainfall_2D(self, fName, bctype='rainfall'):
+        """
+        Parameters
+        ----------
+        fName : str
+            Location of netcdf file containing rainfall rasters
+        bctype : str
+            Type of boundary condition. Currently only rainfall is supported
+        """
         
-    #     crosssections = self.dflowfmmodel.crosssections
-    #     if not any(crosssections.crosssection_loc) or self.dflowfmmodel.network.mesh1d.empty():
-    #         raise ValueError('Cross sections or network are not initialized.')
-
-    #     # Get water depths from cross sections
-    #     bottom = crosssections.get_bottom_levels()
-    #     del self.initial_waterlevel_xyz[:]
-    #     self.initial_waterlevel_xyz.extend([[row.geometry.x, row.geometry.y, row.minz + depth] for row in bottom.itertuples()])
+        assert bctype in ['rainfall']
+        
+        # Add boundary condition
+        self.boundaries['rainfall_2D'] = {
+            'file_name': fName,
+            'bctype': bctype+'bnd',
+        }
+        
 
     def add_boundary_condition(self, name, pt, bctype, series, branchid=None):
         """
