@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+/#!/usr/bin/env python
 # coding: utf-8
 
 # ## Overview of functionalities
@@ -146,7 +146,7 @@ hydamo.laterals.read_shp(pad+'sobekdata/Sbk_S3BR_n.shp',
                                          'NAME      ': 'name',
                                          'X         ':'X',
                                          'Y         ':'Y'})
-hydamo.laterals.snap_to_branch(hydamo.branches, snap_method='overal', maxdist=  500)
+hydamo.laterals.snap_to_branch(hydamo.branches, snap_method='overal', maxdist=  5)
 hydamo.laterals.dropna(axis=0, inplace=True, subset=['branch_offset'])
 
 # Pumps
@@ -310,7 +310,7 @@ mesh.generate_within_polygon(hydamo.clipgeo, cellsize=cellsize, rotation=0)
 
 # Refine the model (2 steps) along the main branch. To do so we generate a buffer around the main branch.
 buffered_branch = hydamo.branches.loc[['riv_RS1_1810', 'riv_RS1_264'], 'geometry'].unary_union.buffer(10)
-mesh.refine(polygon=[buffered_branch], level=[2], cellsize=cellsize, dflowfm_path=r'D:\3640.20\software\dflowfm-x64-1.2.105.67048M')
+mesh.refine(polygon=[buffered_branch], level=[2], cellsize=cellsize)
 
 # Determine the altitude from a digital elevation model
 # rasterpath = '../gis/AHNdommel_clipped.tif'
@@ -514,6 +514,20 @@ drrmodel = DFlowRRModel()
 drrmodel.external_forcings.io.boundary_from_input(hydamo.laterals, hydamo.catchments, overflows=hydamo.overflows)
 
 
+# Eventually, water levels can be read from 1D grid points. For now, an observation point is needed for RR to read water levels from. We add an obseration point for each boundary with a catchment, with an offset of 1 m horizontally and vertically. The new point is then snapped to the branche.
+
+# In[23]:
+
+
+names = []
+points = []
+from shapely.geometry import Point
+for i in drrmodel.external_forcings.boundary_nodes.items():
+    names.append('obs_'+i[1]['id'])
+    points.append(Point((float(i[1]['px'])+1.,float(i[1]['py'])+1.))) 
+dfmmodel.observation_points.add_points(points, names)
+
+
 # dfmmodeling RR and FM must be online. RR reades waterlevels from FM observation points and FM gets discharges from lateral nodes of discharge type 'realtime'. In the call to the function, the overflow locations are appended to the regular lateral locations, so they will be treated the same.
 
 # In[24]:
@@ -575,7 +589,7 @@ dfmmodel.external_forcings.io.read_laterals(hydamo.laterals.append(hydamo.overfl
 
 # all data and settings to create the RR-model
 lu_file = pad+'rasters/lgn250.tif'
-ahn_file = pad+'rasters/ahn_250.tif'
+ahn_file = pad+'rasters/ahn_250_cm.tif'
 soil_file = pad+'rasters/soiltypes250.tif'
 
 
@@ -717,7 +731,7 @@ evap_folder = pad+'rasters/evap'
 
 drrmodel.external_forcings.io.seepage_from_input(hydamo.catchments, seepage_folder)
 drrmodel.external_forcings.io.precip_from_input(meteo_areas, precip_folder)
-drrmodel.external_forcings.io.evap_from_input(meteo_areas, evap_folder)
+drrmodel.external_forcings.io.evap_from_input(meteo_areas, evap_folder, dissolve_field='administratiefgebied')
 
 
 # We need a function to be able to easily plot all nodes and links
@@ -787,8 +801,6 @@ fig.tight_layout()
 
 # In[39]:
 
-# add 2D precip
-dfmmodel.external_forcings.add_rainfall_2D(fName=pad+'rasters/2dprecip.nc')
 
 # Runtime and output settings
 # for FM model

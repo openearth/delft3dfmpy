@@ -64,7 +64,7 @@ class UnpavedIO:
                 boundary_node = unpav.boundary
             )
             
-    def ernst_from_input(self, catchments, depths=None, resistance=None):
+    def ernst_from_input(self, catchments, depths, resistance, infiltration_resistance=None, runoff_resistance=None):
         """
         Method to create a dictionary with Ernst layer depths and resistances.
 
@@ -74,20 +74,30 @@ class UnpavedIO:
             Catchment areas; every cachtment gets a set of RR-nodes.
         depths : list optional
             Depth boundaries for the Ernst resistances.
-        resistance : list, optional
+        resistance : list
             Resistances [d-1] for every Ernst layer
-
+        infiltration_resistance: float, optional
+            Restistance for flow from open water to groundwater
+        runoff_resistance: float, optional
+            Resistance for surface runoff
+            
         Returns
         -------
         None.
 
         """
-        geconverteerd = hydamo_to_dflowrr.generate_ernst(catchments, depths, resistance)
+        if infiltration_resistance is None:
+            infiltration_resistance = 300.
+        if runoff_resistance is None:
+            runoff_resistance = 1.
+        geconverteerd = hydamo_to_dflowrr.generate_ernst(catchments, depths, resistance, infiltration_resistance, runoff_resistance)
         for ernst in geconverteerd.itertuples():
             self.unpaved.add_ernst_def(  
                 id = ernst.code,
                 cvo = ernst.reslist,
-                lv = ernst.lvs
+                lv = ernst.lvs,
+                cvi = ernst.cvi,
+                cvs = ernst.cvs
             )
 
 class PavedIO:

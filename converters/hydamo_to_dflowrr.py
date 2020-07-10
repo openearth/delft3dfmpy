@@ -104,18 +104,20 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
         unpaved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                
     return unpaved_drr          
     
-def generate_ernst(catchments, depths, resistance):    
+def generate_ernst(catchments, depths, resistance, infiltration_resistance, runoff_resistance):    
     """
-    The lists with depths and resistances are converted to a dataframe.
+    The lists with depths and resistances as well as the standard infiltration and runoff resistances, are converted, to a dataframe.
     """
     ernst_drr = ExtendedDataFrame(required_columns=['code'])
-    ernst_drr.set_data( pd.DataFrame(np.zeros((len(catchments),3)), 
-                                       columns=['code','reslist','lvs'], dtype="str"), index_col='code')
+    ernst_drr.set_data( pd.DataFrame(np.zeros((len(catchments),5)), 
+                                       columns=['code','reslist','lvs','cvi','cvs'], dtype="str"), index_col='code')
     ernst_drr.index = catchments.code
     for num, cat in enumerate(catchments.itertuples()):            
         ernst_drr.at[cat.code, 'code'] = str(cat.code)
         ernst_drr.at[cat.code, 'reslist'] = ' '.join([str(res) for res in resistance])
         ernst_drr.at[cat.code, 'lvs'] = ' '.join([str(depth) for depth in depths])
+        ernst_drr.at[cat.code, 'cvi'] = str(infiltration_resistance)
+        ernst_drr.at[cat.code, 'cvs'] = str(runoff_resistance)
     return ernst_drr     
 
 def generate_paved( catchments=None, 

@@ -116,11 +116,11 @@ class Unpaved:
             'boundary_node': boundary_node            
         }
         
-    def add_ernst_def(self,id, cvo, lv):
+    def add_ernst_def(self,id, cvo, lv, cvi, cvs):
         self.ernst_defs[id] = {
             'id' : 'ernst_'+id,            
-            'cvi' : '300',
-            'cvs' : '10',
+            'cvi' : cvi,
+            'cvs' : cvs,
             'cvo' : cvo,
             'lv'  : lv            
         }        
