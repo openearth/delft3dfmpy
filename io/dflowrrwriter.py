@@ -114,7 +114,7 @@ class DFlowRRWriter:
             # Boundary_nodes
             if any(self.rrmodel.external_forcings.boundary_nodes):
                 for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():
-                    f.write('NODE id \'bnd_'+dct['id']+'\' nm \''+dct['id']+'\' ri \'-1\' mt 1 \'6\' nt 78 ObID \'SBK_SBK-3B-NODE\' px '+dct['px']+' py '+dct['py']+' node\n')
+                    f.write('NODE id \''+dct['id']+'\' nm \''+dct['id']+'\' ri \'-1\' mt 1 \'6\' nt 78 ObID \'SBK_SBK-3B-NODE\' px '+dct['px']+' py '+dct['py']+' node\n')
                     
         filepath = os.path.join(self.output_dir, '3B_LINK.TP')
         with open(filepath, 'w') as f:
@@ -124,28 +124,28 @@ class DFlowRRWriter:
                 for _, dct in self.rrmodel.unpaved.unp_nodes.items():
                     if np.sum([float(d) for d in dct['ar'].split(' ')]) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \'bnd_'+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
             if any(self.rrmodel.paved.pav_nodes):                
                 for _, dct in self.rrmodel.paved.pav_nodes.items():
                     if float(dct['ar']) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \'bnd_'+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
             if any(self.rrmodel.greenhouse.gh_nodes):                
                 for _, dct in self.rrmodel.greenhouse.gh_nodes.items():
                     if float(dct['ar']) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \'bnd_'+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
             if any(self.rrmodel.openwater.ow_nodes):                
                 for _, dct in self.rrmodel.openwater.ow_nodes.items():
                     if float(dct['ar']) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \'bnd_'+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
 
         # bound3b.3b        
         filepath = os.path.join(self.output_dir, 'Bound3B.3B')
         with open(filepath, 'w') as f:
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
-                f.write('BOUN id \'bnd_'+dct['id']+'\' bl 2 \'0\' is 0 boun\n')
+                f.write('BOUN id \''+dct['id']+'\' bl 2 \'0\' is 0 boun\n')
                 
         # BoundaryConditions.bc
         filepath = os.path.join(self.output_dir, 'BoundaryConditions.bc')
@@ -153,7 +153,7 @@ class DFlowRRWriter:
         with open(filepath, 'w') as f:                        
             self._write_dict(f, header, 'General','\n')            
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
-                temp = {"name":'bnd_'+dct['id'], 'function':'constant','quantity':'water_level','unit':'m'} 
+                temp = {"name":''+dct['id'], 'function':'constant','quantity':'water_level','unit':'m'} 
                 self._write_dict(f,temp,'Boundary','    0\n\n')
                                    
     def write_unpaved(self):
@@ -417,7 +417,7 @@ class DFlowRRWriter:
                      # FOr now use one observation ponit- until water levels can be read from other nodes
                      #f.write('\t\t\t\t<sourceName>observations/'+str(i[0])+'/water_level</sourceName>\n')
                      f.write('\t\t\t\t<sourceName>laterals/'+str(i[0])+'/water_level</sourceName>\n')
-                     f.write('\t\t\t\t<targetName>catchments/bnd_'+str(i[0])+'/water_level</targetName>\n')
+                     f.write('\t\t\t\t<targetName>catchments/'+str(i[0])+'/water_level</targetName>\n')
                      f.write('\t\t\t</item>\n')                                  
                  f.write('\t\t<logger>\n')
                  f.write('\t\t\t<workingDir>.</workingDir>\n')
@@ -430,7 +430,7 @@ class DFlowRRWriter:
                  f.write('\t\t<targetComponent>'+DFM_comp_name+'</targetComponent>\n')		         
                  for i in self.rrmodel.external_forcings.boundary_nodes.items():
                      f.write('\t\t\t<item>\n')                     
-                     f.write('\t\t\t\t<sourceName>catchments/bnd_'+str(i[0])+'/water_discharge</sourceName>\n')
+                     f.write('\t\t\t\t<sourceName>catchments/'+str(i[0])+'/water_discharge</sourceName>\n')
                      f.write('\t\t\t\t<targetName>laterals/'+str(i[0])+'/water_discharge</targetName>\n')
                      f.write('\t\t\t</item>\n')                                 
 

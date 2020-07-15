@@ -310,14 +310,8 @@ class DFlowFMWriter:
                     if bc['time'] is None:
                         data = [[0, bc['value']], [999999, bc['value']]]
                     else:
-                        data = list(zip(bc['time'], bc['value']))
-                
-                
-                
-            if bc['bctype'] == 'waterlevelbnd' or bc['bctype'] == 'dischargebnd':                 
-
-                dct = {'quantity':f"{bc['bctype']}",'nodeId': bc['nodeid'],'forcingFile':'boundaries.bc'}
-                self._write_dict(f, dct, 'Boundary')                 
+                        data = list(zip(bc['time'], bc['value']))                               
+                  
                  
             refd = str(self.dflowfmmodel.mdu_parameters["refdate"])                      
             
