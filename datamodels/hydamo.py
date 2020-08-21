@@ -157,7 +157,7 @@ class HyDAMO:
             'geometry'            
         ])
             
-    def to_pickle(filename, overwrite=False):
+    def to_pickle(self, filename, overwrite=False):
         # Check if path exists
         if os.path.exists(filename) and not overwrite:
             raise FileExistsError(f'File "{filename}" alraedy exists.')

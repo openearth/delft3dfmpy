@@ -387,6 +387,23 @@ class Mesh2D:
     def geom_from_netcdf(self, file):
         gridio.from_netcdf_old(self.meshgeom, file)
         self._find_cells(self.meshgeom)
+
+    def faces_to_centroid(self):
+        """
+        The find_cells function does not always return face coordinates
+        that are all accepted by the interactor. The coordinates
+        are placed on the circumcenters, and placed on the face border
+        in case of a coordinate that is outside the cells.
+        
+        This function shifts the face coordinates towards the centroid
+        (center of gravity) of the cell.
+        """
+        # Calculate centroids
+        centroids = np.vstack([cell.mean(axis=0) for cell in self.meshgeom.get_faces()]).T
+
+        # Set values back to geometry
+        self.meshgeom.set_values('facex', centroids[0])
+        self.meshgeom.set_values('facey', centroids[1])
                                
 class Rectangular(Mesh2D):
 

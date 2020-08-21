@@ -203,7 +203,7 @@ class CrossSectionsIO:
         """
 
         # first, make a selection as to use only the dwarsprofielen/parametrised that are related to branches, not structures
-        if dwarsprofielen is not None:
+        if dwarsprofielen is not None and not dwarsprofielen.empty:
             if 'codegerelateerdobject' not in dwarsprofielen:
                 dwarsprofielen['codegerelateerdobject'] = np.empty((len(dwarsprofielen)))*np.nan
             dp_branches = ExtendedGeoDataFrame(geotype=LineString, columns = dwarsprofielen.required_columns+['codegerelateerdobject'])
@@ -211,7 +211,7 @@ class CrossSectionsIO:
         else:     
             dp_branches = ExtendedGeoDataFrame(geotype=LineString)
             
-        if parametrised is not None:
+        if parametrised is not None and not parametrised.empty:
             if 'codegerelateerdobject' not in parametrised:
                 parametrised['codegerelateerdobject'] = np.empty((len(parametrised)))*np.nan
             if len(parametrised)>0:        

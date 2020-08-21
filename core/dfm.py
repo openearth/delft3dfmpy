@@ -5,7 +5,7 @@ import os
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import tqdm
+from tqdm.auto import tqdm
 from scipy.spatial import KDTree
 from shapely.geometry import LineString, Point, Polygon
 
@@ -575,7 +575,7 @@ class Links1d2d:
                 continue
             self.check_boundary_link(bc)
 
-    def generate_2d_to_1d(self, max_distance=np.inf, intersecting=True, branchid=None):
+    def generate_2d_to_1d(self, max_distance=np.inf, intersecting=True, branchid=None, shift_to_centroid=True):
         """
         Generate 1d2d links from 2d cells. A maximum distance can be specified
         to remove links that are too long. Also a branchid can be specified to only
@@ -661,7 +661,7 @@ class Links1d2d:
 
             # Remove links that intersect multiple cells
             cellbounds = cells.bounds.values.T
-            for link in tqdm.tqdm(links.itertuples(), total=len(links), desc='Removing links crossing mult. cells'):
+            for link in tqdm(links.itertuples(), total=len(links), desc='Removing links crossing mult. cells'):
                 selectie = cells.loc[geometry.possibly_intersecting(cellbounds, link.geometry)].copy()
                 if selectie.intersects(link.geometry).sum() > 1:
                     todrop.append(link.Index)
@@ -673,6 +673,19 @@ class Links1d2d:
 
             self.nodes1d.extend(links['node1did'].values.tolist())
             self.faces2d.extend(links['face2did'].values.tolist())
+
+        # Shift centers of 2d faces to centroid if they are part of a 1d-2d link
+        if shift_to_centroid:
+            # Get current centers
+            cx, cy = self.mesh2d.get_faces(geometry='center').T
+            # Calculate centroids for cells with link
+            idx = np.array(self.faces2d) - 1
+            centroids = np.vstack([cell.mean(axis=0) for cell in np.array(self.mesh2d.get_faces())[idx]]).T
+            cx[idx] = centroids[0]
+            cy[idx] = centroids[1]
+            # Set values back to geometry
+            self.mesh2d.set_values('facex', cx)
+            self.mesh2d.set_values('facey', cy)
 
         # Remove conflicting 1d2d links
         for bc in self.network.dflowfmmodel.external_forcings.boundaries.values():

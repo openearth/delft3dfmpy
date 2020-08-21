@@ -1,4 +1,4 @@
-from ctypes import POINTER, Structure, c_char, c_double, c_int, CDLL, byref
+from ctypes import POINTER, Structure, c_char, c_double, c_int
 import os
 
 import numpy as np
