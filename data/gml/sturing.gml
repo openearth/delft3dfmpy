@@ -18,8 +18,8 @@
 <nhi:stuurvariabelecode>3</nhi:stuurvariabelecode>
 <nhi:doelvariabelecode>1</nhi:doelvariabelecode>
 <nhi:streefwaarde>3.19</nhi:streefwaarde>
-<nhi:bovenmarge>0.05000</nhi:bovenmarge>
-<nhi:ondermarge>0.05000</nhi:ondermarge>
+<nhi:bovenmarge>3.24000</nhi:bovenmarge>
+<nhi:ondermarge>3.14000</nhi:ondermarge>
 <nhi:sturingtypecode>2</nhi:sturingtypecode>
 </nhi:sturing>
 </gml:featureMember>
@@ -38,8 +38,8 @@
 <nhi:stuurvariabelecode>3</nhi:stuurvariabelecode>
 <nhi:doelvariabelecode>1</nhi:doelvariabelecode>
 <nhi:streefwaarde>3.75</nhi:streefwaarde>
-<nhi:bovenmarge>0.05000</nhi:bovenmarge>
-<nhi:ondermarge>0.05000</nhi:ondermarge>
+<nhi:bovenmarge>3.8000</nhi:bovenmarge>
+<nhi:ondermarge>3.7000</nhi:ondermarge>
 <nhi:sturingtypecode>2</nhi:sturingtypecode>
 </nhi:sturing>
 </gml:featureMember>
@@ -58,8 +58,8 @@
 <nhi:stuurvariabelecode>3</nhi:stuurvariabelecode>
 <nhi:doelvariabelecode>1</nhi:doelvariabelecode>
 <nhi:streefwaarde>7.1</nhi:streefwaarde>
-<nhi:bovenmarge>0.30000</nhi:bovenmarge>
-<nhi:ondermarge>0.3</nhi:ondermarge>
+<nhi:bovenmarge>7.40000</nhi:bovenmarge>
+<nhi:ondermarge>6.8</nhi:ondermarge>
 <nhi:sturingtypecode>2</nhi:sturingtypecode>
 </nhi:sturing>
 </gml:featureMember>
@@ -78,8 +78,8 @@
 <nhi:stuurvariabelecode>3</nhi:stuurvariabelecode>
 <nhi:doelvariabelecode>1</nhi:doelvariabelecode>
 <nhi:streefwaarde>21.425</nhi:streefwaarde>
-<nhi:bovenmarge>0.07500</nhi:bovenmarge>
-<nhi:ondermarge>0.07500</nhi:ondermarge>
+<nhi:bovenmarge>21.500</nhi:bovenmarge>
+<nhi:ondermarge>21.350</nhi:ondermarge>
 <nhi:sturingtypecode>2</nhi:sturingtypecode>
 </nhi:sturing>
 </gml:featureMember>
@@ -258,8 +258,8 @@
 <nhi:stuurvariabelecode>3</nhi:stuurvariabelecode>
 <nhi:doelvariabelecode>1</nhi:doelvariabelecode>
 <nhi:streefwaarde>9.25</nhi:streefwaarde>
-<nhi:bovenmarge>0.05000</nhi:bovenmarge>
-<nhi:ondermarge>0.05000</nhi:ondermarge>
+<nhi:bovenmarge>9.3000</nhi:bovenmarge>
+<nhi:ondermarge>9.2000</nhi:ondermarge>
 <nhi:sturingtypecode>2</nhi:sturingtypecode>
 </nhi:sturing>
 </gml:featureMember>
@@ -478,8 +478,8 @@
 <nhi:stuurvariabelecode>3</nhi:stuurvariabelecode>
 <nhi:doelvariabelecode>1</nhi:doelvariabelecode>
 <nhi:streefwaarde>8.5</nhi:streefwaarde>
-<nhi:bovenmarge>0.10000</nhi:bovenmarge>
-<nhi:ondermarge>0.10000</nhi:ondermarge>
+<nhi:bovenmarge>8.60000</nhi:bovenmarge>
+<nhi:ondermarge>8.40000</nhi:ondermarge>
 <nhi:sturingtypecode>2</nhi:sturingtypecode>
 </nhi:sturing>
 </gml:featureMember>

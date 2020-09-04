@@ -612,7 +612,7 @@
 <nhi:laagstedoorstroombreedte>7.19</nhi:laagstedoorstroombreedte>
 <nhi:hoogstedoorstroombreedte>7.19</nhi:hoogstedoorstroombreedte>
 <nhi:kruinbreedte>7.19</nhi:kruinbreedte>
-<nhi:laagstedoorstroomhoogte>7.935</nhi:laagstedoorstroomhoogte>
+<nhi:laagstedoorstroomhoogte>8.235</nhi:laagstedoorstroomhoogte>
 <nhi:hoogstedoorstroomhoogte>10.36</nhi:hoogstedoorstroomhoogte>
 <nhi:dwarsprofielcode>xxx</nhi:dwarsprofielcode>
 <nhi:afvoercoefficient>1</nhi:afvoercoefficient>

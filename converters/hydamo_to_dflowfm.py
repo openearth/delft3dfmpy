@@ -406,11 +406,18 @@ def dwarsprofiel_to_yzprofiles(crosssections, branches):
     for css in crosssections.itertuples():
         # The cross sections from hydamo are all yz profiles
         
+       # if css.Index == 'prof_RS1-DP-27341':
+       #     print('stop')
         # Determine yz_values
         xyz = np.vstack(css.geometry.coords[:])
         length = np.r_[0, np.cumsum(np.hypot(np.diff(xyz[:, 0]), np.diff(xyz[:, 1])))]
         yz = np.c_[length, xyz[:, -1]]
-        
+        # the GUI cannot cope with identical y-coordinates. Add 1 cm to a 2nd duplicate.
+        yz[:,0] = np.round(yz[:,0],3)
+        for i in range(1,yz.shape[0]):
+            if yz[i,0]==yz[i-1,0]:
+                yz[i,0] +=0.01
+                
         # determine thalweg
         if branches is not None:
             branche_geom = branches[branches.code==css.branch_id].geometry.values        

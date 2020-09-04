@@ -33,6 +33,8 @@ class DFlowFMWriter:
         self.mdufile = os.path.join(self.output_dir, self.name +'.mdu')        
         self.extfile_new = os.path.join(self.output_dir, self.mdu_parameters['ExtForceFileNew'])
         self.netfile = os.path.join(self.output_dir, self.mdu_parameters['NetFile'])
+        if hasattr(self.dflowfmmodel, 'dimr_path'):
+           self.run_dimrpad = self.dflowfmmodel.dimr_path
        
         with open(os.path.join(self.output_dir, 'boundaries.bc'), 'w') as f:
             self._write_header(f, 'boundConds', 1.01, extra_linebreak=False)     
@@ -67,7 +69,10 @@ class DFlowFMWriter:
         self.write_boundary_conditions()
         # Observation points
         self.write_observation_points()
-
+        if hasattr(self, 'run_dimrpad'):
+            # Files for running DIMR
+            self.write_dimrfiles()
+        
         # Change mdu parameters
         for parameter, value in self.mdu_parameters.items():
             self.change_mdu_parameter(parameter, value)
@@ -565,7 +570,39 @@ class DFlowFMWriter:
 
         with open(os.path.join(self.output_dir, f'{self.name}.mdu'), 'w') as f:
             f.write(''.join(lines))
+    
+    def write_dimrfiles(self):        
+        """
+        Method to write the files required for running in DIMR
+        """
+        # run.bat
+        with open(os.path.join(self.output_dir, 'run.bat'),'w') as f:
+                 f.write('@ echo off\n')
+                 f.write('set OMP_NUM_THREADS=2\n')
+                 f.write('call '+self.run_dimrpad+'\n')
+                 f.write('pause\n')
 
+        # coupling XML
+        FM_comp_name = 'DFM'        
+        with open(os.path.join(self.output_dir, 'dimr_config.xml'),'w') as f:       
+                 f.write('<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n')
+                 f.write('<dimrConfig xmlns="http://schemas.deltares.nl/dimr" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.deltares.nl/dimr http://content.oss.deltares.nl/schemas/dimr-1.2.xsd">\n')
+                 f.write('\t<documentation>\n')
+                 f.write('\t\t<fileVersion>1.2</fileVersion>\n')
+                 f.write('\t\t<createdBy>Deltares, Coupling Team</createdBy>\n')
+                 f.write('\t\t<creationDate>2018-08-28T10:06:09.3197094Z</creationDate>\n')
+                 f.write('\t</documentation>\n\n')        
+                 f.write('\t<control>\n')
+                 f.write('\t\t\t\t<start name="'+FM_comp_name+'" />\n')
+                 f.write('\t</control>\n\n')                                      
+                 f.write('\t<component name="'+FM_comp_name+'">\n')
+                 f.write('\t\t<library>dflowfm</library>\n')
+                 f.write('\t\t<workingDir>.</workingDir>\n')
+                 f.write('\t\t<inputFile>'+self.name+'.mdu</inputFile>\n')
+                 f.write('\t</component>\n')                                  
+                 f.write('</dimrConfig>\n')
+        
+    
 
 def _format_row(row):
     # Create format string
@@ -592,3 +629,4 @@ def write_fm_file(file, data, names=None, mode='w'):
 
     with open(file, mode) as f:
         f.write(string)
+

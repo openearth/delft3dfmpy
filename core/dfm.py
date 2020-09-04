@@ -403,7 +403,7 @@ class CrossSections:
             'frictionId': roughnessname
         }
 
-        return name
+        return name        
 
     def add_rectangle_definition(self, height, width, closed, roughnesstype, roughnessvalue, name=None):
         """
@@ -1414,11 +1414,12 @@ class Structures:
         roughnessname = self.dflowfmmodel.network.get_roughness_description(frictiontype, frictionvalue)
 
         # Add cross section definition
+        # WORKAROUND: for the GUI, a profile definition has to be created for every culvert. We do this temporary.
         if crosssection['shape'] == 'circle':
-            definition = self.dflowfmmodel.crosssections.add_circle_definition(crosssection['diameter'], frictiontype, frictionvalue)
+            definition = self.dflowfmmodel.crosssections.add_circle_definition(crosssection['diameter'], frictiontype, frictionvalue, name=id)
         elif crosssection['shape'] == 'rectangle':
             definition = self.dflowfmmodel.crosssections.add_rectangle_definition(
-                crosssection['height'], crosssection['width'], crosssection['closed'], frictiontype, frictionvalue)
+                crosssection['height'], crosssection['width'], crosssection['closed'], frictiontype, frictionvalue, name=id)
         else:
             NotImplementedError(f'Cross section with shape \"{crosssection["shape"]}\" not implemented.')
 
