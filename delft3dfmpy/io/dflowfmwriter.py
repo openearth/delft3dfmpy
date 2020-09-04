@@ -90,7 +90,7 @@ class DFlowFMWriter:
         """
         Copy MDU file form resouces.
         """
-        srcMdu = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'FMmdu.txt')
+        srcMdu = os.path.join(os.path.dirname(__file__), '..', 'resources', 'FMmdu.txt')
         targetMdu = os.path.join(self.output_dir, f'{self.name}.mdu')
 
         shutil.copy2(srcMdu, targetMdu)
