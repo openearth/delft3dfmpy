@@ -12,3 +12,6 @@ datamodels/__pycache__/hydamo.cpython-37.pyc
 io/__pycache__/dflowfmwriter.cpython-37.pyc
 io/__pycache__/dflowfmwriter.cpython-37.pyc
 *.pyc
+dhydamo.log
+.eggs/*
+delft3dfmpy.egg-info
