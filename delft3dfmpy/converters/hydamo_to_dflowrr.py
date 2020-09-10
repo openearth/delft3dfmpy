@@ -186,7 +186,7 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
                         continue
                         
                     pav_pixels = intersecting_pixels[0][14.0]
-                    pav_area += pav_pixels*int(px_area)
+                    pav_area += pav_pixels*px_area
                     # subtract it fromthe total paved area in this catchment, make sure at least 0 remains
                     lu_counts[cat_ind][14.0] -=  pav_pixels
                     if lu_counts[cat_ind][14.0] < 0: lu_counts[cat_ind][14.0]  = 0
@@ -237,7 +237,7 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
             
         elev = mean_elev[num]['median']
         paved_drr.at[cat.code, 'code'] = str(cat.code)
-        paved_drr.at[cat.code, 'area'] = str(lu_counts[num][14]*int(px_area)) if 14 in lu_counts[num] else '0'        
+        paved_drr.at[cat.code, 'area'] = str(lu_counts[num][14]*px_area) if 14 in lu_counts[num] else '0'        
         paved_drr.at[cat.code, 'mvlevel'] = f'{elev:.2f}'         
         # if a float is given, a standard value is passed. If a string is given, a rastername is assumed to zonal statistics are applied.       
         if isinstance(street_storage, float):    
@@ -292,7 +292,7 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
             
         elev = mean_elev[num]['median']
         gh_drr.at[cat.code, 'code'] = str(cat.code)
-        gh_drr.at[cat.code, 'area'] = str(lu_counts[num][15]*int(px_area)) if 15 in lu_counts[num] else '0'        
+        gh_drr.at[cat.code, 'area'] = str(lu_counts[num][15]*px_area) if 15 in lu_counts[num] else '0'        
         gh_drr.at[cat.code, 'mvlevel'] = f'{elev:.2f}' 
         if isinstance(roof_storage, float):    
             gh_drr.at[cat.code, 'roofstor'] = f'{roof_storage:.2f}'
@@ -327,7 +327,7 @@ def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=N
         ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code   
         
         ow_drr.at[cat.code, 'code'] = str(cat.code)
-        ow_drr.at[cat.code, 'area'] = str(lu_counts[num][13]*int(px_area)) if 13 in lu_counts[num] else '0'        
+        ow_drr.at[cat.code, 'area'] = str(lu_counts[num][13]*px_area) if 13 in lu_counts[num] else '0'        
         ow_drr.at[cat.code, 'meteostat'] = ms
         ow_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-20:.0f}'
         ow_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'

@@ -8,6 +8,7 @@ import numpy as np
 from shapely.geometry import box, LineString, Point
 import pandas as pd
 import csv
+import delft3dfmpy
 from delft3dfmpy.core.geometry import orthogonal_line
 
 import logging
@@ -24,6 +25,8 @@ class DFlowRRWriter:
         self.output_dir = os.path.join(output_dir, 'rr')
         self.name = name
 
+        self.version = delft3dfmpy.DFlowFMWriter.version
+        
         if os.path.exists(self.output_dir):
             shutil.rmtree(self.output_dir)
 
@@ -67,7 +70,7 @@ class DFlowRRWriter:
             Succesfull or not.
 
         """
-        srcRR = os.path.join(os.path.dirname(__file__), '..', 'resources', 'RRmodel')
+        srcRR = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'RRmodel')
         targetRR = os.path.join(self.output_dir)
         shutil.copytree(srcRR, targetRR)
         return True
@@ -381,10 +384,9 @@ class DFlowRRWriter:
                  f.write('<dimrConfig xmlns="http://schemas.deltares.nl/dimr" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.deltares.nl/dimr http://content.oss.deltares.nl/schemas/dimr-1.2.xsd">\n')
                  f.write('\t<documentation>\n')
                  f.write('\t\t<fileVersion>1.2</fileVersion>\n')
-                 f.write('\t\t<createdBy>Deltares, Coupling Team</createdBy>\n')
-                 f.write('\t\t<creationDate>2018-08-28T10:06:09.3197094Z</creationDate>\n')
-                 f.write('\t</documentation>\n\n')
-        
+                 f.write('\t\t<createdBy>D-HyDAMO in delft3dfmpy v.'+self.version['number']+'</createdBy>\n')
+                 f.write("\t\t<creationDate>"+self.version['date']+'</creationDate>\n')
+                 f.write('\t</documentation>\n\n')        
                  f.write('\t<control>\n')
                  f.write('\t\t<parallel>\n')
                  f.write('\t\t\t<startGroup>\n')

@@ -6,7 +6,7 @@ import datetime
 
 import numpy as np
 from shapely.geometry import box, LineString, Point
-
+import delft3dfmpy
 from delft3dfmpy.io.UgridWriter import UgridWriter
 from delft3dfmpy.core.geometry import orthogonal_line
 
@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 class DFlowFMWriter:
     """Writer for FM files"""
 
+    # versioning info
+    version = { 'number'        : delft3dfmpy.__version__,
+                'date'          : datetime.datetime.strftime(datetime.datetime.today(),'%Y-%m-%d %H:%M:%S'),
+                'dfm_version'   : '1.2.105.67228M',
+                'dimr_version'  : '2.13.02.67836',
+                'suite_version' : '(Beta) 0.9.6.51435'} 
+   
     def __init__(self, dflowfmmodel, output_dir, name):
         self.dflowfmmodel = dflowfmmodel
         self.output_dir = os.path.join(output_dir, 'fm')
@@ -24,7 +31,9 @@ class DFlowFMWriter:
             os.makedirs(self.output_dir)
 
         self.name = name
-
+       
+        self.version = DFlowFMWriter.version
+        
         self.mdu_parameters = dflowfmmodel.mdu_parameters
         self.mdu_parameters['NetFile'] = self.name + "_net.nc"
 
@@ -33,6 +42,7 @@ class DFlowFMWriter:
         self.mdufile = os.path.join(self.output_dir, self.name +'.mdu')
         self.extfile_new = os.path.join(self.output_dir, self.mdu_parameters['ExtForceFileNew'])
         self.netfile = os.path.join(self.output_dir, self.mdu_parameters['NetFile'])
+        
         if hasattr(self.dflowfmmodel, 'dimr_path'):
            self.run_dimrpad = self.dflowfmmodel.dimr_path
        
@@ -51,7 +61,7 @@ class DFlowFMWriter:
 
         # Write grid in Ugrid format to netcdf
         ugridWriter = UgridWriter()
-        ugridWriter.write(dflowfmmodel=self.dflowfmmodel, path=self.netfile)
+        ugridWriter.write(dflowfmmodel=self.dflowfmmodel, path=self.netfile, version=self.version)
 
         # mdu file
         self.writeMdFiles()
@@ -155,6 +165,9 @@ class DFlowFMWriter:
                     self._write_dict(f, dct=dct, header='CrossSection')
 
     def _write_header(self, f, filetype, fileversion, extra_linebreak=True):
+        f.write(f"# Generated with D-HyDAMO in delftd3fmpy v.{self.version['number']} on {self.version['date']}.\n")
+        f.write(f"# Tested and compatible with D-Flow FM {self.version['dfm_version']}, DIMRset {self.version['dimr_version']} and D-HYDRO suite 1D2D {self.version['suite_version']}.\n")
+        f.write('# \n')
         f.write('[General]\n')
         f.write(f'fileVersion = {fileversion:.2f}\n')
         f.write(f'fileType = {filetype}\n')
@@ -589,8 +602,8 @@ class DFlowFMWriter:
                  f.write('<dimrConfig xmlns="http://schemas.deltares.nl/dimr" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.deltares.nl/dimr http://content.oss.deltares.nl/schemas/dimr-1.2.xsd">\n')
                  f.write('\t<documentation>\n')
                  f.write('\t\t<fileVersion>1.2</fileVersion>\n')
-                 f.write('\t\t<createdBy>Deltares, Coupling Team</createdBy>\n')
-                 f.write('\t\t<creationDate>2018-08-28T10:06:09.3197094Z</creationDate>\n')
+                 f.write('\t\t<createdBy>D-HyDAMO in delft3dfmpy v.'+self.version['number']+'</createdBy>\n')
+                 f.write("\t\t<creationDate>"+self.version['date']+'</creationDate>\n')
                  f.write('\t</documentation>\n\n')        
                  f.write('\t<control>\n')
                  f.write('\t\t\t\t<start name="'+FM_comp_name+'" />\n')

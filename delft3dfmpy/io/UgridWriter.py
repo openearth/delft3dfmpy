@@ -13,9 +13,9 @@ class UgridWriter:
         self.idstrlength = 40
         self.longstrlength = 80
 
-    def write(self, dflowfmmodel, path):  # write ugrid file from GWSW model
+    def write(self, dflowfmmodel, path, version):  # write ugrid file from GWSW model
 
-        ncfile = self.create_netcdf(path)
+        ncfile = self.create_netcdf(path, version)
 
         # Write the 1d mesh
         if not dflowfmmodel.network.mesh1d.empty():
@@ -40,7 +40,7 @@ class UgridWriter:
         """Convert list of strings to list of stings with a fixed number of characters"""
         return [item.ljust(size)[:size] for item in lst]
 
-    def create_netcdf(self, path):
+    def create_netcdf(self, path, version):
 
         # File format:
         outformat = "NETCDF3_CLASSIC" #"NETCDF4"
@@ -49,10 +49,12 @@ class UgridWriter:
 
         # global attributes
         ncfile.Conventions = "CF-1.8 UGRID-1.0"
-        ncfile.history = "Created on {} D-Flow 1D, D-Flow FM".format(datetime.now())
-        ncfile.institution = "Deltares"
-        ncfile.reference = "http://www.deltares.nl"
-        ncfile.source = "Python script to prepare HyDAMO import into a D-Flow FM model."
+        ncfile.title = 'Delft3D-FM 1D2D network for model '+os.path.split(path)[-1].rstrip('_net.nc')
+        ncfile.source = f"delft3dfmpy v.{version['number']}, D-HyDAMO, model {os.path.split(path)[-1].rstrip('_net.nc')}"
+        ncfile.history = f"Created on {version['date']} by {os.path.split(__file__)[-1]}."        
+        ncfile.institution = "Deltares/HKV"
+        ncfile.references = "https://github.com/openearth/delft3dfmpy/; https://www.deltares.nl; https://www.hkv.nl"      
+        ncfile.comment = f"Tested and compatible with D-Flow FM {version['dfm_version']}, DIMRset {version['dimr_version']} and D-HYDRO suite 1D2D {version['suite_version']}"
 
         return ncfile
 
