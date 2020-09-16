@@ -18,3 +18,5 @@ delft3dfmpy.egg-info
 notebooks/.ipynb_checkpoints/Usage_introduction_FM_only-checkpoint.ipynb
 notebooks/temp_ascgrid.asc
 notebooks/tempgrid_net.nc
+data/testmodel_fmonly/*
+notebooks/unstruc.dia

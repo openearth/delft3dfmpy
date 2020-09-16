@@ -7,6 +7,7 @@ channels:
 # if you only want the user dependencies, see
 # install_requires in setup.py
 dependencies:
+  - git
   - gdal=2.4.1
   - geopandas
   - git

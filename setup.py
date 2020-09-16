@@ -23,7 +23,7 @@ setup(
     setup_requires=["setuptools_scm"],
     python_requires=">=3.6",
     install_requires=[
-                      "gdal==2.4.1",
+                      "gdal>=2.4.1",
                       "geopandas",
                       "imod",
                       "matplotlib",
