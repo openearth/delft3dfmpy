@@ -19,8 +19,8 @@ setup(
     packages=find_packages(),
     package_dir={"delft3dfmpy": "delft3dfmpy"},
     test_suite="tests",
-    use_scm_version=True,
-    setup_requires=["setuptools_scm"],
+#    use_scm_version=True,
+#    setup_requires=["setuptools_scm"],
     python_requires=">=3.6",
     install_requires=[
                       "fire",
