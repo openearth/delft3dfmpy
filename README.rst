@@ -53,11 +53,11 @@ By the following procedure you can install the delft3dfmpy module:
 
        conda activate delft3dfmpy
 
- Install the delft3dfmpy in the active environment by the following command in command prompt:
+4.  Install the delft3dfmpy in the active environment by the following command in command prompt:
 
       pip install .
 
- Alternatively, you can link the directory with delft3dfmpy to your anaconda environment in develop-mode:
+    Alternatively, you can link the directory with delft3dfmpy to your anaconda environment in develop-mode:
  
       pip install -e .
 
