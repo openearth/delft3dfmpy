@@ -43,26 +43,31 @@ By the following procedure you can install the delft3dfmpy module:
 
     During installation, tick the box “Add Anaconda to PATH”, even though it colors a suggestive red.
 
-2.  Clone or download the repository. This can be done with the "Code" button at the upper right of this page. Unpack the downloaded file if you've chosen to download the repository as .zip.
+2.  Clone or download the repository. This can be done with the "Code" button at the upper right of this page. Unpack the downloaded file if you've chosen to download teh repository as .zip.
 
-3.  Open a command prompt and navigate (with the "cd" command) to the directory were you've cloned or unpacked delft3dfmpy. This directory should contain amongst other the files environment.yml and setup.py. Create the delft3dfmpy environment with the required modules, by executing the following commands in an anaconda command prompt:
+3.  Open a command prompt and navigate (with the `cd` command) to the directory were you've cloned or unpacked delft3dfmpy. This directory should contain amongst other the files environment.yml and setup.py. If you have an Anaconda installation where you did not add Anaconda to the system path (step 1), use an Anaconda command prompt instead of a regular command prompt.
+
+4. Create the delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
 
         conda env create -f environment.yml
+		
+	This should create a delft3dfmpy environment with the required dependencies.
 
-3.  Activate the created environment by the following command in command prompt:
+5.  Activate the created environment by the following command in command prompt:
 
        conda activate delft3dfmpy
 
-4.  Install the delft3dfmpy in the active environment by the following command in command prompt:
+6. Install the delft3dfmpy in the active environment by the following command in command prompt:
 
-      pip install .
+		pip install .
+	   
+	Or in case you want to further develop the code:
+	
+		pip install -e .
+	  
+	Including the keyword `-e` makes Python recognize the module during import in your script: `import delft3dfmpy` without moving it to the site-packages directory. This means that you can edit the code from the directory where you cloned or unzipped the repository, and the changes will automatically be recognized on the next import. If you do not plan to modify the code you can leave the keyword `-e` out. In this case pip will install the package in the site-packages directory, as any other pip or conda installed package. You can still make changes to the code, but in order for them to be picked up they need to be done in the site-packages/delft3dfmpy directory
 
-    Alternatively, you can link the directory with delft3dfmpy to your anaconda environment in develop-mode:
- 
-      pip install -e .
-
-
-Activate the created environment in an anaconda command prompt (conda activate delft3dfmpy) before running your notebook or script. A jupyter notebook or command prompt for the environment can also be launched from the Anaconda Navigator. 
+Activate the created environment in an (anaconda) command prompt (conda activate delft3dfmpy) before running your notebook or script. A jupyter notebook or command prompt for the environment can also be launched from the Anaconda Navigator. 
 For more information on how to use environments, see: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
 Usage

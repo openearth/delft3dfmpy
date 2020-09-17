@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-with open("README.rst") as readme_file:
+with open("README.rst", encoding="utf8") as readme_file:
     readme = readme_file.read()
 
 setup(
@@ -23,11 +23,14 @@ setup(
     setup_requires=["setuptools_scm"],
     python_requires=">=3.6",
     install_requires=[
-                      "gdal==2.4.1",
+                      "fire",
+                      "gdal>=2.4.1",
                       "geopandas",
+                      "hkvsobekpy",
                       "imod",
                       "matplotlib",
-                      "netcdf4 ",
+                      "netcdf4",
+                      "notebook",
                       "numpy",
                       "pandas",
                       "pillow",
