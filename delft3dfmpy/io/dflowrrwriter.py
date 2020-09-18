@@ -70,7 +70,7 @@ class DFlowRRWriter:
             Succesfull or not.
 
         """
-        srcRR = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'RRmodel')
+        srcRR = os.path.join(os.path.dirname(__file__), 'resources', 'RRmodel')
         targetRR = os.path.join(self.output_dir)
         shutil.copytree(srcRR, targetRR)
         return True
