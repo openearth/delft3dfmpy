@@ -60,15 +60,23 @@ By the following procedure you can install the delft3dfmpy module:
 
      git clone https://github.com/openearth/delft3dfmpy.git
 
-5.  Move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
+5.  move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
 
      cd delft3dfmpy
 
      pip install .
 
+    if you installed Anaconda for the current user only, you can install delft3dfmpy by:
+
+    python -m pip install --user .
+
     Or in case you want to further develop replace the last command by:
 
      pip install -e .
+
+    or:
+
+    python -m pip install --user -e .
 
     Including the keyword `-e` makes Python recognize the module during import in your script: `import delft3dfmpy` without moving it to the site-packages directory. This means that you can edit the code from the directory where you cloned or unzipped the repository, and the changes will automatically be recognized on the next import. If you do not plan to modify the code you can leave the keyword `-e` out. In this case pip will install the package in the site-packages directory, as any other pip or conda installed package. You can still make changes to the code, but in order for them to be picked up they need to be done in the site-packages/delft3dfmpy directory
 
