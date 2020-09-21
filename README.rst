@@ -48,7 +48,7 @@ By the following procedure you can install the delft3dfmpy module:
 
 3.  Open a command prompt and navigate (with the `cd` command) to the directory were you've cloned or unpacked delft3dfmpy. This directory should contain amongst other the files environment.yml and setup.py. If you have an Anaconda installation where you did not add Anaconda to the system path (step 1), use an Anaconda command prompt instead of a regular command prompt.
 
-4.  Create the delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
+4.  Download environment.yml from this repository and create a delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
 
         conda env create -f environment.yml
 
@@ -58,13 +58,18 @@ By the following procedure you can install the delft3dfmpy module:
 
         conda activate delft3dfmpy
 
-6.  Install the delft3dfmpy in the active environment by the following command in command prompt:
+6.  Clone this github directory by the following command in the command prompt:
 
-	    pip install .
+       git clone https://github.com/openearth/delft3dfmpy.git
 
-    Or in case you want to further develop the code:
+7.  Move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
 
-	    pip install -e .
+        cd delft3dfmpy
+        pip install .
+
+    Or in case you want to further develop replace the last command by:
+
+        pip install -e .
 
     Including the keyword `-e` makes Python recognize the module during import in your script: `import delft3dfmpy` without moving it to the site-packages directory. This means that you can edit the code from the directory where you cloned or unzipped the repository, and the changes will automatically be recognized on the next import. If you do not plan to modify the code you can leave the keyword `-e` out. In this case pip will install the package in the site-packages directory, as any other pip or conda installed package. You can still make changes to the code, but in order for them to be picked up they need to be done in the site-packages/delft3dfmpy directory
 
