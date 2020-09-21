@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nhi:FeatureCollection xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" xmlns:nhi="http://www.nhi.nu/gml" xsi:schemaLocation="http://www.nhi.nu/gml nhiFeatureTypes.xsd">
+<gml:boundedBy>
+<gml:Box srsName="EPSG:28992"><gml:coordinates>NaN,NaN NaN,NaN</gml:coordinates></gml:Box>
+</gml:boundedBy>
+<gml:featureMember>
+<nhi:afsluitmiddel>
+<nhi:code>KDU_RS31-st5_AS1</nhi:code>
+<nhi:statusobjectcode>3</nhi:statusobjectcode>
+<nhi:objectbegintijd>19800101000000</nhi:objectbegintijd>
+<nhi:objecteindtijd>20170727000000</nhi:objecteindtijd>
+<nhi:administratiefgebied>dommel</nhi:administratiefgebied>
+<nhi:codegerelateerdobject>RS375-KDU4</nhi:codegerelateerdobject>
+<nhi:soortafsluitmiddelcode>5</nhi:soortafsluitmiddelcode>
+<nhi:soortregelbaarheidcode>4</nhi:soortregelbaarheidcode>
+<nhi:breedte>1.2</nhi:breedte>
+<nhi:hoogte>0.715</nhi:hoogte>
+<nhi:minimalehoogtebovenkant>25.015</nhi:minimalehoogtebovenkant>
+<nhi:maximalehoogtebovenkant>25.73</nhi:maximalehoogtebovenkant>
+<nhi:afvoercoefficient>1</nhi:afvoercoefficient>
+</nhi:afsluitmiddel>
+</gml:featureMember>
+<gml:featureMember>
+<nhi:afsluitmiddel>
+<nhi:code>Weir_OWL26657-st1_AS1</nhi:code>
+<nhi:statusobjectcode>3</nhi:statusobjectcode>
+<nhi:objectbegintijd>19800101000000</nhi:objectbegintijd>
+<nhi:objecteindtijd>20170727000000</nhi:objecteindtijd>
+<nhi:administratiefgebied>dommel</nhi:administratiefgebied>
+<nhi:codegerelateerdobject>Weir_OWL22770-st1</nhi:codegerelateerdobject>
+<nhi:soortafsluitmiddelcode>4</nhi:soortafsluitmiddelcode>
+<nhi:soortregelbaarheidcode>3</nhi:soortregelbaarheidcode>
+<nhi:breedte>1.3</nhi:breedte>
+<nhi:hoogte>1.43</nhi:hoogte>
+<nhi:minimalehoogtebovenkant>7.58</nhi:minimalehoogtebovenkant>
+<nhi:maximalehoogtebovenkant>9.01</nhi:maximalehoogtebovenkant>
+<nhi:afvoercoefficient>1</nhi:afvoercoefficient>
+</nhi:afsluitmiddel>
+</gml:featureMember>
+</nhi:FeatureCollection>
