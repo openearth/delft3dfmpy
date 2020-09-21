@@ -39,36 +39,36 @@ By the following procedure you can install the delft3dfmpy module:
 
 1.  Install a Anaconda or Minoconda Python distribution:
 
-        https://www.anaconda.com/products/individual
-        https://docs.conda.io/en/latest/miniconda.html
+     https://www.anaconda.com/products/individual
+     https://docs.conda.io/en/latest/miniconda.html
 
     During installation, tick the box “Add Anaconda to PATH”, even though it colors a suggestive red.
 
-2.  Download the content of https://raw.githubusercontent.com/openearth/delft3dfmpy/master/environment.yml and store this in a local file named environment.yml
+2.  Save the content of https://raw.githubusercontent.com/openearth/delft3dfmpy/master/environment.yml and store this in a local file named environment.yml
 
-3. from this repository and create a delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
+3.  from this repository and create a delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
 
-        conda env create -f environment.yml
+     conda env create -f environment.yml
 
-    This should create a delft3dfmpy environment with the required dependencies.
+     This should create a delft3dfmpy environment with the required dependencies.
 
 3.  Activate the created environment by the following command in command prompt:
 
-        conda activate delft3dfmpy
+     conda activate delft3dfmpy
 
 4.  Clone this github directory by the following command in the command prompt:
 
-       git clone https://github.com/openearth/delft3dfmpy.git
+     git clone https://github.com/openearth/delft3dfmpy.git
 
 5.  Move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
 
-        cd delft3dfmpy
+     cd delft3dfmpy
 
-        pip install .
+     pip install .
 
     Or in case you want to further develop replace the last command by:
 
-        pip install -e .
+     pip install -e .
 
     Including the keyword `-e` makes Python recognize the module during import in your script: `import delft3dfmpy` without moving it to the site-packages directory. This means that you can edit the code from the directory where you cloned or unzipped the repository, and the changes will automatically be recognized on the next import. If you do not plan to modify the code you can leave the keyword `-e` out. In this case pip will install the package in the site-packages directory, as any other pip or conda installed package. You can still make changes to the code, but in order for them to be picked up they need to be done in the site-packages/delft3dfmpy directory
 
