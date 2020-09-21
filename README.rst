@@ -65,6 +65,7 @@ By the following procedure you can install the delft3dfmpy module:
 7.  Move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
 
         cd delft3dfmpy
+
         pip install .
 
     Or in case you want to further develop replace the last command by:
