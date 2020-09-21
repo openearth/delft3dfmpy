@@ -44,25 +44,21 @@ By the following procedure you can install the delft3dfmpy module:
 
     During installation, tick the box “Add Anaconda to PATH”, even though it colors a suggestive red.
 
-2.  Clone or download the repository. This can be done with the "Code" button at the upper right of this page. Unpack the downloaded file if you've chosen to download teh repository as .zip.
-
-3.  Open a command prompt and navigate (with the `cd` command) to the directory were you've cloned or unpacked delft3dfmpy. This directory should contain amongst other the files environment.yml and setup.py. If you have an Anaconda installation where you did not add Anaconda to the system path (step 1), use an Anaconda command prompt instead of a regular command prompt.
-
-4.  Download environment.yml from this repository and create a delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
+2.  Download environment.yml from this repository and create a delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
 
         conda env create -f environment.yml
 
     This should create a delft3dfmpy environment with the required dependencies.
 
-5.  Activate the created environment by the following command in command prompt:
+3.  Activate the created environment by the following command in command prompt:
 
         conda activate delft3dfmpy
 
-6.  Clone this github directory by the following command in the command prompt:
+4.  Clone this github directory by the following command in the command prompt:
 
        git clone https://github.com/openearth/delft3dfmpy.git
 
-7.  Move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
+5.  Move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
 
         cd delft3dfmpy
 
