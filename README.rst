@@ -38,8 +38,8 @@ Installation
 
 By the following procedure you can install the delft3dfmpy module:
 
-Environment
-^^^^^^^^^^^
+Environment Preparation
+^^^^^^^^^^^^^^^^^^^^^^^
 Prepare an environment with the correct dependencies for delft3dfmpy
 1.  Install a Anaconda or Minoconda Python distribution:
 
@@ -48,27 +48,27 @@ Prepare an environment with the correct dependencies for delft3dfmpy
 
 2.  Save the content of https://raw.githubusercontent.com/openearth/delft3dfmpy/master/environment.yml and store this in a local file named environment.yml
 
-3.  Open Ananconda prompt and enter the directory where the `envrionment.yml` from step 2 is stored.
+3.  Open Ananconda prompt and enter the directory where the ``envrionment.yml`` from step 2 is stored.
 
-4.  Install the `delft3dfmpy` environment with the required modules, by executing the following command in the opened command prompt.
+4.  Install the ``delft3dfmpy`` environment with the required modules, by executing the following command in the opened command prompt.
 
-     conda env create -f environment.yml
+        ``conda env create -f environment.yml``
 
-     This should create a delft3dfmpy environment with the required dependencies.
+    This should create a delft3dfmpy environment with the required dependencies.
 
 5.  Activate the created environment by the following command in command prompt:
 
-     conda activate delft3dfmpy
+        ``conda activate delft3dfmpy``
 
-     You now have a correct environment for installation of the `delft3dfmpy` Python package
+    You now have a correct environment for installation of the ``delft3dfmpy`` Python package
 
-Python package delft3dfmpy
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-1.  Install the Python package `delft3dfmpy` directly, by executing the following command in the opened command prompt.
+Python package ``delft3dfmpy``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1.  Install the Python package ``delft3dfmpy`` directly, by executing the following command in the opened command prompt.
 
-     python -m pip install git+https://github.com/openearth/delft3dfmpy.git     
+        ``python -m pip install git+https://github.com/openearth/delft3dfmpy.git``
 
-2.  If the command prompt states `Successfully built delft3dfmpy` then installation is succesful.
+2.  If the command prompt states ``Successfully built delft3dfmpy`` then installation is succesful.
 
 Usage
 -----
@@ -81,14 +81,13 @@ The usage is best described by the example notebook: https://github.com/openeart
 Contribution
 ------------
 
-Contributions are much welcome for the documentation and for defects. Defects means here both behaviour not conforming the specification and missing but desirable features.
-The code and development happens in this GitHub repository: https://github.com/openearth/delft3dfmpy.
+Contributions are much welcome for the documentation, missing but desirable features and bugs. The code and development happens in this GitHub repository: https://github.com/openearth/delft3dfmpy.
 
 For contributions, use the following guidelines:
 
- 1.  Fork the project on GitHub, clone the fork to your Operating System and open the repository as folder/workspace in your favorite IDE. I use VSCode + Python extension.
+ 1.  Fork the project on GitHub, clone the fork to your Operating System and open the repository as folder/workspace in your favorite IDE (eg. VSCode + Python extension).
 
- 2.  Any change applied to the source code should be tested locally.
+ 2.  Make your contributions and test the changes locally.
 
  3.  Once satisfied, push your changes as a new branch to your fork and create a Pull Request to the original repository.
 
