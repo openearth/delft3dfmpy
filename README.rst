@@ -35,54 +35,61 @@ Features
 
 Installation
 ------------
+
 By the following procedure you can install the delft3dfmpy module:
 
+Environment
+^^^^^^^^^^^
+Prepare an environment with the correct dependencies for delft3dfmpy
 1.  Install a Anaconda or Minoconda Python distribution:
 
      https://www.anaconda.com/products/individual
      https://docs.conda.io/en/latest/miniconda.html
 
-    During installation, tick the box “Add Anaconda to PATH”, even though it colors a suggestive red.
-
 2.  Save the content of https://raw.githubusercontent.com/openearth/delft3dfmpy/master/environment.yml and store this in a local file named environment.yml
 
-3.  from this repository and create a delft3dfmpy environment with the required modules, by executing the following command in the opened command prompt.
+3.  Open Ananconda prompt and enter the directory where the `envrionment.yml` from step 2 is stored.
+
+4.  Install the `delft3dfmpy` environment with the required modules, by executing the following command in the opened command prompt.
 
      conda env create -f environment.yml
 
      This should create a delft3dfmpy environment with the required dependencies.
 
-3.  Activate the created environment by the following command in command prompt:
+5.  Activate the created environment by the following command in command prompt:
 
      conda activate delft3dfmpy
 
-4.  Clone this github directory by the following command in the command prompt:
+     You now have a correct environment for installation of the `delft3dfmpy` Python package
 
-     git clone https://github.com/openearth/delft3dfmpy.git
+Python package delft3dfmpy
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+1.  Install the Python package `delft3dfmpy` directly, by executing the following command in the opened command prompt.
 
-5.  Make sure your enviornment is still active and move to the delft3dfm folder and install the delft3dfmpy in the active environment by the following commands:
+     python -m pip install git+https://github.com/openearth/delft3dfmpy.git     
 
-     cd delft3dfmpy
+2.  If the command prompt states `Successfully built delft3dfmpy` then installation is succesful.
 
-     pip install .
-
-    if you installed Anaconda for the current user only, you can install delft3dfmpy by:
-
-    python -m pip install --user .
-
-    Or in case you want to further develop replace the last command by:
-
-     pip install -e .
-
-    or:
-
-     python -m pip install --user -e .
-
-    Including the keyword `-e` makes Python recognize the module during import in your script: `import delft3dfmpy` without moving it to the site-packages directory. This means that you can edit the code from the directory where you cloned or unzipped the repository, and the changes will automatically be recognized on the next import. If you do not plan to modify the code you can leave the keyword `-e` out. In this case pip will install the package in the site-packages directory, as any other pip or conda installed package. You can still make changes to the code, but in order for them to be picked up they need to be done in the site-packages/delft3dfmpy directory
+Usage
+-----
 
 Activate the created environment in an (anaconda) command prompt (conda activate delft3dfmpy) before running your notebook or script. A jupyter notebook or command prompt for the environment can also be launched from the Anaconda Navigator. 
 For more information on how to use environments, see: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
-Usage
------
 The usage is best described by the example notebook: https://github.com/openearth/delft3dfmpy/blob/master/notebooks/Usage_introduction_coupled_RRFM.ipynb
+
+Contribution
+------------
+
+Contributions are much welcome for the documentation and for defects. Defects means here both behaviour not conforming the specification and missing but desirable features.
+The code and development happens in this GitHub repository: https://github.com/openearth/delft3dfmpy.
+
+For contributions, use the following guidelines:
+
+ 1.  Fork the project on GitHub, clone the fork to your Operating System and open the repository as folder/workspace in your favorite IDE. I use VSCode + Python extension.
+
+ 2.  Any change applied to the source code should be tested locally.
+
+ 3.  Once satisfied, push your changes as a new branch to your fork and create a Pull Request to the original repository.
+
+ 4.  A maintainer on the main GitHub repository will review your PR and guide the merging process. 
