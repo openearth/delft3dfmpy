@@ -4,6 +4,7 @@ channels:
   - default
 dependencies:
   - python=3.7.*
+  - git
   - pip  
   - geopandas
   - rasterio  
