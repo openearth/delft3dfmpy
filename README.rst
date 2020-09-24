@@ -85,10 +85,10 @@ Contributions are much welcome for the documentation, missing but desirable feat
 
 For contributions, use the following guidelines:
 
- 1.  Fork the project on GitHub, clone the fork to your Operating System and open the repository as folder/workspace in your favorite IDE (eg. VSCode + Python extension).
+1.  Fork the project on GitHub, clone the fork to your Operating System and open the repository as folder/workspace in your favorite IDE (eg. VSCode + Python extension).
 
- 2.  Make your contributions and test the changes locally.
+2.  Make your contributions and test the changes locally.
 
- 3.  Once satisfied, push your changes as a new branch to your fork and create a Pull Request to the original repository.
+3.  Once satisfied, push your changes as a new branch to your fork and create a Pull Request to the original repository.
 
- 4.  A maintainer on the main GitHub repository will review your PR and guide the merging process. 
+4.  A maintainer on the main GitHub repository will review your PR and guide the merging process. 
