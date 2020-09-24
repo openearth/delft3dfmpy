@@ -12,7 +12,7 @@ requires = [
     "rasterio",
     "imod",
     "numpy",
-    "scipy"
+    "scipy",
     "pandas",
     "matplotlib",
     "pillow",
@@ -24,7 +24,7 @@ requires = [
     "hkvsobekpy"
 ]
 keywords = "hydraulics hydrology data-science delft3dfm deltares hkv hydamo"
-description-file = "README.md"
+description-file = "README.rst"
 classifiers = ["License :: MIT License"]
 
 [tool.flit.metadata.requires-extra]
