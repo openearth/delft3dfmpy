@@ -20,5 +20,6 @@ dependencies:
   - netcdf4 
   - descartes
   - contextily
+  - fire
   - pip:
     - hkvsobekpy
