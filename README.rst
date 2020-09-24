@@ -46,7 +46,7 @@ Prepare an environment with the correct dependencies for delft3dfmpy
      https://www.anaconda.com/products/individual
      https://docs.conda.io/en/latest/miniconda.html
 
-2.  Save the content of https://raw.githubusercontent.com/openearth/delft3dfmpy/master/environment.yml and store this in a local file named environment.yml
+2.  Save the content of https://raw.githubusercontent.com/openearth/delft3dfmpy/master/environment.yml and store this in a local file named ``environment.yml``
 
 3.  Open Ananconda prompt and enter the directory where the ``envrionment.yml`` from step 2 is stored.
 
@@ -54,13 +54,13 @@ Prepare an environment with the correct dependencies for delft3dfmpy
 
         ``conda env create -f environment.yml``
 
-    This should create a delft3dfmpy environment with the required dependencies.
+    This should create a ``delft3dfmpy`` environment with the required dependencies.
 
 5.  Activate the created environment by the following command in command prompt:
 
         ``conda activate delft3dfmpy``
 
-    You now have a correct environment for installation of the ``delft3dfmpy`` Python package
+    You now have a correct and activated environment for installation of the ``delft3dfmpy`` Python package
 
 Python package ``delft3dfmpy``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
