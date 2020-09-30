@@ -1,25 +1,25 @@
 name: delft3dfmpy
-
 channels:
   - conda-forge
-
+  - default
 dependencies:
-  - fire
-  - gdal>=2.4.1
-  - geopandas
+  - python=3.7.*
   - git
-  - imod
-  - matplotlib
-  - netcdf4 
-  - notebook
-  - numpy
-  - pandas
-  - pillow
   - pip
-  - rasterio
+  - ipykernel  
+  - geopandas
+  - rasterio  
+  - imod  
+  - numpy
+  - scipy  
+  - pandas  
+  - matplotlib
+  - pillow
   - rasterstats
-  - scipy
-  - setuptools_scm
   - tqdm
+  - netcdf4 
+  - descartes
+  - contextily
+  - fire
   - pip:
     - hkvsobekpy
