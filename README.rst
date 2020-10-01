@@ -36,10 +36,9 @@ Features
 Installation
 ------------
 
-By the following procedure you can install the ``delft3dfmpy`` module. Remember that this requires an environment with multiple packages not included within ``delft3dfmpy``. 
-And depending on the Integrated Development Environment (IDE) additional registration of this new environment.
+The package ``delft3dfmpy`` requires you to have (a) environment with required dependencies and (b) an Integrated Development Envrionment (IDE) that can access this envrionment. 
 
-If you do NOT have a correct environment or IDE for installation of ``delft3dfmpy``, prepare these first with the instructions below before installing the python package ``delft3dfmpy``.
+Please meet these two conditions first with instructions below before installing the Python package ``delft3dfmpy``.
 
 
 Python package ``delft3dfmpy``
@@ -79,24 +78,28 @@ Prepare an environment with the correct dependencies for ``delft3dfmpy``.
 Envrionment Integration in your IDE 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Integration of the prepared envrionment depends on the IDE of usage. Here we mention briefly some options for the user: 
+
 1.  For a new instance of Jupyter within the activated environment:
 
         Using Notebook
+
         ``conda install -c conda-forge notebook``
+
         or using JupyterLab
+
         ``conda install -c conda-forge jupyterlab`` 
 
 2.  To register the newly created environment as a new kernel for Jupyter (Notebook or JupyterLab):
 
-        ``python -m ipykernel install --user --name=delft3dfmpy
-        
+        ``python -m ipykernel install --user --name=delft3dfmpy``
+
 3.  No extra actions are required for PyCharm, Spyder or VSCode + Python extension.
 
 
 Usage
 -----
 
-Activate the created environment in an (anaconda) command prompt (conda activate delft3dfmpy) before running your notebook or script. A jupyter notebook or command prompt for the environment can also be launched from the Anaconda Navigator. 
+Activate the created environment in an (Anaconda) command prompt (``conda activate delft3dfmpy``) before running your notebook or script. A Jupyter notebook or command prompt for the environment can also be launched from the Anaconda Navigator. 
 For more information on how to use environments, see: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
 The usage is best described by the example notebook: https://github.com/openearth/delft3dfmpy/blob/master/notebooks/Usage_introduction_coupled_RRFM.ipynb
@@ -112,11 +115,13 @@ For contributions, use the following guidelines:
 
 2.  Make sure you have installed and activated the environment as is described above.
 
-3.  ``delft3dfmpy`` uses ``flit`` to to build, package and publish the project. To install the development dependencies and register the cloned fork as a Python package do the following fo:
+3.  Delft3dfmpy uses ``flit`` to to build, package and publish the project. To install the development dependencies and register the cloned fork as a Python package for development purposes do the following:
 
-        From an elevated Anaconda Prompt (run as Administrator) within the activated ``delft3dfmpy`` environment do:
+        From an elevated Anaconda Prompt (run as Administrator) within the activated ``delft3dfmpy`` environment:
+
         ``conda install -c conda-forge flit``
-        ``flit install --deps develop --symlink
+
+        ``flit install --deps develop --symlink``
 
         This installs the development dependencies and creates a symbolic link in the Python site-packages folder of the activated environment.
 
