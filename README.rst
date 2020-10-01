@@ -36,7 +36,7 @@ Features
 Installation
 ------------
 
-The package ``delft3dfmpy`` requires you to have (a) environment with required dependencies and (b) an Integrated Development Envrionment (IDE) that can access this envrionment. 
+The package ``delft3dfmpy`` requires you to have (a) an environment with required dependencies and (b) an Integrated Development Envrionment (IDE) that can access this envrionment. 
 
 Please meet these two conditions first with instructions below before installing the Python package ``delft3dfmpy``.
 
@@ -77,7 +77,7 @@ Prepare an environment with the correct dependencies for ``delft3dfmpy``.
 
 Envrionment Integration in your IDE 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Integration of the prepared envrionment depends on the IDE of usage. Here we mention briefly some options for the user: 
+Integration of the prepared envrionment depends on the IDE of usage. Here we mention briefly some options for the user (pick one!): 
 
 1.  For a new instance of Jupyter within the activated environment:
 
