@@ -1,12 +1,13 @@
 [build-system]
-requires = ["flit"]
-build-backend = "flit.buildapi"
+requires = ["flit_core >=2,<4"]
+build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
 module = "delft3dfmpy"
 author = "Deltares - HKV"
-author-email = ""
-home-page = "https://github.com/openearth/delft3dfmpy/"
+home-page = "https://github.com/openearth/delft3dfmpy"
+classifiers = ["License :: OSI Approved :: MIT License"]
+description-file = "README.rst"
 requires = [
     "geopandas",
     "rasterio",
@@ -24,8 +25,7 @@ requires = [
     "hkvsobekpy"
 ]
 keywords = "hydraulics hydrology data-science delft3dfm deltares hkv hydamo"
-description-file = "README.rst"
-classifiers = ["License :: MIT License"]
+requires-python = ">=3.6"
 
 [tool.flit.metadata.requires-extra]
 dev = [
