@@ -24,3 +24,7 @@ print(type(osm))
 
 # TODO: create DFM parsers for drains, culverts and cross sections based on dfmmodel.structures.io.xxxx_from_hydamo as example
 
+# TODO: create 2D grid with refinement
+
+# TODO: create 1D2D links
+
