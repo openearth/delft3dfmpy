@@ -10,6 +10,7 @@ from delft3dfmpy.core.dfm import DFlowFMModel
 from delft3dfmpy.core.drr import DFlowRRModel
 from delft3dfmpy.core.mesh2d import Rectangular
 from delft3dfmpy.datamodels.hydamo import HyDAMO
+from delft3dfmpy.datamodels.osm import OSM
 from delft3dfmpy.io.dflowfmwriter import DFlowFMWriter
 from delft3dfmpy.io.dflowrrwriter import DFlowRRWriter
 
