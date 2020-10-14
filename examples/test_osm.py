@@ -16,7 +16,9 @@ print(type(osm))
 
 # TODO: read branches, culvert, cross sections and properties from file and plot network to check
 
-# TODO: snapping. May not be needed as wel only use parameterized profiles
+# TODO: snapping of open drains over culverts. May not be needed as wel only use parameterized profiles
+
+# TODO: make culvert points (midpoint) with properties
 
 # TODO assign elevation value to cross sections. this needs to be retrieved from a DEM (which we have!)
 
