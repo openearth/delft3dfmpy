@@ -68,6 +68,7 @@ Layertype                         = 1                   # 1= all sigma, 2 = all 
 Numtopsig                         = 0                   # Nr of sigmalayers in top of Zlayer model
 SigmaGrowthFactor                 = 1.                  # layer thickness growth factor from bed up
 dxDoubleAt1DEndNodes              = true                # Extend endnodes with half ∆x.
+AllowBndAtBifurcation             = 1                   # Allow boundary nodes to be placed at connection of 2 channels (1 to allow boundaries, 0 to ignore boundary at biforcation. 
 
 [numerics]
 CFLMax                            = 0.7                 # Maximum Courant number
