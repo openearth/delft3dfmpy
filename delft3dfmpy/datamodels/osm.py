@@ -50,41 +50,6 @@ class OSM:
             'ruwheidstypecode'
         ])
 
-        # # FIXME: there are no weirs mapped in Dar, so this one can be left out
-        # self.weirs = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-        #     'code',
-        #     'geometry',
-        #     'soortstuwcode',
-        #     'soortregelbaarheidcode',
-        #     'laagstedoorstroomhoogte',
-        #     'laagstedoorstroombreedte',
-        #     'afvoercoefficient'
-        # ])
-        #
-        # # FIXME: as we are looking at tertiairy drains, we won't need these
-        # self.bridges = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-        #     'code',
-        #     #'name',
-        #     'geometry',
-        #     'hoogtebovenzijde',
-        #     'hoogteonderzijde',
-        #     'lengte',
-        #     'dwarsprofielcode',
-        #     'intreeverlies',
-        #     'uittreeverlies',
-        #     'ruwheidstypecode',
-        #     'ruwheidswaarde'
-        # ])
-
-        # # FIXME: remove these
-        # self.orifices = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-        #      'code',
-        #      'geometry',
-        #      'laagstedoorstroomhoogte',
-        #      'laagstedoorstroombreedte',
-        #      'schuifhoogte',
-        #      'afvoercoefficient'
-        #  ])
 
         # FIXME: ensure that all culvert types and properties can be handled. We probably have circular and box-shaped culverts, sometimes with multiple openings
         self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
@@ -107,68 +72,6 @@ class OSM:
         #     'geometry'
         # ])
         #
-        # # FIXME: remove, not needed Gemalen
-        # self.gemalen = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-        #     'code',
-        # ])
-        #
-        # # FIXME: remove, not needed
-        # self.pumps = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-        #     'code',
-        #     'maximalecapaciteit',
-        #     'geometry',
-        #     'codegerelateerdobject'
-        # ])
-        #
-        # # FIXME: remove not needed
-        # self.sturing = ExtendedDataFrame(required_columns=[
-        #     'code',
-        #     'streefwaarde',
-        #     'bovenmarge',
-        #     'ondermarge',
-        #     'codegerelateerdobject'
-        # ])
-        #
-        # # FIXME: remove not needed
-        # self.afsluitmiddel = ExtendedDataFrame(required_columns=[
-        #     'code',
-        #     'soortafsluitmiddelcode',
-        #     'codegerelateerdobject'
-        # ])
-        #
-        # # FIXME: remove not needed
-        # # Hydraulische randvoorwaarden
-        # self.boundary_conditions = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-        #     'code',
-        #     'typerandvoorwaardecode',
-        #     'geometry'
-        # ])
-        #
-        # # FIXME: remove not needed
-        # # RR catchments
-        # self.catchments = ExtendedGeoDataFrame(geotype=Polygon, required_columns=[
-        #     'code',
-        #     'geometry',
-        #     'lateraleknoopcode'
-        #
-        # ])
-        #
-        # # FIXME: remove not needed
-        # # RR overflows
-        # self.overflows = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-        #     'code',
-        #     'geometry',
-        #     'codegerelateerdobject',
-        #     'fractie'
-        #
-        # ])
-        #
-        # # FIXME: remove not needed
-        # # RR sewer areas
-        # self.sewer_areas = ExtendedGeoDataFrame(geotype=Polygon, required_columns=[
-        #     'code',
-        #     'geometry'
-        # ])
 
     def to_pickle(self, filename, overwrite=False):
         # Check if path exists
