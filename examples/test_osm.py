@@ -1,7 +1,7 @@
 # test workflow for OpenStreetMap data
 
 import os
-import configparser
+import configparser, json
 from delft3dfmpy import OSM
 
 # Read ini file
@@ -16,8 +16,11 @@ fn_pilot_area = os.path.join(path, config.get('input', 'studyareafile'))
 
 print(f'All data is expected to be in {path}')
 
-# initialize the class
-osm = OSM(fn_pilot_area)
+# Get required columns
+required_columns_data = config._sections['datacolumns']
+
+osm = OSM(fn_pilot_area, required_columns_data)
+
 print(type(osm))
 
 # TODO: read branches, culvert, cross sections and properties from file and plot network to check

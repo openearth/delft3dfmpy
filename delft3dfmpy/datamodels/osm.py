@@ -12,22 +12,26 @@ class OSM:
     OpenStreetMap model
     """
 
-    def __init__(self, extent_file=None):
+    def __init__(self, extent_file=None, data_columns=None):
 
         # Read geometry to clip data
         if extent_file is not None:
             self.clipgeo = gpd.read_file(extent_file).unary_union
+            print('extent worked')
         else:
             self.clipgeo = None
 
+        # Get required columns of OSM data
+        self.data_columns = data_columns
+
+
+        print('hello')
 
 
         # Create standard dataframe for network, cross sections, orifices, weirs
         # FIXME: check available columns and required columns for the OSM data, and apply these here
-        self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
-            'code',
-            'geometry'
-        ])
+        self.branches = ExtendedGeoDataFrame(geotype=LineString,
+                                             required_columns=self.get_columns('branches'))
 
         # FIXME: in openstreetmap, cross sections are not linestrings, perpendicular to stream, but profile types and dimensions of a channel
         # It may be that this is "parameterised cross sections, and we simply don't need the property below.
@@ -69,12 +73,17 @@ class OSM:
             'ruwheidstypecode',
             'ruwheidswaarde'
         ])
+
         # # FIXME: not sure what laterals in this context mean, but I don't think we need it at this stage.
         # self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=[
         #     'code',
         #     'geometry'
         # ])
         #
+
+    def get_columns(self, key):
+        cols = [x.strip() for x in self.data_columns[key].split('#')[0].strip().split(',')]
+        return cols
 
     def to_pickle(self, filename, overwrite=False):
         # Check if path exists
@@ -92,5 +101,4 @@ class OSM:
             loaded_cls = pickle.load(handle)
 
         return loaded_cls
-
 
