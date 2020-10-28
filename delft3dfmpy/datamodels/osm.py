@@ -20,12 +20,15 @@ class OSM:
         else:
             self.clipgeo = None
 
+
+
         # Create standard dataframe for network, cross sections, orifices, weirs
         # FIXME: check available columns and required columns for the OSM data, and apply these here
         self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
             'code',
             'geometry'
         ])
+
         # FIXME: in openstreetmap, cross sections are not linestrings, perpendicular to stream, but profile types and dimensions of a channel
         # It may be that this is "parameterised cross sections, and we simply don't need the property below.
         self.crosssections = ExtendedGeoDataFrame(geotype=LineString, required_columns=[

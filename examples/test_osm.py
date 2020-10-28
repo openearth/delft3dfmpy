@@ -1,12 +1,18 @@
 # test workflow for OpenStreetMap data
 
 import os
-
+import configparser
 from delft3dfmpy import OSM
 
-# path to the package containing the dummy-data
-path = os.path.abspath('../data/osm')
-fn_pilot_area = os.path.join(path, 'study_area.geojson')
+# Read ini file
+config = configparser.ConfigParser()
+config.read(os.path.abspath('../data/osm')+'/osm_settings.ini')
+
+# Path to data
+path = config.get('input', 'DataPath')
+
+# Extend of study area
+fn_pilot_area = os.path.join(path, config.get('input', 'studyareafile'))
 
 print(f'All data is expected to be in {path}')
 
@@ -16,6 +22,7 @@ print(type(osm))
 
 # TODO: read branches, culvert, cross sections and properties from file and plot network to check
 # TODO: BRANCHES - read id column from json.  Do not deviate between drain type
+
 # TODO: BRANCHES - connect branches on the right locations
 # TODO: plot branches
 
