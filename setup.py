@@ -21,7 +21,7 @@ setup(
     test_suite="tests",
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     install_requires=[
                       "gdal",
                       "geopandas",
@@ -34,6 +34,7 @@ setup(
                       "rasterio",
                       "rasterstats",
                       "scipy",
+                      "setuptools",
                       "setuptools_scm",
                       "tqdm"
     ],
