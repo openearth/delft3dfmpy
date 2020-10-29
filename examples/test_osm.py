@@ -27,6 +27,7 @@ print(type(osm))
 # TODO: BRANCHES - read id column from json.  Do not deviate between drain type
 osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col='id',clip = osm.clipgeo, id_col='id')
 
+print('hello world')
 # TODO: BRANCHES - connect branches on the right locations
 # TODO: plot branches
 

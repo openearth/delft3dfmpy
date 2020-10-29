@@ -12,17 +12,17 @@ from copy import deepcopy
 
 from delft3dfmpy.core import geometry
 
-
-def explode_multilinestring(gdf, id_col='code'):
-    gdf_dst = gpd.GeoDataFrame()
-    for f in gdf:
-        for n, g in enumerate(f.geometry):
-            row = deepcopy(f)
-            row['geometry'] = g
-            if len(f.geometry) > 1:
-                # add _{n} to id_col
-                row[id_col] += f'_{n}'
-            gdf_dst.append(row)
+# FIXME: check if function still is needed
+# def explode_multilinestring(gdf, id_col='code'):
+#     gdf_dst = gpd.GeoDataFrame()
+#     for f in gdf:
+#         for n, g in enumerate(f.geometry):
+#             row = deepcopy(f)
+#             row['geometry'] = g
+#             if len(f.geometry) > 1:
+#                 # add _{n} to id_col
+#                 row[id_col] += f'_{n}'
+#             gdf_dst.append(row)
 
 
 
@@ -92,21 +92,22 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         # Read GeoDataFrame
         gdf = gpd.read_file(path)
 
+        #FIXME: add method to handle features with geometry is None.
+        gdf.drop(gdf.index[gdf.geometry.isnull()], inplace =True) # temporary fix
+
         #FIXME: add reprojection of gdf via crs inifile
 
-        if 'MultiPolygon' in str(gdf.geometry.type):
+        if 'MultiPolygon' or 'MultiLineString' in str(gdf.geometry.type):
             #gdf = gdf[gdf.geometry.type != 'MultiPolygon']
-            sfx = ['_'+str(i) for i in range(100)]
+            #sfx = ['_'+str(i) for i in range(100)]
             gdf = gdf.explode()
             for ftc in gdf[id_col].unique():
                 if len(gdf[gdf[id_col] == ftc])>1:
-                    gdf.loc[gdf[id_col] == ftc, id_col] = [i + sfx[ii] for ii, i in enumerate(gdf[gdf[id_col] == ftc][id_col])]
-                    print(f'{ftc} is MultiPolygon; split into single parts.')
+                    #FIXME: Check if method below works instead of sfx[ii]
+                    gdf.loc[gdf[id_col] == ftc, id_col] = [i + f'_{ii}' for ii, i in enumerate(gdf[gdf[id_col] == ftc][id_col])]
+                    print(f'{ftc} is MultiPolygon or MuliLineString; split into single parts.')
 
             #print('Features of type \"Multipolygon\" encountered: they are skipped.')
-
-        if 'MultiLineString' in str(gdf.geometry.type):
-            print('hello world')
 
         # Check number of entries
         if gdf.empty:
@@ -164,7 +165,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         Check geometry type
         """
         if not all(isinstance(geo, self.geotype) for geo in self.geometry):
-            raise TypeError('Geometrytype "{}" required. The input shapefile has geometry type(n) {}.'.format(
+            raise TypeError('Geometrytype "{}" required. The input shapefile has geometry type(s) {}.'.format(
                 re.findall('([A-Z].*)\'', repr(self.geotype))[0],
                 self.geometry.type.unique().tolist()
             ))
