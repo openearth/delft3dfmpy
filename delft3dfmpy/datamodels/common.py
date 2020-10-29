@@ -85,17 +85,26 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.iloc[:, 0] = np.nan
             self.dropna(inplace=True)
 
-    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True, id_col='code'):
+    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True,
+                 id_col='code',filter_cols = False):
         """
         Import function, extended with type checks. Does not destroy reference to object.
         """
         # Read GeoDataFrame
         gdf = gpd.read_file(path)
 
+        #FIXME: add filter to read_file
+
+        # Remove unnecessary columns
+        if filter_cols:
+            gdf.drop(columns=gdf.columns[~gdf.columns.isin(self.required_columns)], inplace=True)
+
+
+
         #FIXME: add method to handle features with geometry is None.
         gdf.drop(gdf.index[gdf.geometry.isnull()], inplace =True) # temporary fix
 
-        #FIXME: add reprojection of gdf via crs inifile
+        #FIXME: add reprojection of geodataframe via crs inifile
 
         if 'MultiPolygon' or 'MultiLineString' in str(gdf.geometry.type):
             #gdf = gdf[gdf.geometry.type != 'MultiPolygon']

@@ -25,13 +25,15 @@ print(type(osm))
 
 # TODO: read branches, culvert, cross sections and properties from file and plot network to check
 # TODO: BRANCHES - read id column from json.  Do not deviate between drain type
-osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col='id',clip = osm.clipgeo, id_col=config.get('datacolumns', 'idcolumn'))
+osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col='id',clip = osm.clipgeo
+                      , id_col=config.get('datacolumns', 'idcolumn'), filter_cols=True)
 
 print('hello world')
 # TODO: BRANCHES - connect branches on the right locations
 # TODO: plot branches
 
 # TODO: CROSS SECTIONS DEFINTION - read id, drain_type, material, width, depth, top_width, diameter, profile_op, profile_cl, bottom_width columns from json
+
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
 # TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections. this needs to be retrieved from a DEM (which we have!)
 # TODO: CROSS SECTION DEFINITION - create circular profiles --> prof_idofbranch
