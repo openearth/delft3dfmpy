@@ -3,10 +3,16 @@
 import os
 import configparser, json
 from delft3dfmpy import OSM
+from delft3dfmpy.core.logging import initialize_logger
+import logging
+root = os.path.abspath('../data/osm')
+fn_ini = os.path.join(root, 'osm_settings.ini')
 
+logger = initialize_logger('osm2fm.log', log_level=10)
 # Read ini file
+logger.info(f'Read config from {fn_ini}')
 config = configparser.ConfigParser()
-config.read(os.path.abspath('../data/osm')+'/osm_settings.ini')
+config.read(fn_ini)
 
 # Path to data
 path = config.get('input', 'DataPath')
@@ -14,14 +20,14 @@ path = config.get('input', 'DataPath')
 # Extend of study area
 fn_pilot_area = os.path.join(path, config.get('input', 'studyareafile'))
 
-print(f'All data is expected to be in {path}')
+logger.info(f'All data is expected to be in {path}')
 
 # Get required columns
 required_columns_data = config._sections['datacolumns']
 
-osm = OSM(fn_pilot_area, required_columns_data)
+osm = OSM(fn_pilot_area, required_columns_data, logger=logger)
 
-print(type(osm))
+# print(type(osm))
 
 # Id column
 id = config.get('datacolumns','idcolumn')
