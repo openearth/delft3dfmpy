@@ -86,7 +86,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.dropna(inplace=True)
 
     def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True,
-                 id_col='code',filter_cols = False):
+                 id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False):
         """
         Import function, extended with type checks. Does not destroy reference to object.
         """
@@ -95,9 +95,14 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         #FIXME: add filter to read_file
 
-        # Remove unnecessary columns
+        # Only keep required columns
         if filter_cols:
             gdf.drop(columns=gdf.columns[~gdf.columns.isin(self.required_columns)], inplace=True)
+
+        # In case of culvert select indices that are culverts
+        #FIXME: draintype culvert could be different for other OSM data
+        if filter_culverts:
+            gdf.drop(index= gdf.index[gdf[draintype_col]!='culvert'], inplace = True)
 
 
 

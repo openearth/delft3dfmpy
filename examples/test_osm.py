@@ -23,16 +23,20 @@ osm = OSM(fn_pilot_area, required_columns_data)
 
 print(type(osm))
 
-# TODO: read branches, culvert, cross sections and properties from file and plot network to check
-# TODO: BRANCHES - read id column from json.  Do not deviate between drain type
-osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col='id',clip = osm.clipgeo
-                      , id_col=config.get('datacolumns', 'idcolumn'), filter_cols=True)
+# Id column
+id = config.get('datacolumns','idcolumn')
 
-print('hello world')
-# TODO: BRANCHES - connect branches on the right locations
-# TODO: plot branches
+# TODO: BRANCHES - read id column from json.  Do not deviate between drain type
+# Read branches and store in OSM data model
+osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo
+                      , id_col=id, filter_cols=True)
 
 # TODO: CROSS SECTIONS DEFINTION - read id, drain_type, material, width, depth, top_width, diameter, profile_op, profile_cl, bottom_width columns from json
+# read cross-sections
+osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo
+                      , id_col=id, filter_cols=True)
+
+print('Hello world')
 
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
 # TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections. this needs to be retrieved from a DEM (which we have!)
@@ -44,6 +48,11 @@ print('hello world')
 # TODO: plot branches + cross sections locations
 
 # TODO: STRUCTURE - read id, draintype
+# Read culverts
+osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo,
+                      id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
+                      , filter_culverts=True)
+
 # TODO: STRUCTURE - select rows with draintype culvert
 # TODO: STRUCTURE - determine length and midpoint location culvert
 # TODO: STRUCTURE - snapping of open drains over culverts. May not be needed as wel only use parameterized profiles
@@ -56,3 +65,4 @@ print('hello world')
 
 # TODO: create 1D2D links
 
+print("Hello world")

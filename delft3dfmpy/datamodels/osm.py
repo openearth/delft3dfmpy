@@ -38,35 +38,11 @@ class OSM:
 
         # FIXME: ensure that all required parameterised properties are provided. I can imagine this is a matter of making
         # several parameterised profiles for different profile types (e.g. trapezoidal, rectangular, circular, etc.)
-        self.parametrised_profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
-            'code',
-            'bodemhoogtebenedenstrooms',
-            'bodemhoogtebovenstrooms',
-            'bodembreedte',
-            'taludhellinglinkerzijde',
-            'taludhellingrechterzijde',
-            'hoogteinsteeklinkerzijde',
-            'hoogteinsteekrechterzijde',
-            'ruwheidswaarde',
-            'ruwheidstypecode'
-        ])
+        self.parametrised_profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('crosssections'))
 
 
         # FIXME: ensure that all culvert types and properties can be handled. We probably have circular and box-shaped culverts, sometimes with multiple openings
-        self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
-            'code',
-            'geometry',
-            'lengte',
-            'hoogteopening',
-            'breedteopening',
-            'hoogtebinnenonderkantbenedenstrooms',
-            'hoogtebinnenonderkantbovenstrooms',
-            'vormcode',
-            'intreeverlies',
-            'uittreeverlies',
-            'ruwheidstypecode',
-            'ruwheidswaarde'
-        ])
+        self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('structures'))
 
         # # FIXME: not sure what laterals in this context mean, but I don't think we need it at this stage.
         # self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=[
