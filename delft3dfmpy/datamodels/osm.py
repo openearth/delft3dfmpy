@@ -6,18 +6,22 @@ import pandas as pd
 
 from delft3dfmpy.datamodels.common import ExtendedDataFrame, ExtendedGeoDataFrame
 from shapely.geometry import LineString, Point, Polygon
+import logging
 
 class OSM:
     """
     OpenStreetMap model
     """
 
-    def __init__(self, extent_file=None, data_columns=None):
+    def __init__(self, extent_file=None, data_columns=None, logger=logging):
 
         # Read geometry to clip data
+        self.logger = logger
         if extent_file is not None:
+            self.logger.debug(f'extent file found, reading from {extent_file}')
             self.clipgeo = gpd.read_file(extent_file).unary_union
         else:
+            self.logger.debug(f'No extent file found, assuming the entire file is needed.')
             self.clipgeo = None
 
         # Get required columns of OSM data
