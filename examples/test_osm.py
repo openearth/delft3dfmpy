@@ -5,6 +5,7 @@ import configparser, json
 from delft3dfmpy import OSM
 from delft3dfmpy.core.logging import initialize_logger
 import logging
+
 root = os.path.abspath('../data/osm')
 fn_ini = os.path.join(root, 'osm_settings.ini')
 
@@ -35,14 +36,12 @@ id = config.get('datacolumns','idcolumn')
 # TODO: BRANCHES - read id column from json.  Do not deviate between drain type
 # Read branches and store in OSM data model
 osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo
-                      , id_col=id, filter_cols=True)
+                      , id_col=id, filter_cols=True, logger=logger)
 
 # TODO: CROSS SECTIONS DEFINTION - read id, drain_type, material, width, depth, top_width, diameter, profile_op, profile_cl, bottom_width columns from json
 # read cross-sections
 osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo
-                      , id_col=id, filter_cols=True)
-
-print('Hello world')
+                      , id_col=id, filter_cols=True, logger=logger)
 
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
 # TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections. this needs to be retrieved from a DEM (which we have!)
@@ -57,7 +56,7 @@ print('Hello world')
 # Read culverts
 osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo,
                       id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
-                      , filter_culverts=True)
+                      , filter_culverts=True, logger=logger)
 
 # TODO: STRUCTURE - select rows with draintype culvert
 # TODO: STRUCTURE - determine length and midpoint location culvert

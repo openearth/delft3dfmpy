@@ -7,6 +7,7 @@ import pandas as pd
 from osgeo import ogr
 from shapely import wkb
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+import logging
 
 from copy import deepcopy
 
@@ -32,6 +33,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
     _metadata = ['required_columns', 'geotype'] + gpd.GeoDataFrame._metadata
 
     def __init__(self, geotype, required_columns=None, *args, **kwargs):
+
         # Check type
         if required_columns is None:
             required_columns = []
@@ -86,7 +88,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.dropna(inplace=True)
 
     def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True,
-                 id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False):
+                 id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False, logger=logging):
         """
         Import function, extended with type checks. Does not destroy reference to object.
         """
@@ -97,17 +99,21 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         # Only keep required columns
         if filter_cols:
+            logger.info(f'Only required columns are kept in geodataframe')
             gdf.drop(columns=gdf.columns[~gdf.columns.isin(self.required_columns)], inplace=True)
 
         # In case of culvert select indices that are culverts
         #FIXME: draintype culvert could be different for other OSM data
         if filter_culverts:
+            logger.info(f'Filter selecting culverts from data is ON')
             gdf.drop(index= gdf.index[gdf[draintype_col]!='culvert'], inplace = True)
+            logger.debug(f'Found drain type: culvert')
 
-
-
-        #FIXME: add method to handle features with geometry is None.
+        # Drop features without geometry
+        total_features = len(gdf)
+        missing_features = len(gdf.index[gdf.geometry.isnull()])
         gdf.drop(gdf.index[gdf.geometry.isnull()], inplace =True) # temporary fix
+        logger.debug(f'{missing_features} out of {total_features} do not have a geometry')
 
         #FIXME: add reprojection of geodataframe via crs inifile
 
