@@ -25,6 +25,7 @@ print(type(osm))
 
 # TODO: read branches, culvert, cross sections and properties from file and plot network to check
 # TODO: BRANCHES - read id column from json.  Do not deviate between drain type
+osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col='id',clip = osm.clipgeo, id_col='id')
 
 # TODO: BRANCHES - connect branches on the right locations
 # TODO: plot branches

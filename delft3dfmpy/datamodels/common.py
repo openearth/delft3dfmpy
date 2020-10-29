@@ -12,6 +12,20 @@ from copy import deepcopy
 
 from delft3dfmpy.core import geometry
 
+
+def explode_multilinestring(gdf, id_col='code'):
+    gdf_dst = gpd.GeoDataFrame()
+    for f in gdf:
+        for n, g in enumerate(f.geometry):
+            row = deepcopy(f)
+            row['geometry'] = g
+            if len(f.geometry) > 1:
+                # add _{n} to id_col
+                row[id_col] += f'_{n}'
+            gdf_dst.append(row)
+
+
+
 class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
     # normal properties
@@ -23,27 +37,27 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             required_columns = []
         elif not isinstance(required_columns, list):
             required_columns = [required_columns]
-        
+
         # Add required columns to column list
         if 'columns' in kwargs.keys():
             kwargs['columns'] += required_columns
         else:
             kwargs['columns'] = required_columns
-        
+
         super(ExtendedGeoDataFrame, self).__init__(*args, **kwargs)
 
         self.required_columns = required_columns[:]
         self.geotype = geotype
-        
+
     # def drop(self,edf, item, index_col=None,axis=None):
     #     #edf = ExtendedGeoDataFrame(geotype=LineString)
-    #     temp = gpd.GeoDataFrame()        
-    #     for field in self.iteritems(): 
-    #         temp[field[0]] = field[1]        
-    #     temp.drop(item,axis=axis, inplace=True)  
-    #     edf.set_data(temp, index_col=index_col, check_columns=True)              
+    #     temp = gpd.GeoDataFrame()
+    #     for field in self.iteritems():
+    #         temp[field[0]] = field[1]
+    #     temp.drop(item,axis=axis, inplace=True)
+    #     edf.set_data(temp, index_col=index_col, check_columns=True)
     #     return edf
-                
+
     def copy(self, deep=True):
         """
         Create a copy
@@ -60,9 +74,9 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         )
         edf.required_columns.extend(self.required_columns[:])
         edf.loc[:, :] = self.values if not deep else deepcopy(self.values)
-        
+
         return edf
-    
+
     def delete_all(self):
         """
         Empty the dataframe
@@ -71,24 +85,29 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.iloc[:, 0] = np.nan
             self.dropna(inplace=True)
 
-    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True):
+    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True, id_col='code'):
         """
         Import function, extended with type checks. Does not destroy reference to object.
         """
         # Read GeoDataFrame
         gdf = gpd.read_file(path)
-        
+
+        #FIXME: add reprojection of gdf via crs inifile
+
         if 'MultiPolygon' in str(gdf.geometry.type):
-            #gdf = gdf[gdf.geometry.type != 'MultiPolygon']  
+            #gdf = gdf[gdf.geometry.type != 'MultiPolygon']
             sfx = ['_'+str(i) for i in range(100)]
             gdf = gdf.explode()
-            for ftc in gdf.code.unique():                                
-                if len(gdf[gdf.code==ftc])>1:
-                    gdf.loc[gdf.code==ftc,'code'] = [i+sfx[ii] for ii,i in enumerate(gdf[gdf.code==ftc].code)]
-                    print(f'{ftc} is MultiPolygon; split into single parts.')               
-                
+            for ftc in gdf[id_col].unique():
+                if len(gdf[gdf[id_col] == ftc])>1:
+                    gdf.loc[gdf[id_col] == ftc, id_col] = [i + sfx[ii] for ii, i in enumerate(gdf[gdf[id_col] == ftc][id_col])]
+                    print(f'{ftc} is MultiPolygon; split into single parts.')
+
             #print('Features of type \"Multipolygon\" encountered: they are skipped.')
-        
+
+        if 'MultiLineString' in str(gdf.geometry.type):
+            print('hello world')
+
         # Check number of entries
         if gdf.empty:
             raise IOError('Imported shapefile contains no rows.')
@@ -125,7 +144,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         else:
             self.index = gdf[index_col]
             self.index.name = index_col
-        
+
         # Check geometry types
         if check_geotype:
             self._check_geotype()
@@ -145,7 +164,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         Check geometry type
         """
         if not all(isinstance(geo, self.geotype) for geo in self.geometry):
-            raise TypeError('Geometrietype "{}" vereist. De ingevoerde shapefile heeft geometrietype(n) {}.'.format(
+            raise TypeError('Geometrytype "{}" required. The input shapefile has geometry type(n) {}.'.format(
                 re.findall('([A-Z].*)\'', repr(self.geotype))[0],
                 self.geometry.type.unique().tolist()
             ))
@@ -183,7 +202,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         # Get column names for features
         columns = [layerDefinition.GetFieldDefn(i).GetName() for i in range(nfields)]
-              
+
         # Collect features
         features = [f for f in layer]
 
@@ -198,19 +217,19 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         geometries = []
         new_feats = []
         for i,f in enumerate(features):
-            geometry = wkb.loads(georefs[i].ExportToWkb())            
+            geometry = wkb.loads(georefs[i].ExportToWkb())
             if(geometry.type=='MultiPolygon'):
-                new_geoms = list(geometry)                                
+                new_geoms = list(geometry)
                 geometries.extend(new_geoms)
                 new_features = [f]*len(new_geoms)
-                new_feats.extend(new_features)                
+                new_feats.extend(new_features)
             else:
                 geometries.append(geometry)
                 new_feats.append(f)
-        features = new_feats        
+        features = new_feats
         #geometries = [wkb.loads(geo.ExportToWkb()) for geo in georefs]
-                      
-                
+
+
         # Get group by columns
         if groupby_column is not None:
             # Check if the group by column is found
@@ -252,7 +271,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             for point, volgnr, branch, volgnr_rel in zip(geometries, order, groupbyvalues, order_rel):
                 #lines[branch][volgnr - startnr[branch]] = point
                 lines[branch][volgnr_rel] = point
-                
+
             # Group geometries to lines
             for branch in branches[~singlepoint]:
                 if any(isinstance(pt, int) for pt in lines[branch]):
@@ -280,11 +299,11 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         # add a letter to 'exploded' multipolygons
         sfx = ['_'+str(i) for i in range(100)]
-        for ftc in gdf.code.unique():                                
+        for ftc in gdf.code.unique():
             if len(gdf[gdf.code==ftc])>1:
                 gdf.loc[gdf.code==ftc,'code'] = [i+sfx[ii] for ii,i in enumerate(gdf[gdf.code==ftc].code)]
-                print(f'{ftc} is MultiPolygon; split into single parts.')   
-                    
+                print(f'{ftc} is MultiPolygon; split into single parts.')
+
         # Add data to class GeoDataFrame
         self.set_data(gdf, index_col=index_col, check_columns=check_columns, check_geotype=check_geotype)
 

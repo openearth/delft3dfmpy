@@ -17,16 +17,11 @@ class OSM:
         # Read geometry to clip data
         if extent_file is not None:
             self.clipgeo = gpd.read_file(extent_file).unary_union
-            print('extent worked')
         else:
             self.clipgeo = None
 
         # Get required columns of OSM data
         self.data_columns = data_columns
-
-
-        print('hello')
-
 
         # Create standard dataframe for network, cross sections, orifices, weirs
         # FIXME: check available columns and required columns for the OSM data, and apply these here
