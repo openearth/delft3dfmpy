@@ -4,6 +4,8 @@ import os
 import configparser, json
 from delft3dfmpy import OSM
 from delft3dfmpy.core.logging import initialize_logger
+import matplotlib.pyplot as plt
+
 import logging
 
 root = os.path.abspath('../data/osm')
@@ -50,7 +52,24 @@ osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafil
 # TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
 # TODO: CROSS SECTION LOCATION - select rows with drain type other than culvert
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
-# TODO: plot branches + cross sections locations
+osm.parametrised_profiles.snap_to_branch(osm.branches, snap_method='intersecting')
+
+# FIXME: cross-sections are plotted as branches. This means that snapping should be changed.
+# FIXME: when adding the culvert. I encounter crs problem.
+# Plot branches and cross-sections
+plt.rcParams['axes.edgecolor'] = 'w'
+
+fig, ax = plt.subplots(figsize=(10, 10))
+
+ax.fill(*osm.clipgeo.exterior.xy, color='w', alpha=0.5)
+ax.xaxis.set_visible(False)
+ax.yaxis.set_visible(False)
+
+background = plt.imread(path+'/background.png')
+ax.imshow(background, extent=(39.222335471, 39.266427395, -6.814710925, -6.789116518), interpolation='lanczos')
+osm.branches.plot(ax=ax, label='Channel')
+osm.parametrised_profiles.plot(ax=ax, color='C3', label='Cross section')
+plt.show()
 
 # TODO: STRUCTURE - read id, draintype
 # Read culverts
