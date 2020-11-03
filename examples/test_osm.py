@@ -35,14 +35,17 @@ osm = OSM(fn_pilot_area, required_columns_data, logger=logger)
 # Id column
 id = config.get('datacolumns','idcolumn')
 
+# Projected coordinate system
+crs_proj = config.get('parameter','projectedcrs')
+
 # TODO: BRANCHES - read id column from json.  Do not deviate between drain type
 # Read branches and store in OSM data model
-osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo
+osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo
                       , id_col=id, filter_cols=True, logger=logger)
 
 # TODO: CROSS SECTIONS DEFINTION - read id, drain_type, material, width, depth, top_width, diameter, profile_op, profile_cl, bottom_width columns from json
 # read cross-sections
-osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo
+osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo
                       , id_col=id, filter_cols=True, logger=logger)
 
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
@@ -65,15 +68,17 @@ ax.fill(*osm.clipgeo.exterior.xy, color='w', alpha=0.5)
 ax.xaxis.set_visible(False)
 ax.yaxis.set_visible(False)
 
-background = plt.imread(path+'/background.png')
-ax.imshow(background, extent=(39.222335471, 39.266427395, -6.814710925, -6.789116518), interpolation='lanczos')
+#background = plt.imread(path+'/background.png')
+#ax.imshow(background, extent=(39.222335471, 39.266427395, -6.814710925, -6.789116518), interpolation='lanczos')
+background = plt.imread(path+'/background_projected.png')
+ax.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
 osm.branches.plot(ax=ax, label='Channel')
 osm.parametrised_profiles.plot(ax=ax, color='C3', label='Cross section')
 plt.show()
 
 # TODO: STRUCTURE - read id, draintype
 # Read culverts
-osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, clip = osm.clipgeo,
+osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo,
                       id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
                       , filter_culverts=True, logger=logger)
 

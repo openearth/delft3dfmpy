@@ -87,7 +87,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.iloc[:, 0] = np.nan
             self.dropna(inplace=True)
 
-    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, clip=None, check_geotype=True,
+    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, proj_crs=None, clip=None, check_geotype=True,
                  id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False, logger=logging):
         """
         Import function, extended with type checks. Does not destroy reference to object.
@@ -115,7 +115,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         gdf.drop(gdf.index[gdf.geometry.isnull()], inplace =True) # temporary fix
         logger.debug(f'{missing_features} out of {total_features} do not have a geometry')
 
-        #FIXME: add reprojection of geodataframe via crs inifile
+
 
         if 'MultiPolygon' or 'MultiLineString' in str(gdf.geometry.type):
             #gdf = gdf[gdf.geometry.type != 'MultiPolygon']
@@ -143,6 +143,12 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         # Clip if extent is provided
         if clip is not None:
             self.clip(clip)
+
+        # To re-project CRS system to projected CRS, first all empty geometries should be dropped
+        if proj_crs is not None:
+            gdf.to_crs(epsg=proj_crs, inplace=True)
+        else:
+            logger.info(f'Check if crs of OSM data is an projected crs')
 
 
     def set_data(self, gdf, index_col=None, check_columns=True, check_geotype=True):
