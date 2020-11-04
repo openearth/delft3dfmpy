@@ -13,16 +13,26 @@ class OSM:
     OpenStreetMap model
     """
 
-    def __init__(self, extent_file=None, data_columns=None, logger=logging):
+    def __init__(self, extent_file=None, data_columns=None, proj_crs = None, logger=logging):
 
         # Read geometry to clip data
         self.logger = logger
+        self.crs_out = proj_crs
+
         if extent_file is not None:
             self.logger.debug(f'extent file found, reading from {extent_file}')
-            self.clipgeo = gpd.read_file(extent_file).unary_union
+            self.clipgdf = gpd.read_file(extent_file)
+            self.clipgeo = self.clipgdf.unary_union
+
+            if self.crs_out is not None:
+                if self.crs_out!=self.clipgdf.crs:
+                    self.clipgdf.to_crs(self.crs_out, inplace=True)
         else:
             self.logger.debug(f'No extent file found, assuming the entire file is needed.')
+            self.clipgdf = None
             self.clipgeo = None
+
+
 
         # Get required columns of OSM data
         self.data_columns = data_columns

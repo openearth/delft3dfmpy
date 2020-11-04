@@ -87,7 +87,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.iloc[:, 0] = np.nan
             self.dropna(inplace=True)
 
-    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, proj_crs=None, clip=None, check_geotype=True,
+    def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, proj_crs = None, clip=None, check_geotype=True,
                  id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False, logger=logging):
         """
         Import function, extended with type checks. Does not destroy reference to object.
@@ -146,9 +146,9 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         # To re-project CRS system to projected CRS, first all empty geometries should be dropped
         if proj_crs is not None:
-            gdf.to_crs(epsg=proj_crs, inplace=True)
+            self.check_projection(proj_crs)
         else:
-            logger.info(f'Check if crs of OSM data is an projected crs')
+            logger.debug(f'No projected CRS is given in ini-file')
 
 
     def set_data(self, gdf, index_col=None, check_columns=True, check_geotype=True):
@@ -351,6 +351,14 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         self.set_data(gdf)
 
+    def check_projection(self, crs_out):
+        """
+        Check if reprojection is required
+        """
+        if crs_out!=self.crs:
+            self.to_crs(crs_out, inplace=True)
+        else:
+            logger.info(f'OSM data has same projection as projected crs in ini-file')
 
     def snap_to_branch(self, branches, snap_method, maxdist=5):
         """Snap the geometries to the branch"""

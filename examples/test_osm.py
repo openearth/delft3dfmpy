@@ -5,6 +5,7 @@ import configparser, json
 from delft3dfmpy import OSM
 from delft3dfmpy.core.logging import initialize_logger
 import matplotlib.pyplot as plt
+import geopandas as gpd
 
 import logging
 
@@ -28,24 +29,25 @@ logger.info(f'All data is expected to be in {path}')
 # Get required columns
 required_columns_data = config._sections['datacolumns']
 
-osm = OSM(fn_pilot_area, required_columns_data, logger=logger)
+# Get parameters
+parameters = config._sections['parameter']
+
+# Initialise osm data
+osm = OSM(fn_pilot_area, required_columns_data,parameters['projectedcrs'], logger=logger)
 
 # print(type(osm))
 
 # Id column
 id = config.get('datacolumns','idcolumn')
 
-# Projected coordinate system
-crs_proj = config.get('parameter','projectedcrs')
-
 # TODO: BRANCHES - read id column from json.  Do not deviate between drain type
 # Read branches and store in OSM data model
-osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo
+osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs = osm.crs_out, clip = osm.clipgeo
                       , id_col=id, filter_cols=True, logger=logger)
 
 # TODO: CROSS SECTIONS DEFINTION - read id, drain_type, material, width, depth, top_width, diameter, profile_op, profile_cl, bottom_width columns from json
 # read cross-sections
-osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo
+osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs = osm.crs_out, clip = osm.clipgeo
                       , id_col=id, filter_cols=True, logger=logger)
 
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
@@ -55,7 +57,7 @@ osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafil
 # TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
 # TODO: CROSS SECTION LOCATION - select rows with drain type other than culvert
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
-osm.parametrised_profiles.snap_to_branch(osm.branches, snap_method='intersecting')
+osm.parametrised_profiles.snap_to_branch(osm.branches, snap_method='ends')
 
 # FIXME: cross-sections are plotted as branches. This means that snapping should be changed.
 # FIXME: when adding the culvert. I encounter crs problem.
@@ -64,23 +66,22 @@ plt.rcParams['axes.edgecolor'] = 'w'
 
 fig, ax = plt.subplots(figsize=(10, 10))
 
-ax.fill(*osm.clipgeo.exterior.xy, color='w', alpha=0.5)
+#ax.fill(*osm.clipgeo.exterior.xy, color='w', alpha=0.5)
 ax.xaxis.set_visible(False)
 ax.yaxis.set_visible(False)
 
-#background = plt.imread(path+'/background.png')
-#ax.imshow(background, extent=(39.222335471, 39.266427395, -6.814710925, -6.789116518), interpolation='lanczos')
 background = plt.imread(path+'/background_projected.png')
 ax.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
+osm.clipgdf.plot(ax=ax, color='w', alpha=0.5)
 osm.branches.plot(ax=ax, label='Channel')
 osm.parametrised_profiles.plot(ax=ax, color='C3', label='Cross section')
 plt.show()
 
-# TODO: STRUCTURE - read id, draintype
-# Read culverts
-osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo,
-                      id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
-                      , filter_culverts=True, logger=logger)
+# # TODO: STRUCTURE - read id, draintype
+# # Read culverts
+# osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo,
+#                       id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
+#                       , filter_culverts=True, logger=logger)
 
 # TODO: STRUCTURE - select rows with draintype culvert
 # TODO: STRUCTURE - determine length and midpoint location culvert

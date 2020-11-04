@@ -29,14 +29,14 @@ def rotate_coordinates(origin, theta, xcrds, ycrds):
 
 def minimum_bounds_fixed_rotation(polygon, angle):
     """Get the minimum box for a polygon with a given axes rotation.
-    
+
     Parameters
     ----------
     polygon : shapely.geometry.Polygon
         Polygon that is rotated
     angle : int or float
         Rotation of the polygon in degrees
-    
+
     Returns
     -------
     tuple
@@ -79,13 +79,13 @@ def possibly_intersecting(dataframebounds, geometry, buffer=0):
     )
     # Get intersecting profiles
     return idx
-    
+
 
 def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
     """
     Method to determine nearest branch for each geometry.
-    The nearest branch can be found by finding the nearest branch from the geometry
-    as a whole (overal), the centroid (centroid), from both ends (ends) or intersecting (intersect).
+    The nearest branch can be found by finding t from both ends (ends) or the nearest branch from the geometry
+    as a whole (overal), the centroid (centroid),intersecting (intersect).
 
     Parameters
     ----------
@@ -127,7 +127,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
                 offset = round(branchgeo.project(branchgeo.intersection(geometry.geometry).centroid), 3)
                 offset = max(mindist, min(branchgeo.length - mindist, offset))
                 geometries.at[geometry.Index, 'branch_offset'] = offset
-    
+
     else:
         branch_bounds = branches.bounds.values.T
         # In case of looking for the nearest, it is easier to iteratie over the geometries instead of the branches
@@ -135,7 +135,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
             # Find near branches
             nearidx = possibly_intersecting(branch_bounds, geometry.geometry, buffer=maxdist)
             selectie = branches.loc[nearidx]
-        
+
             if method == 'overal':
                 # Determine distances to branches
                 dist = selectie.distance(geometry.geometry)
@@ -143,7 +143,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
                 # Determine distances to branches
                 dist = selectie.distance(geometry.geometry.centroid)
             elif method == 'ends':
-                # Since a culvert can cross a channel, it is 
+                # Since a culvert can cross a channel, it is
                 crds = geometry.geometry.coords[:]
                 dist = (selectie.distance(Point(*crds[0])) + selectie.distance(Point(*crds[-1]))) * 0.5
 
@@ -155,7 +155,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
                     geo = geometry.geometry
                 else:
                     geo = geometry.geometry.centroid
-                
+
                 # Calculate offset
                 branchgeo = branches.at[branchidxmin, 'geometry']
                 mindist = min(0.1, branchgeo.length / 2.)
@@ -178,23 +178,23 @@ def orthogonal_line(line, offset, width=1.0):
     line : list
         List with coordinate tuples
     """
-    
+
     # Determine angle at offset
     angle = np.angle(complex(*np.diff([
         line.interpolate(offset - 0.001).coords[0][:2],
         line.interpolate(offset + 0.001).coords[0][:2]
     ], axis=0)[0])) + 0.5 * np.pi
-    
+
     # Create new line
     pt = line.interpolate(offset).coords[0]
-    
-    f = 0.5 * width 
+
+    f = 0.5 * width
     line = [(pt[0] + np.cos(angle) * f, pt[1] + np.sin(angle) * f), (pt[0] - np.cos(angle) * f, pt[1] - np.sin(angle) * f)]
-    
+
     return line
-    
+
 def extend_linestring(line, near_pt, length):
-    
+
     # Get the nearest end
     nearest_end = (0, 1) if line.project(near_pt) < line.length / 2 else (-1, -2)
 
@@ -233,24 +233,24 @@ def points_in_polygon(points, polygon):
 
     extp = path.Path(polygon.exterior)
     intps = [path.Path(interior) for interior in polygon.interiors]
-                
+
     # create first index. Everything within exterior is True
     index = extp.contains_points(boxpoints)
-                
+
     # set points in holes also to nan
     if intps:
         subset = boxpoints[index]
         # Start with all False
         subindex = np.zeros(len(subset), dtype=bool)
-    
+
         for intp in intps:
             # update mask, set to True where point in interior
             subindex = subindex | intp.contains_points(subset)
-    
+
         # Everything within interiors should be True
         # So, set everything within interiors (subindex == True), to True
         index[np.where(index)[0][subindex]] = False
-    
+
     # Set index in main index to False
     mainindex[np.where(mainindex)[0][~index]] = False
 
@@ -301,9 +301,9 @@ class RasterPart:
         self.get_corners()
         # Select points within part + buffer
         idx = (
-            (pts[:, 0] > self.lowerleft[0] - buffer) & 
-            (pts[:, 0] < self.upperright[0] + buffer) & 
-            (pts[:, 1] > self.lowerleft[1] - buffer) & 
+            (pts[:, 0] > self.lowerleft[0] - buffer) &
+            (pts[:, 0] < self.upperright[0] + buffer) &
+            (pts[:, 1] > self.lowerleft[1] - buffer) &
             (pts[:, 1] < self.upperright[1] + buffer)
         )
         return idx
@@ -314,7 +314,7 @@ class RasterPart:
         return valid
 
 def geometry_to_mask(polygons, lowerleft, cellsize, shape):
-    
+
     # Initialize mask
     mask = np.zeros(shape)
 
@@ -324,31 +324,31 @@ def geometry_to_mask(polygons, lowerleft, cellsize, shape):
         # Subtract interiors
         for interior in polygon.interiors:
             mask -= get_mask(interior, lowerleft, cellsize, shape, outline=0)
-        
+
     mask = (mask == 1)
-    
+
     return mask
-    
+
 
 def get_mask(linestring, lowerleft, cellsize, shape, outline=1):
-    
+
     # Create array from coordinate sequence
     path = np.vstack(linestring.coords[:])
-    
+
     # Convert to (0,0) and step size 1
     path[:, 0] -= lowerleft[0]
     path[:, 1] -= lowerleft[1] + cellsize
     path /= cellsize
-    # Convert from array to tuple list    
+    # Convert from array to tuple list
     path = list(zip(*zip(*path)))
-    
+
     # Create mask
     maskIm = PIL.Image.new('L', (shape[1], shape[0]), 0)
     PIL.ImageDraw.Draw(maskIm).polygon(path, outline=outline, fill=1)
     mask = np.array(maskIm)[::-1]
-    
+
     return mask
-    
+
 
 def raster_in_parts(f, ncols, nrows, facedata=None):
     """
@@ -371,9 +371,9 @@ def raster_in_parts(f, ncols, nrows, facedata=None):
 
     for i, (ix, iy) in enumerate(product(range(nx), range(ny))):
         pl.set_step(i)
-        
+
         part = RasterPart(f, xmin=xparts[ix], ymin=yparts[iy], xmax=xparts[ix+1], ymax=yparts[iy+1])
-        
+
         if facedata is not None:
             # For each part, get points in part.
             # For narrow/diagonal shapes the points in part can be limited
@@ -385,7 +385,7 @@ def raster_in_parts(f, ncols, nrows, facedata=None):
             ll = list(zip(*[crds[i].min(axis=0) for i in np.where(idx)[0] + 1]))
             ur = list(zip(*[crds[i].max(axis=0) for i in np.where(idx)[0] + 1]))
             bounds = (min(ll[0]), min(ll[1]), max(ur[0]), max(ur[1]))
-            
+
             # Get new part based on extended bounds
             part = RasterPart.from_bounds(f, bounds)
 
@@ -400,7 +400,7 @@ def rasterize_cells(facedata, prt):
     # Create mask
     maskIm = PIL.Image.new('I', (prt.shape[1], prt.shape[0]), 0)
     todraw = PIL.ImageDraw.Draw(maskIm)
-    
+
     cellnumber = np.zeros(prt.shape)
     cellsize = abs(prt.f.transform.a)
 
@@ -412,12 +412,12 @@ def rasterize_cells(facedata, prt):
         path[:, 0] -= (prt.lowerleft[0] - 0.5 * cellsize)
         path[:, 1] -= (prt.lowerleft[1] + 0.5 * cellsize)
         path /= cellsize
-        # Convert from array to tuple list    
+        # Convert from array to tuple list
         path = list(zip(*zip(*path)))
-        
+
         # Create mask
         todraw.polygon(path, outline=row.Index, fill=row.Index)
-    
+
     return np.array(maskIm, dtype=np.int32)[::-1]
 
 def check_geodateframe_rasterstats(facedata):
@@ -436,12 +436,12 @@ def check_geodateframe_rasterstats(facedata):
     # Check if coordinates are present.
     if 'crds' not in facedata.columns:
         facedata['crds'] =[row.coords[:] for row in facedata.geometry]
-    
-    
+
+
 def raster_stats_fine_cells(rasterpath, facedata, stats=['mean']):
     """
     Get raster stats
-    
+
     Parameters
     ----------
     rasterpath : str
@@ -463,7 +463,7 @@ def raster_stats_fine_cells(rasterpath, facedata, stats=['mean']):
     first = True
     i = 0
     with rasterio.open(rasterpath, 'r') as f:
-        
+
         # Split file in parts based on shape
         parts = raster_in_parts(f, ncols=250, nrows=250, facedata=facedata)
 
@@ -479,16 +479,16 @@ def raster_stats_fine_cells(rasterpath, facedata, stats=['mean']):
             cellidx_sel = rasterize_cells(facedata.loc[prt.idx], prt)
             cellidx_sel[~valid] = 0
             valid = (cellidx_sel != 0)
-            
+
             for cell_idx in np.unique(cellidx_sel):
                 if cell_idx == 0:
                     continue
-                
+
                 # Mask
                 cellmask = (cellidx_sel == cell_idx)
                 if not cellmask.any():
                     continue
-                
+
                 # Get bottom values
                 bottom = arr[cellmask]
 
@@ -500,14 +500,14 @@ def raster_stats_fine_cells(rasterpath, facedata, stats=['mean']):
 
         # Cast to pandas dataframe
         df = pd.DataFrame.from_dict(stat_array).reindex(index=facedata.index)
-        
+
     return df
 
 def waterdepth_ahn(dempath, facedata, outpath, column):
     """
     Function that combines a dem and water levels to a water
     depth raster. No sub grid correction is done.
-    
+
     Parameters
     ----------
     dempath : str
@@ -545,7 +545,7 @@ def waterdepth_ahn(dempath, facedata, outpath, column):
 
             # Create array to assign water levels
             wlev_subgr = np.zeros(cellidx_sel.shape, dtype=out_meta['dtype'])
-            
+
             for cell_idx in np.unique(cellidx_sel):
                 if cell_idx == 0:
                     continue
@@ -555,7 +555,7 @@ def waterdepth_ahn(dempath, facedata, outpath, column):
                     continue
                 # Add values for cell to raster
                 wlev_subgr[cellmask] = facedata.at[cell_idx, column]
-            
+
             # Write to output raster
             with rasterio.open(outpath, 'w' if first else 'r+', **out_meta) as dst:
                 # Determine water depth
@@ -573,7 +573,7 @@ def waterdepth_ahn(dempath, facedata, outpath, column):
 def compress(path):
     """
     Function re-save an existing raster file with compression.
-    
+
     Parameters
     ----------
     path : str
@@ -590,12 +590,12 @@ def compress(path):
 def as_polygon_list(polygon):
     """Convenience method to return a list with one or more
     Polygons from a given Polygon or MultiPolygon.
-    
+
     Parameters
     ----------
     polygon : list or Polygon or MultiPolygon
         Object to be converted
-    
+
     Returns
     -------
     list
