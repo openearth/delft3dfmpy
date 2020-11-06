@@ -40,27 +40,18 @@ osm = OSM(fn_pilot_area, required_columns_data,parameters['projectedcrs'], logge
 # Id column
 id = config.get('datacolumns','idcolumn')
 
-# TODO: BRANCHES - read id column from json.  Do not deviate between drain type
+
 # Read branches and store in OSM data model
 osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs = osm.crs_out, clip = osm.clipgeo
                       , id_col=id, filter_cols=True, logger=logger)
 
-# TODO: CROSS SECTIONS DEFINTION - read id, drain_type, material, width, depth, top_width, diameter, profile_op, profile_cl, bottom_width columns from json
-# read cross-sections
-osm.parametrised_profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs = osm.crs_out, clip = osm.clipgeo
-                      , id_col=id, filter_cols=True, logger=logger)
+# Read cross-sections and store in OSM data model
+osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs = osm.crs_out,
+                      clip = osm.clipgeo, id_col=id, filter_cols=True, geometry_duplicater=1, logger=logger)
 
-# TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
-# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections. this needs to be retrieved from a DEM (which we have!)
-# TODO: CROSS SECTION DEFINITION - create circular profiles --> prof_idofbranch
-# TODO: CROSS SECTION DEFINITION - create rectangular profiles --> prof_idofbranch
-# TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
-# TODO: CROSS SECTION LOCATION - select rows with drain type other than culvert
-# TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
-osm.parametrised_profiles.snap_to_branch(osm.branches, snap_method='ends')
+# Snap profiles to branches: create two profile locations along branches.
+osm.profiles.snap_to_branch(osm.branches, snap_method='one_data')
 
-# FIXME: cross-sections are plotted as branches. This means that snapping should be changed.
-# FIXME: when adding the culvert. I encounter crs problem.
 # Plot branches and cross-sections
 plt.rcParams['axes.edgecolor'] = 'w'
 
@@ -74,15 +65,39 @@ background = plt.imread(path+'/background_projected.png')
 ax.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
 osm.clipgdf.plot(ax=ax, color='w', alpha=0.5)
 osm.branches.plot(ax=ax, label='Channel')
-osm.parametrised_profiles.plot(ax=ax, color='C3', label='Cross section')
+osm.profiles.geometry.interpolate(osm.profiles.branch_offset).plot(ax=ax, marker='*', markersize=5, color='C3', label='Cross section')
 plt.show()
 
-# # TODO: STRUCTURE - read id, draintype
-# # Read culverts
-# osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= crs_proj, clip = osm.clipgeo,
-#                       id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
-#                       , filter_culverts=True, logger=logger)
+# # Read culverts into OSM
+osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= osm.crs_out, clip = osm.clipgeo,
+                      id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
+                      , filter_culverts=True, logger=logger)
 
+# Snap culvert to branches and determine centroid.
+osm.culverts.snap_to_branch(osm.branches, snap_method='ends')
+
+# Plot branches, cross-sections and culverts
+fig1, ax1 = plt.subplots(figsize=(10, 10))
+
+ax1.xaxis.set_visible(False)
+ax1.yaxis.set_visible(False)
+
+background = plt.imread(path+'/background_projected.png')
+ax1.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
+osm.clipgdf.plot(ax=ax1, color='w', alpha=0.5)
+osm.branches.plot(ax=ax1, label='Channel')
+osm.profiles.geometry.interpolate(osm.profiles.branch_offset).plot(ax=ax1, marker='*', markersize=5, color='C3', label='Cross section', zorder=5)
+osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
+plt.show()
+
+
+# TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
+# TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
+# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections. this needs to be retrieved from a DEM (which we have!)
+# TODO: CROSS SECTION DEFINITION - create circular profiles --> prof_idofbranch
+# TODO: CROSS SECTION DEFINITION - create rectangular profiles --> prof_idofbranch
+# TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
+# TODO: CROSS SECTION LOCATION - select rows with drain type other than culvert
 # TODO: STRUCTURE - select rows with draintype culvert
 # TODO: STRUCTURE - determine length and midpoint location culvert
 # TODO: STRUCTURE - snapping of open drains over culverts. May not be needed as wel only use parameterized profiles

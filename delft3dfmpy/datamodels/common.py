@@ -88,14 +88,12 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.dropna(inplace=True)
 
     def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, proj_crs = None, clip=None, check_geotype=True,
-                 id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False, logger=logging):
+                 id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False, geometry_duplicater=0,  logger=logging):
         """
         Import function, extended with type checks. Does not destroy reference to object.
         """
         # Read GeoDataFrame
         gdf = gpd.read_file(path)
-
-        #FIXME: add filter to read_file
 
         # Only keep required columns
         if filter_cols:
@@ -137,6 +135,9 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         if column_mapping is not None:
             gdf.rename(columns=column_mapping, inplace=True)
 
+        if geometry_duplicater > 0:
+            gdf = pd.concat([gdf] * (geometry_duplicater+1), axis=0)
+
         # Add data to class GeoDataFrame
         self.set_data(gdf, index_col=index_col, check_columns=check_columns, check_geotype=check_geotype)
 
@@ -149,7 +150,6 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.check_projection(proj_crs)
         else:
             logger.debug(f'No projected CRS is given in ini-file')
-
 
     def set_data(self, gdf, index_col=None, check_columns=True, check_geotype=True):
 
@@ -360,9 +360,15 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         else:
             logger.info(f'OSM data has same projection as projected crs in ini-file')
 
-    def snap_to_branch(self, branches, snap_method, maxdist=5):
+    def snap_to_branch(self, branches, snap_method, maxdist=5, minoffset=0.500):
         """Snap the geometries to the branch"""
-        geometry.find_nearest_branch(branches=branches, geometries=self, method=snap_method, maxdist=maxdist)
+
+        if snap_method=='one_data':
+            gdf = geometry.create_profiles_on_branch(branches=branches, geometries=self, maxdist=maxdist, minoffset=minoffset)
+            #FIXME:  Branchids, offsets and lengths only added to osm.profiles if self.set_data is applied. This is not the case for method under else.
+            self.set_data(gdf)
+        else:
+            geometry.find_nearest_branch(branches=branches, geometries=self, method=snap_method, maxdist=maxdist)
 
 class ExtendedDataFrame(pd.DataFrame):
 

@@ -52,7 +52,7 @@ class OSM:
 
         # FIXME: ensure that all required parameterised properties are provided. I can imagine this is a matter of making
         # several parameterised profiles for different profile types (e.g. trapezoidal, rectangular, circular, etc.)
-        self.parametrised_profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('crosssections'))
+        self.profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('crosssections'))
 
 
         # FIXME: ensure that all culvert types and properties can be handled. We probably have circular and box-shaped culverts, sometimes with multiple openings
