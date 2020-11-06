@@ -316,9 +316,11 @@ class DFlowFMWriter:
 
                         # Get time series
                         if bc['time'] is None:
-                            data = [[0, bc['value']], [999999, bc['value']]]
+                            data = float(bc['value'])
+                            headerType='constant'
                         else:
                             data = list(zip(bc['time'], bc['value']))
+                            headerType='timeseries'
 
                 else:
                     dct = {'quantity':f"{bc['bctype']}",'nodeId': bc['nodeid'],'forcingFile':'boundaries.bc'}
@@ -326,25 +328,36 @@ class DFlowFMWriter:
 
                     # Get time series
                     if bc['time'] is None:
-                        data = [[0, bc['value']], [999999, bc['value']]]
+                        data = float(bc['value'])
+                        headerType='constant'
                     else:
                         data = list(zip(bc['time'], bc['value']))
+                        headerType='timeseries'
 
-
-            refd = str(self.dflowfmmodel.mdu_parameters["refdate"])
-
-            # and write data to the bc file
-            with open(os.path.join(self.output_dir, 'boundaries.bc'), 'a') as f:
-                f.write(f'\n[Forcing]\n'
-                        f'name       = {bc["nodeid"]}\n'
-                        f'function   = timeseries\n'
-                        f'timeInterpolation = linear\n'
-                        f'quantity   = time\n'
-                        f'unit       = minutes since {refd[0:4]}-{refd[4:6]}-{refd[6:9]} 00:00:00\n'
-                        f'quantity   = {bc["bctype"]}\n'
-                        f'unit       = {bc["unit"]}\n'
-                       )
-            write_fm_file(file=os.path.join(self.output_dir, 'boundaries.bc'), data=data, mode='a')
+                refd = str(self.dflowfmmodel.mdu_parameters["refdate"])
+    
+                # and write data to the bc file
+                with open(os.path.join(self.output_dir, 'boundaries.bc'), 'a') as f:
+                    if headerType=='timeseries':
+                        f.write(f'\n[Forcing]\n'
+                            f'name       = {bc["nodeid"]}\n'
+                            f'function   = timeseries\n'
+                            f'timeInterpolation = linear\n'
+                            f'quantity   = time\n'
+                            f'unit       = minutes since {refd[0:4]}-{refd[4:6]}-{refd[6:9]} 00:00:00\n'
+                            f'quantity   = {bc["bctype"]}\n'
+                            f'unit       = {bc["unit"]}\n'
+                           )
+                    if headerType=='constant':
+                        f.write(f'\n[Forcing]\n'
+                            f'name       = {bc["nodeid"]}\n'
+                            f'function   = constant\n'
+                            f'quantity   = {bc["bctype"]}\n'
+                            f'unit       = {bc["unit"]}\n'
+                            f'{data}\n'
+                           )
+                if headerType=='timeseries':
+                    write_fm_file(file=os.path.join(self.output_dir, 'boundaries.bc'), data=data, mode='a')
 
     def write_initial_conditions(self):
 
@@ -592,7 +605,7 @@ class DFlowFMWriter:
         with open(os.path.join(self.output_dir, 'run.bat'),'w') as f:
                  f.write('@ echo off\n')
                  f.write('set OMP_NUM_THREADS=2\n')
-                 f.write('call '+self.run_dimrpad+'\n')
+                 f.write('call \"'+self.run_dimrpad+'\"\n')
                  f.write('pause\n')
 
         # coupling XML

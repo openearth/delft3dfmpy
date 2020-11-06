@@ -34,16 +34,22 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
     mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median",all_touched=all_touched)    
         
     # optional rasters
-    if not isinstance(surface_storage, float):                
+    if isinstance(surface_storage, str):                
         rast,affine = read_raster(surface_storage, static=True)
-        sstores = zonal_stats(catchments, rast, affine=affine, stats="mean",all_touched=True)    
-    if not isinstance(infiltration_capacity, float):        
+        sstores = zonal_stats(catchments, rast, affine=affine, stats="mean",all_touched=True)            
+    elif isinstance(surface_storage,int):
+        surface_storage = float(surface_storage)
+    if isinstance(infiltration_capacity, str):        
         rast,affine = read_raster(infiltration_capacity, static=True)
         infcaps = zonal_stats(catchments, rast, affine=affine, stats="mean",all_touched=True)    
-    if not isinstance(initial_gwd, float):                
+    elif isinstance(infiltration_capacity,int):
+        infiltration_capacity = float(infiltration_capacity)
+    if isinstance(initial_gwd, str):                
         rast,affine = read_raster(initial_gwd, static=True)
         ini_gwds = zonal_stats(catchments, rast, affine=affine, stats="mean", all_touched=True)       
-    
+    elif isinstance(initial_gwd,int):
+        initial_gwd = float(initial_gwd)
+        
     # get raster cellsize    
     px_area = lu_affine[0] * -lu_affine[4]
     
@@ -141,26 +147,32 @@ def generate_paved( catchments=None,
     sl_rast, sl_affine = read_raster(surface_level, static=True)
     mean_elev = zonal_stats(catchments, sl_rast, affine=sl_affine, stats="median",all_touched=all_touched)         
     
-    if not isinstance( street_storage, float):                
+    if isinstance( street_storage, str):                
         strs_rast, strs_affine = read_raster(street_storage, static=True)
         str_stors = zonal_stats(catchments, strs_rast, affine=strs_affine, stats="mean", all_touched=True)        
-    if not isinstance( sewer_storage, float):                
+    elif isinstance( street_storage, int):
+        street_storage = float(street_storage)
+    if isinstance( sewer_storage, str):                
         sews_rast, sews_affine = read_raster(sewer_storage, static=True)
         sew_stors = zonal_stats(catchments, sews_rast, affine=sews_affine, stats="mean", all_touched=True)        
-    if not isinstance(pump_capacity, float):     
+    elif isinstance( sewer_storage, int):
+        sewer_storage = float(sewer_storage)    
+    if isinstance(pump_capacity, str):     
         pump_rast, pump_affine = read_raster(pump_capacity, static=True)               
         pump_caps = zonal_stats(catchments, pump_rast, affine=pump_affine, stats="mean", all_touched=True)    
-    
+    elif isinstance( pump_capacity, int):
+        pump_capacity = float(pump_capacity)    
+        
     # get raster cellsize    
     px_area = lu_affine[0] * -lu_affine[4]
     paved_drr = ExtendedDataFrame(required_columns=['code'])
     if sewer_areas is not None:        
         # if the parameters area rasters, do the zonal statistics per sewage area as well.
-        if not isinstance( street_storage, float):                
+        if isinstance( street_storage, str):                
             str_stors_sa = zonal_stats(sewer_areas, strs_rast,affine=strs_affine,stats="mean", all_touched=True)
-        if not isinstance( sewer_storage, float):                
+        if isinstance( sewer_storage, str):                
             sew_stors_sa = zonal_stats(sewer_areas, sews_rast,affine=sews_affine,stats="mean", all_touched=True)
-        if not isinstance(pump_capacity, float):     
+        if isinstance(pump_capacity, str):     
             pump_caps_sa = zonal_stats(sewer_areas, pump_rast,affine=pump_affine,stats="mean", all_touched=True)
         mean_sa_elev = zonal_stats(sewer_areas, sl_rast, affine=sl_affine, stats="median",all_touched=True)         
         
@@ -270,10 +282,12 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
     rast, affine = read_raster(surface_level, static=True)
     mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median", all_touched=all_touched) 
     # optional rasters
-    if not isinstance(roof_storage, float):                
+    if isinstance(roof_storage, str):                
         rast, affine = read_raster(roof_storage, static=True)
         roofstors = zonal_stats(catchments, rast, affine=affine, stats="mean", all_touched=True)    
-    
+    elif isinstance(roof_storage, int):
+        roof_storage = float(roof_storage)
+        
     # get raster cellsize    
     px_area = lu_affine[0] * -lu_affine[4]
     
