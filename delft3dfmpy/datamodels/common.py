@@ -92,9 +92,6 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             filter = (gdf[list(filter_rows)] == pd.Series(filter_rows)).all(axis=1)
             gdf = gdf[filter]
 
-            # gdf.drop(index=gdf.index[gdf[draintype_col]!='culvert'], inplace = True)
-            # logger.debug(f'Found drain type: culvert')
-
         # Drop features without geometry
         total_features = len(gdf)
         missing_features = len(gdf.index[gdf.geometry.isnull()])
