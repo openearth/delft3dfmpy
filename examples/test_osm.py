@@ -15,7 +15,7 @@ fn_ini = os.path.join(root, 'osm_settings.ini')
 logger = initialize_logger('osm2fm.log', log_level=10)
 # Read ini file
 logger.info(f'Read config from {fn_ini}')
-config = configparser.ConfigParser()
+config = configparser.ConfigParser(inline_comment_prefixes=[";", "#"])
 config.read(fn_ini)
 
 # Path to data

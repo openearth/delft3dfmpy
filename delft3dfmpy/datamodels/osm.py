@@ -54,7 +54,6 @@ class OSM:
         # several parameterised profiles for different profile types (e.g. trapezoidal, rectangular, circular, etc.)
         self.profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('crosssections'))
 
-
         # FIXME: ensure that all culvert types and properties can be handled. We probably have circular and box-shaped culverts, sometimes with multiple openings
         self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('structures'))
 
@@ -66,13 +65,13 @@ class OSM:
         #
 
     def get_columns(self, key):
-        cols = [x.strip() for x in self.data_columns[key].split('#')[0].strip().split(',')]
+        cols = [x.strip() for x in self.data_columns[key].replace(' ', '').split(',')]
         return cols
 
     def to_pickle(self, filename, overwrite=False):
         # Check if path exists
         if os.path.exists(filename) and not overwrite:
-            raise FileExistsError(f'File "{filename}" alraedy exists.')
+            raise FileExistsError(f'File "{filename}" already exists.')
 
         # Dump object
         with open(filename, 'wb') as handle:
