@@ -360,15 +360,25 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         else:
             logger.info(f'OSM data has same projection as projected crs in ini-file')
 
+    def branch_to_prof(self, offset=0., vertex_end=False, rename_col=None, prefix='', suffix=''):
+        gdf_out = self.copy()
+        # interpolate over feature geometries
+        if vertex_end:
+            p = self.interpolate(self.length - offset)
+        else:
+            p = self.interpolate(offset)
+        gdf_out.geometry = p
+        if rename_col is not None:
+            try:
+                gdf_out[rename_col] = [f'{prefix}{g[1][rename_col]}{suffix}' for g in self.iterrows()]
+            except:
+                raise ValueError(f"Column rename with '{rename_col}' did not succeed.")
+
+        return gdf_out  # TODO: make this return self.copy as a copy of the input
+
     def snap_to_branch(self, branches, snap_method, maxdist=5, minoffset=0.500):
         """Snap the geometries to the branch"""
-
-        if snap_method=='one_data':
-            gdf = geometry.create_profiles_on_branch(branches=branches, geometries=self, maxdist=maxdist, minoffset=minoffset)
-            #FIXME:  Branchids, offsets and lengths only added to osm.profiles if self.set_data is applied. This is not the case for method under else.
-            self.set_data(gdf)
-        else:
-            geometry.find_nearest_branch(branches=branches, geometries=self, method=snap_method, maxdist=maxdist)
+        geometry.find_nearest_branch(branches=branches, geometries=self, method=snap_method, maxdist=maxdist)
 
 class ExtendedDataFrame(pd.DataFrame):
 

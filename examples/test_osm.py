@@ -5,7 +5,7 @@ import configparser, json
 from delft3dfmpy import OSM
 from delft3dfmpy.core.logging import initialize_logger
 import matplotlib.pyplot as plt
-import geopandas as gpd
+import pandas as pd
 
 import logging
 
@@ -50,7 +50,13 @@ osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_co
                       clip = osm.clipgeo, id_col=id, filter_cols=True, geometry_duplicater=1, logger=logger)
 
 # Snap profiles to branches: create two profile locations along branches.
-osm.profiles.snap_to_branch(osm.branches, snap_method='one_data')
+# osm.profiles.snap_to_branch(osm.branches, snap_method='one_data')
+# retrieve profiles at start of each line segment
+profiles_start = osm.profiles.branch_to_prof(offset=0.5, prefix='A_', rename_col='id')
+# retrieve profiles at end of each line segment
+profiles_end = osm.profiles.branch_to_prof(offset=0.5, prefix='B_', rename_col='id', vertex_end=True)
+# concat into a new profiles object
+osm.profiles = pd.concat([profiles_start, profiles_end])
 
 # Plot branches and cross-sections
 plt.rcParams['axes.edgecolor'] = 'w'
@@ -65,7 +71,9 @@ background = plt.imread(path+'/background_projected.png')
 ax.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
 osm.clipgdf.plot(ax=ax, color='w', alpha=0.5)
 osm.branches.plot(ax=ax, label='Channel')
-osm.profiles.geometry.interpolate(osm.profiles.branch_offset).plot(ax=ax, marker='*', markersize=5, color='C3', label='Cross section')
+profiles_start.plot(ax=ax, marker='.', alpha=0.3, color='g')
+profiles_end.plot(ax=ax, marker='.', alpha=0.3, color='r')
+
 plt.show()
 
 # # Read culverts into OSM
