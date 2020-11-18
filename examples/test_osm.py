@@ -102,7 +102,7 @@ background = plt.imread(path+'/background_projected.png')
 ax1.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
 osm.clipgdf.plot(ax=ax1, color='w', alpha=0.5)
 osm.branches.plot(ax=ax1, label='Channel')
-osm.profiles.geometry.interpolate(osm.profiles.branch_offset).plot(ax=ax1, marker='*', markersize=5, color='C3', label='Cross section', zorder=5)
+# osm.profiles.geometry.interpolate(osm.profiles.branch_offset).plot(ax=ax1, marker='*', markersize=5, color='C3', label='Cross section', zorder=5)
 osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
 plt.show()
 

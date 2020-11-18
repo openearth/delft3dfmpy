@@ -13,20 +13,6 @@ from copy import deepcopy
 
 from delft3dfmpy.core import geometry
 
-# FIXME: check if function still is needed
-# def explode_multilinestring(gdf, id_col='code'):
-#     gdf_dst = gpd.GeoDataFrame()
-#     for f in gdf:
-#         for n, g in enumerate(f.geometry):
-#             row = deepcopy(f)
-#             row['geometry'] = g
-#             if len(f.geometry) > 1:
-#                 # add _{n} to id_col
-#                 row[id_col] += f'_{n}'
-#             gdf_dst.append(row)
-
-
-
 class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
     # normal properties
