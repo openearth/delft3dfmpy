@@ -88,7 +88,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             self.dropna(inplace=True)
 
     def read_shp(self, path, index_col=None, column_mapping=None, check_columns=True, proj_crs = None, clip=None, check_geotype=True,
-                 id_col='code',filter_cols = False, draintype_col=None, filter_culverts=False, geometry_duplicater=0,  logger=logging):
+                 id_col='code', filter_cols=False, filter_rows=None, logger=logging):
         """
         Import function, extended with type checks. Does not destroy reference to object.
         """
@@ -97,46 +97,41 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         # Only keep required columns
         if filter_cols:
-            logger.info(f'Only required columns are kept in geodataframe')
+            logger.info(f'Filtering required column keys')
             gdf.drop(columns=gdf.columns[~gdf.columns.isin(self.required_columns)], inplace=True)
 
-        # In case of culvert select indices that are culverts
-        #FIXME: draintype culvert could be different for other OSM data
-        if filter_culverts:
-            logger.info(f'Filter selecting culverts from data is ON')
-            gdf.drop(index= gdf.index[gdf[draintype_col]!='culvert'], inplace = True)
-            logger.debug(f'Found drain type: culvert')
+        # filter out rows on key/value pairs if required
+        if filter_rows is not None:
+            logger.info(f'Filter rows using key value pairs')
+            filter = (gdf[list(filter_rows)] == pd.Series(filter_rows)).all(axis=1)
+            gdf = gdf[filter]
+
+            # gdf.drop(index=gdf.index[gdf[draintype_col]!='culvert'], inplace = True)
+            # logger.debug(f'Found drain type: culvert')
 
         # Drop features without geometry
         total_features = len(gdf)
         missing_features = len(gdf.index[gdf.geometry.isnull()])
-        gdf.drop(gdf.index[gdf.geometry.isnull()], inplace =True) # temporary fix
+        gdf.drop(gdf.index[gdf.geometry.isnull()], inplace=True) # temporary fix
         logger.debug(f'{missing_features} out of {total_features} do not have a geometry')
 
-
+        # Rename columns:
+        if column_mapping is not None:
+            gdf.rename(columns=column_mapping, inplace=True)
 
         if 'MultiPolygon' or 'MultiLineString' in str(gdf.geometry.type):
-            #gdf = gdf[gdf.geometry.type != 'MultiPolygon']
-            #sfx = ['_'+str(i) for i in range(100)]
             gdf = gdf.explode()
             for ftc in gdf[id_col].unique():
-                if len(gdf[gdf[id_col] == ftc])>1:
-                    #FIXME: Check if method below works instead of sfx[ii]
-                    gdf.loc[gdf[id_col] == ftc, id_col] = [i + f'_{ii}' for ii, i in enumerate(gdf[gdf[id_col] == ftc][id_col])]
-                    print(f'{ftc} is MultiPolygon or MuliLineString; split into single parts.')
+                if len(gdf[gdf[id_col]==ftc]) > 1:
+                    gdf.loc[gdf[id_col]==ftc, id_col] = [f'{i}_{n}' for n, i in enumerate(gdf[gdf[id_col]==ftc][id_col])]
+                    print(f'{ftc} is MultiPolygon; split into single parts.')
+
 
             #print('Features of type \"Multipolygon\" encountered: they are skipped.')
 
         # Check number of entries
         if gdf.empty:
             raise IOError('Imported shapefile contains no rows.')
-
-        # Rename columns:
-        if column_mapping is not None:
-            gdf.rename(columns=column_mapping, inplace=True)
-
-        if geometry_duplicater > 0:
-            gdf = pd.concat([gdf] * (geometry_duplicater+1), axis=0)
 
         # Add data to class GeoDataFrame
         self.set_data(gdf, index_col=index_col, check_columns=check_columns, check_geotype=check_geotype)

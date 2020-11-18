@@ -42,15 +42,24 @@ id = config.get('datacolumns','idcolumn')
 
 
 # Read branches and store in OSM data model
-osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs = osm.crs_out, clip = osm.clipgeo
-                      , id_col=id, filter_cols=True, logger=logger)
+osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),
+                      index_col=id,
+                      proj_crs=osm.crs_out,
+                      clip=osm.clipgeo,
+                      id_col=id,
+                      filter_cols=True,
+                      logger=logger)
 
 # Read cross-sections and store in OSM data model
-osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs = osm.crs_out,
-                      clip = osm.clipgeo, id_col=id, filter_cols=True, geometry_duplicater=1, logger=logger)
+osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),
+                      index_col=id,
+                      proj_crs=osm.crs_out,
+                      clip=osm.clipgeo,
+                      id_col=id,
+                      filter_cols=True,
+                      logger=logger
+                      )
 
-# Snap profiles to branches: create two profile locations along branches.
-# osm.profiles.snap_to_branch(osm.branches, snap_method='one_data')
 # retrieve profiles at start of each line segment
 profiles_start = osm.profiles.branch_to_prof(offset=0.5, prefix='A_', rename_col='id')
 # retrieve profiles at end of each line segment
@@ -78,8 +87,7 @@ plt.show()
 
 # # Read culverts into OSM
 osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= osm.crs_out, clip = osm.clipgeo,
-                      id_col=id, filter_cols=True, draintype_col=config.get('datacolumns','draintypecolumn')
-                      , filter_culverts=True, logger=logger)
+                      id_col=id, filter_rows={'drain_type': 'culvert'}, logger=logger)
 
 # Snap culvert to branches and determine centroid.
 osm.culverts.snap_to_branch(osm.branches, snap_method='ends')
