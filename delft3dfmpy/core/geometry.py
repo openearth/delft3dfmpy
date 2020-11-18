@@ -85,8 +85,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
     """
     Method to determine nearest branch for each geometry.
     The nearest branch can be found by finding t from both ends (ends) or the nearest branch from the geometry
-    as a whole (overal), the centroid (centroid),intersecting (intersect), or if both branch and cross-section are
-    retrieved from same data source (same_data).
+    as a whole (overal), the centroid (centroid), or intersecting (intersect).
 
     Parameters
     ----------
@@ -102,7 +101,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
         Minimum offset from the end of the corresponding branch in case of method=equal
     """
     # Check if method is in allowed methods
-    allowed_methods = ['intersecting', 'overal', 'centroid', 'ends','same_data']
+    allowed_methods = ['intersecting', 'overal', 'centroid', 'ends']
     if method not in allowed_methods:
         raise NotImplementedError(f'Method "{method}" not implemented.')
 
@@ -164,79 +163,6 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
                 mindist = min(0.1, branchgeo.length / 2.)
                 offset = max(mindist, min(branchgeo.length - mindist, round(branchgeo.project(geo), 3)))
                 geometries.at[geometry.Index, 'branch_offset'] = offset
-
-def create_profiles_on_branch(branches, geometries, maxdist=5, minoffset=0.500):
-    """
-    Method to determine nearest branch for each geometry if both branch and cross-section are
-    retrieved from same data source (same_data).
-
-    Parameters
-    ----------
-    branches : geopandas.GeoDataFrame
-        Geodataframe with branches
-    geometries : geopandas.GeoDataFrame
-        Geodataframe with geometries to snap
-    maxdist=5 : int or float
-        Maximum distance for finding nearest geometry
-    minoffset : int or float
-        Minimum offset from the end of the corresponding branch in case of method=equal
-    """
-    # Add columns if not present
-    if 'branch_id' not in geometries.columns:
-        geometries['branch_id'] = ''
-    if 'branch_offset' not in geometries.columns:
-        geometries['branch_offset'] = np.nan
-    if 'branch_length' not in geometries.columns:
-        geometries['branch_length'] = np.nan
-    if 'profile_point' not in geometries.columns:
-        geometries['profile_point'] = np.nan
-
-    # FIXME: still dependent on  id column name. Should be change to id_col!
-
-    # Give each cross-section an unique id
-    dummy_geoms = geometries.copy()
-    dummy_geoms.id.where(~geometries.id.duplicated(keep='last'), 'Prof_' + dummy_geoms.id + '_A', inplace=True)
-    dummy_geoms.id.where(~geometries.id.duplicated(keep='first'), 'Prof_' + dummy_geoms.id + '_B', inplace=True)
-
-    # Rename back geometries
-    geometries = dummy_geoms.copy()
-    del(dummy_geoms)
-
-    # Determine intersection geometries per branch
-    geobounds = geometries.bounds.values.T
-    for branch in branches.itertuples():
-        selectie = geometries.loc[possibly_intersecting(geobounds, branch.geometry)].copy()
-        intersecting = selectie.loc[selectie.intersects(branch.geometry).values]
-
-        # For each geometrie, determine offset along branch
-        for geometry in intersecting.itertuples():
-
-            # Determine distance of profile line along branch
-            geometries.at['_'.join(geometry.id.split('_')[1:-1]), 'branch_id'] = branch.id
-
-            # Calculate branch length
-            geometries.at['_'.join(geometry.id.split('_')[1:-1]), 'branch_length'] = branch.geometry.length
-
-    # Set index
-    geometries.set_index(['id'], drop=False, inplace=True)
-
-    for geometry in geometries.itertuples():
-
-        # Determine offset
-        if '_A' in geometry.id:
-            offset = round(minoffset, 3)
-
-        elif '_B' in geometry.id:
-            offset = round(geometry.branch_length - minoffset, 3)
-
-        # Add offset column
-        geometries.at[geometry.id, 'branch_offset'] = offset
-
-        # Add point of profile locations
-        #geometries.at[geometry.id, 'profile_point'] =  geometry.geometry.interpolate(offset)
-
-    return geometries
-
 
 def orthogonal_line(line, offset, width=1.0):
     """
