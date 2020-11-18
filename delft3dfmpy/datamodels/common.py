@@ -357,7 +357,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         return gdf_out  # TODO: make this return self.copy as a copy of the input
 
-    def snap_to_branch(self, branches, snap_method, maxdist=5, minoffset=0.500):
+    def snap_to_branch(self, branches, snap_method, maxdist=5):
         """Snap the geometries to the branch"""
         geometry.find_nearest_branch(branches=branches, geometries=self, method=snap_method, maxdist=maxdist)
 
