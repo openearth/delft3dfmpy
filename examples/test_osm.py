@@ -13,6 +13,7 @@ root = os.path.abspath('../data/osm')
 fn_ini = os.path.join(root, 'osm_settings.ini')
 
 logger = initialize_logger('osm2fm.log', log_level=10)
+
 # Read ini file
 logger.info(f'Read config from {fn_ini}')
 config = configparser.ConfigParser(inline_comment_prefixes=[";", "#"])
@@ -61,11 +62,14 @@ osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),
                       )
 
 # retrieve profiles at start of each line segment
-profiles_start = osm.profiles.branch_to_prof(offset=0.5, prefix='A_', rename_col='id')
+profiles_start = osm.profiles.branch_to_prof(offset=0.5, prefix = 'Prof_', suffix='_A', rename_col='id')
 # retrieve profiles at end of each line segment
-profiles_end = osm.profiles.branch_to_prof(offset=0.5, prefix='B_', rename_col='id', vertex_end=True)
+profiles_end = osm.profiles.branch_to_prof(offset=0.5, prefix = 'Prof_', suffix='_B', rename_col='id', vertex_end=True)
 # concat into a new profiles object
 osm.profiles = pd.concat([profiles_start, profiles_end])
+
+#
+#osm.profiles.sample_raster(rasterio,offset=None,geometry)
 
 # Plot branches and cross-sections
 plt.rcParams['axes.edgecolor'] = 'w'

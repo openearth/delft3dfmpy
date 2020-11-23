@@ -18,7 +18,11 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
     # normal properties
     _metadata = ['required_columns', 'geotype'] + gpd.GeoDataFrame._metadata
 
-    def __init__(self, geotype, required_columns=None, *args, **kwargs):
+    def __init__(self, geotype, required_columns=None,logger=logging, *args, **kwargs):
+
+        # Add logger object to self
+        # FIXME: logging below results in error
+        #self.logger = logger
 
         # Check type
         if required_columns is None:
@@ -339,15 +343,23 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             logger.info(f'OSM data has same projection as projected crs in ini-file')
 
     def branch_to_prof(self, offset=0., vertex_end=False, rename_col=None, prefix='', suffix=''):
+        """Create profiles on branches from branch data"""
+
         gdf_out = self.copy()
+
         # interpolate over feature geometries
         if vertex_end:
-            p = self.interpolate(self.length - offset)
+            chainage = self.length - offset
+            p = self.interpolate(chainage)
         else:
-            p = self.interpolate(offset)
+            chainage = offset
+            p = self.interpolate(chainage)
         gdf_out.geometry = p
+        gdf_out['offset'] = chainage
+
         if rename_col is not None:
             try:
+                gdf_out['branch_id'] = gdf_out[rename_col]
                 gdf_out[rename_col] = [f'{prefix}{g[1][rename_col]}{suffix}' for g in self.iterrows()]
             except:
                 raise ValueError(f"Column rename with '{rename_col}' did not succeed.")

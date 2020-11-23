@@ -41,15 +41,6 @@ class OSM:
         # FIXME: check available columns and required columns for the OSM data, and apply these here
         self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('branches'))
 
-        # FIXME: in openstreetmap, cross sections are not linestrings, perpendicular to stream, but profile types and dimensions of a channel
-        # It may be that this is "parameterised cross sections, and we simply don't need the property below.
-        self.crosssections = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
-            'code',
-            'geometry',
-            'ruwheidswaarde',
-            'ruwheidstypecode'
-        ])
-
         # FIXME: ensure that all required parameterised properties are provided. I can imagine this is a matter of making
         # several parameterised profiles for different profile types (e.g. trapezoidal, rectangular, circular, etc.)
         self.profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('crosssections'))
