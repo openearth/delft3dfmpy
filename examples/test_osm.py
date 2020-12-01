@@ -2,7 +2,7 @@
 
 import os
 import configparser, json
-from delft3dfmpy import OSM
+from delft3dfmpy import OSM, DFlowFMModel
 from delft3dfmpy.core.logging import initialize_logger
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -87,7 +87,7 @@ osm.branches.plot(ax=ax, label='Channel')
 profiles_start.plot(ax=ax, marker='.', alpha=0.3, color='g')
 profiles_end.plot(ax=ax, marker='.', alpha=0.3, color='r')
 
-plt.show()
+#plt.show()
 
 # # Read culverts into OSM
 osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= osm.crs_out, clip = osm.clipgeo,
@@ -108,12 +108,36 @@ osm.clipgdf.plot(ax=ax1, color='w', alpha=0.5)
 osm.branches.plot(ax=ax1, label='Channel')
 # osm.profiles.geometry.interpolate(osm.profiles.branch_offset).plot(ax=ax1, marker='*', markersize=5, color='C3', label='Cross section', zorder=5)
 osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
-plt.show()
+#plt.show()
 
-
+# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections and depth. this needs to be retrieved from a DEM (which we have!)
+# TODO: DETERMINE LONGITUDINAL slope of branch
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
+
+# Temporary dummy columns added to osm.profiles, start and end of culverts
+osm.profiles['DEM_crs'] = 12
+osm.branches['slope'] = 0.001
+
+#FIXME: Move to common.py
+def merge_columns(df, col1, col2, rename_col):
+    """merge columns"""
+    if col1 or col2 in df.columns.values:
+        try:
+           df = df.assign(merged_col=df[col1] + df[col2])
+           df.rename(columns={'merged_col':rename_col}, inplace=True)
+        except:
+            raise ValueError(f"Merge of two profile columns'{col1}' and '{col2}' did not succeed.")
+    return df
+
+# Merge profile_cl and profile_open
+osm.profiles = merge_columns(osm.profiles, col1='profile_cl', col2='profile_op', rename_col='profile')
+
+# Start dfmmodel
+dfmmodel = DFlowFMModel()
+
+osm.culverts.columns
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
-# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections. this needs to be retrieved from a DEM (which we have!)
+
 # TODO: CROSS SECTION DEFINITION - create circular profiles --> prof_idofbranch
 # TODO: CROSS SECTION DEFINITION - create rectangular profiles --> prof_idofbranch
 # TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
