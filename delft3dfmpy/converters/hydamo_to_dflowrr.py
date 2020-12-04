@@ -140,6 +140,7 @@ def generate_paved( catchments=None,
         Combine all data to form a complete PAVED definition. ALso the coordinates for the networ topology are included.
     Zonal statistics are applied to land use, to get the paved area. The classificition described in the notebook is assumed. From the elevation grid, the median value per catchment is assumed. Other parameters can be prescribed as as float (spatially uniform) or as a raster name, in which case the mean value per catchment is used.
     """
+    
     all_touched=False if zonalstats_alltouched is None else zonalstats_alltouched        
         
     lu_rast, lu_affine = read_raster(landuse, static=True)
@@ -163,6 +164,14 @@ def generate_paved( catchments=None,
     elif isinstance( pump_capacity, int):
         pump_capacity = float(pump_capacity)    
         
+    def update_dict(dict1, dict2):
+        for i in dict2.keys():
+            if i in dict1:
+                dict1[i]+=dict2[i]
+            else:
+                dict1[i] = dict2[i]
+        return dict1
+    
     # get raster cellsize    
     px_area = lu_affine[0] * -lu_affine[4]
     paved_drr = ExtendedDataFrame(required_columns=['code'])
@@ -184,20 +193,38 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
         # find the paved area in the sewer areas
         for isew, sew in enumerate(sewer_areas.itertuples()):            
             pav_area = 0
-            for cat_ind, cat in enumerate(catchments.itertuples()):
+            for cat_ind, cat in enumerate(catchments.itertuples()):                
+                #print)
+                #if (cat.Index =='afwat_602')&(sew.Index=='BG 11 Smakterheide'):
+                #    print('stop')
                 # if no rasterdata could be obtained for this catchment, skip it.
                 if mean_elev[cat_ind]['median'] is None:
                     continue        
                 if(cat.geometry.intersects(sew.geometry)):
-                    # find the paved area within the intersection and add it to the sewer area sum
-                    intersecting_pixels = zonal_stats(cat.geometry.intersection(sew.geometry), lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)
-                    if intersecting_pixels[0]=={}:
+                    test_intersect = cat.geometry.intersection(sew.geometry)
+                    #print(cat.Index+' '+sew.Index+' '+test_intersect.type)
+                    if test_intersect.type =='LineString':
                         continue
-                    if 14.0 not in intersecting_pixels[0]:
+                    if test_intersect.type=='GeometryCollection':                                                
+                        numpol = 0
+                        for int_ft in test_intersect:                            
+                            if int_ft.type == 'Polygon':
+                                if numpol==0:                                                                
+                                    intersecting_pixels = zonal_stats(int_ft, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
+                                else:                                    
+                                    temp_int = zonal_stats(int_ft, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
+                                    intersecting_pixels = update_dict(intersecting_pixels, temp_int)
+                                numpol += 1                        
+                    else:
+                        # find the paved area within the intersection and add it to the sewer area sum
+                        intersecting_pixels = zonal_stats(cat.geometry.intersection(sew.geometry), lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
+                    if intersecting_pixels=={}:
+                        continue
+                    if 14.0 not in intersecting_pixels:
                         print(f'{sew.code} / {cat.code}: no paved area in sewer area!')
                         continue
                         
-                    pav_pixels = intersecting_pixels[0][14.0]
+                    pav_pixels = intersecting_pixels[14.0]
                     pav_area += pav_pixels*px_area
                     # subtract it fromthe total paved area in this catchment, make sure at least 0 remains
                     lu_counts[cat_ind][14.0] -=  pav_pixels
@@ -389,14 +416,13 @@ def generate_seepage(catchments, seepage_folder):
     warnings.filterwarnings('ignore')
     file_list = os.listdir(seepage_folder)
     times = []    
+    arr = np.zeros((len(file_list), len(catchments.code)))
     for ifile, file in enumerate(file_list):
         array, affine, time = read_raster(os.path.join(seepage_folder, file))
         times.append(time)           
         stats = zonal_stats(catchments, array, affine=affine, stats="mean", all_touched=True)
-        if ifile==0:
-            result = pd.DataFrame( [[s['mean'] for s in stats]] , columns='sep_'+catchments.code)
-        else:
-            result = result.append(pd.DataFrame( [[s['mean'] for s in stats]], dtype=float, columns='sep_'+catchments.code), ignore_index=True)    
+        arr[ifile,:] = [s['mean'] for s in stats]        
+    result = pd.DataFrame(arr,columns='sep_'+catchments.code)
     result.index = times 
     # convert units
     result_mmd = (result / (1e-3*(affine[0]*-affine[4])))/((times[2]-times[1]).total_seconds()/86400.)
@@ -409,15 +435,14 @@ def generate_precip(areas, precip_folder):
     """
     warnings.filterwarnings('ignore')
     file_list = os.listdir(precip_folder)
-    times = []    
+    times = []        
+    arr = np.zeros((len(file_list), len(areas.code)))
     for ifile, file in enumerate(file_list):
         array, affine, time = read_raster(os.path.join(precip_folder, file))
-        times.append(time)           
+        times.append(time)                   
         stats = zonal_stats(areas, array, affine=affine, stats="mean", all_touched=True)
-        if ifile==0:
-            result = pd.DataFrame( [[s['mean'] for s in stats]] , columns='ms_'+areas.code)
-        else:
-            result = result.append(pd.DataFrame( [[s['mean'] for s in stats]], dtype=float, columns='ms_'+areas.code), ignore_index=True)    
+        arr[ifile,:]= [s['mean'] for s in stats]        
+    result = pd.DataFrame(arr, columns='ms_'+areas.code)
     result.index = times 
     return result
 
@@ -432,14 +457,13 @@ def generate_evap(areas, evap_folder):
     areas['dissolve'] = 1
     agg_areas = areas.iloc[0:len(areas),:].dissolve(by='dissolve',aggfunc='mean')
     times = []    
+    arr = np.zeros((len(file_list), 1))
     for ifile, file in enumerate(file_list):
         array, affine, time = read_raster(os.path.join(evap_folder, file))
         times.append(time)                  
         stats = zonal_stats(agg_areas, array, affine=affine, stats="mean",all_touched=True)
-        if ifile==0:
-            result = pd.DataFrame( [[s['mean'] for s in stats]] , columns=['ms_'+areas.iloc[0,0]])
-        else:
-            result = result.append(pd.DataFrame( [[s['mean'] for s in stats]], dtype=float, columns=['ms_'+areas.iloc[0,0]]), ignore_index=True)    
+        arr[ifile,:] = [s['mean'] for s in stats]       
+    result = pd.DataFrame(arr,columns=['ms_'+areas.iloc[0,0]])
     result.index = times 
     return result
 
