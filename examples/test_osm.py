@@ -3,6 +3,7 @@
 import os
 import configparser, json
 from delft3dfmpy import OSM, DFlowFMModel
+from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
 from delft3dfmpy.core.logging import initialize_logger
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -66,7 +67,7 @@ profiles_start = osm.profiles.branch_to_prof(offset=0.5, prefix = 'Prof_', suffi
 # retrieve profiles at end of each line segment
 profiles_end = osm.profiles.branch_to_prof(offset=0.5, prefix = 'Prof_', suffix='_B', rename_col='id', vertex_end=True)
 # concat into a new profiles object
-osm.profiles = pd.concat([profiles_start, profiles_end])
+osm.profiles = ExtendedGeoDataFrame(pd.concat([profiles_start, profiles_end]))
 
 #
 #osm.profiles.sample_raster(rasterio,offset=None,geometry)
@@ -89,9 +90,11 @@ profiles_end.plot(ax=ax, marker='.', alpha=0.3, color='r')
 
 #plt.show()
 
+# FIXME: all columns are still read from data for culverts
 # # Read culverts into OSM
 osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= osm.crs_out, clip = osm.clipgeo,
-                      id_col=id, filter_rows={'drain_type': 'culvert'}, logger=logger)
+                      id_col=id, filter_cols=True, filter_rows={'drain_type': 'culvert'}, logger=logger)
+
 
 # Snap culvert to branches and determine centroid.
 osm.culverts.snap_to_branch(osm.branches, snap_method='ends')
@@ -130,10 +133,13 @@ def merge_columns(df, col1, col2, rename_col):
     return df
 
 # Merge profile_cl and profile_open
-osm.profiles = merge_columns(osm.profiles, col1='profile_cl', col2='profile_op', rename_col='profile')
+#osm.profiles = merge_columns(osm.profiles, col1='profile_cl', col2='profile_op', rename_col='profile')
+#osm.culverts = merge_columns(osm.culverts, col1='profile_cl', col2='profile_op', rename_col='profile')
+#osm.profiles.merge_columns(col1='profile_cl', col2='profile_op', rename_col='profile')
 
 # Start dfmmodel
 dfmmodel = DFlowFMModel()
+
 
 osm.culverts.columns
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
