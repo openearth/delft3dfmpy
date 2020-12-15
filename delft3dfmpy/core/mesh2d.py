@@ -207,7 +207,7 @@ class Mesh2D:
         return xnodes, ynodes, edge_nodes, face_nodes
 
     @staticmethod
-    def _find_cells(geometries):
+    def _find_cells(geometries, maxnumfacenodes=None):
         """
         Determine what the cells are in a grid.
         """
@@ -233,7 +233,10 @@ class Mesh2D:
         assert ierr == 0
 
         dimensions.numface = meshdimout.numface
-        dimensions.maxnumfacenodes = meshdimout.maxnumfacenodes
+        if maxnumfacenodes is None:
+            dimensions.maxnumfacenodes = meshdimout.maxnumfacenodes
+        else:
+            dimensions.maxnumfacenodes = maxnumfacenodes
 
         # Allocate
         for mesh in [geometries, meshout]:
@@ -251,7 +254,18 @@ class Mesh2D:
 
         # Copy content to self meshgeom
         for var in ['facex', 'facey', 'face_nodes']:
-            geometries.set_values(var, meshout.get_values(var))
+            # Create array of allocated size. In case of deviating maxnumfacenodes
+            if (maxnumfacenodes is not None) and (var == 'face_nodes'):
+                # Create an empty integer. Empty values should only be present in the integer arrays
+                arr = np.full(geometries.get_dimensions(var), -999, dtype=int)
+                # Get array
+                arr[:, :meshout.meshgeomdim.maxnumfacenodes] = meshout.get_values(var, as_array=True)
+                # Set array
+                geometries.set_values(var, arr.ravel())
+            else:
+                # Set array
+                geometries.set_values(var, meshout.get_values(var))
+    
 
         ierr = wrapperGridgeom.ggeo_deallocate()
         
