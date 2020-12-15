@@ -364,7 +364,21 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             except:
                 raise ValueError(f"Column rename with '{rename_col}' did not succeed.")
 
-        return gdf_out  # TODO: make this return self.copy as a copy of the input
+        return gdf_out
+
+
+    def merge_columns(self, col1, col2, rename_col):
+        """merge columns"""
+
+        #if (not(col1 in self) or not(col2 in self)):
+        #    raise ValueError(f"'{col1}' or '{col2}' do not exist.")
+
+        if col1 or col2 in self.columns.values:
+            try:
+                self[rename_col] = self[col1] + self[col2]
+            except:
+                raise ValueError(f"Merge of two profile columns'{col1}' and '{col2}' did not succeed.")
+
 
     def snap_to_branch(self, branches, snap_method, maxdist=5):
         """Snap the geometries to the branch"""

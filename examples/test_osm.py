@@ -7,6 +7,7 @@ from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
 from delft3dfmpy.core.logging import initialize_logger
 import matplotlib.pyplot as plt
 import pandas as pd
+import geopandas as gpd
 
 import logging
 
@@ -52,6 +53,7 @@ osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),
                       filter_cols=True,
                       logger=logger)
 
+
 # Read cross-sections and store in OSM data model
 osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),
                       index_col=id,
@@ -66,38 +68,26 @@ osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),
 profiles_start = osm.profiles.branch_to_prof(offset=0.5, prefix = 'Prof_', suffix='_A', rename_col='id')
 # retrieve profiles at end of each line segment
 profiles_end = osm.profiles.branch_to_prof(offset=0.5, prefix = 'Prof_', suffix='_B', rename_col='id', vertex_end=True)
-# concat into a new profiles object
-osm.profiles = ExtendedGeoDataFrame(pd.concat([profiles_start, profiles_end]))
+# combine into one and add set to OSM
+osm.profiles.set_data(pd.concat([profiles_start, profiles_end]), check_columns=False, check_geotype=False)
+# Merge profile_cl and profile_open for profiles
+osm.profiles.merge_columns(col1='profile_cl', col2='profile_op', rename_col='profile')
 
-#
+# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections and depth. this needs to be retrieved from a DEM (which we have!)
 #osm.profiles.sample_raster(rasterio,offset=None,geometry)
 
-# Plot branches and cross-sections
-plt.rcParams['axes.edgecolor'] = 'w'
 
-fig, ax = plt.subplots(figsize=(10, 10))
 
-#ax.fill(*osm.clipgeo.exterior.xy, color='w', alpha=0.5)
-ax.xaxis.set_visible(False)
-ax.yaxis.set_visible(False)
-
-background = plt.imread(path+'/background_projected.png')
-ax.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
-osm.clipgdf.plot(ax=ax, color='w', alpha=0.5)
-osm.branches.plot(ax=ax, label='Channel')
-profiles_start.plot(ax=ax, marker='.', alpha=0.3, color='g')
-profiles_end.plot(ax=ax, marker='.', alpha=0.3, color='r')
-
-#plt.show()
-
-# FIXME: all columns are still read from data for culverts
 # # Read culverts into OSM
 osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= osm.crs_out, clip = osm.clipgeo,
                       id_col=id, filter_cols=True, filter_rows={'drain_type': 'culvert'}, logger=logger)
-
+# Merge profile_cl and profile_open for culverts
+osm.culverts.merge_columns(col1='profile_cl', col2='profile_op', rename_col='profile')
 
 # Snap culvert to branches and determine centroid.
 osm.culverts.snap_to_branch(osm.branches, snap_method='ends')
+
+
 
 # Plot branches, cross-sections and culverts
 fig1, ax1 = plt.subplots(figsize=(10, 10))
@@ -109,11 +99,12 @@ background = plt.imread(path+'/background_projected.png')
 ax1.imshow(background, extent=(524564.3221, 529442.7747, 9246725.9975, 9249557.8336), interpolation='lanczos')
 osm.clipgdf.plot(ax=ax1, color='w', alpha=0.5)
 osm.branches.plot(ax=ax1, label='Channel')
-# osm.profiles.geometry.interpolate(osm.profiles.branch_offset).plot(ax=ax1, marker='*', markersize=5, color='C3', label='Cross section', zorder=5)
+osm.profiles.geometry.plot(ax=ax1, marker='.', color='r' , markersize=5, label='Cross section')
 osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
-#plt.show()
+plt.show()
 
-# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections and depth. this needs to be retrieved from a DEM (which we have!)
+
+
 # TODO: DETERMINE LONGITUDINAL slope of branch
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
 
@@ -121,21 +112,7 @@ osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5
 osm.profiles['DEM_crs'] = 12
 osm.branches['slope'] = 0.001
 
-#FIXME: Move to common.py
-def merge_columns(df, col1, col2, rename_col):
-    """merge columns"""
-    if col1 or col2 in df.columns.values:
-        try:
-           df = df.assign(merged_col=df[col1] + df[col2])
-           df.rename(columns={'merged_col':rename_col}, inplace=True)
-        except:
-            raise ValueError(f"Merge of two profile columns'{col1}' and '{col2}' did not succeed.")
-    return df
 
-# Merge profile_cl and profile_open
-#osm.profiles = merge_columns(osm.profiles, col1='profile_cl', col2='profile_op', rename_col='profile')
-#osm.culverts = merge_columns(osm.culverts, col1='profile_cl', col2='profile_op', rename_col='profile')
-#osm.profiles.merge_columns(col1='profile_cl', col2='profile_op', rename_col='profile')
 
 # Start dfmmodel
 dfmmodel = DFlowFMModel()
