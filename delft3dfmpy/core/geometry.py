@@ -9,7 +9,7 @@ import PIL.ImageDraw
 import rasterio
 from matplotlib import path
 from shapely import affinity
-from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+from shapely.geometry import MultiLineString, LineString, MultiPolygon, Polygon, MultiPoint, Point
 
 from delft3dfmpy.core import checks
 from delft3dfmpy.core.logging import ProgressLogger
@@ -587,29 +587,38 @@ def compress(path):
     with rasterio.open(path, 'w', **out_meta) as f:
         f.write(arr)
 
-def as_polygon_list(polygon):
+def as_geometry_list(geometry, singletype, multitype):
     """Convenience method to return a list with one or more
-    Polygons from a given Polygon or MultiPolygon.
-    
+    Polygons/LineString/Point from a given Polygon/LineString/Point
+    or MultiPolygon/MultiLineString/MultiPoint.
+
     Parameters
     ----------
     polygon : list or Polygon or MultiPolygon
         Object to be converted
-    
+
     Returns
     -------
     list
         list of Polygons
     """
-    if isinstance(polygon, Polygon):
-        return [polygon]
-    elif isinstance(polygon, MultiPolygon):
-        return [p for p in polygon]
-    elif isinstance(polygon, list):
+    if isinstance(geometry, singletype):
+        return [geometry]
+    elif isinstance(geometry, multitype):
+        return [p for p in geometry]
+    elif isinstance(geometry, list):
         lst = []
-        for item in polygon:
-            checks.check_argument(item, 'item in list', (list, Polygon, MultiPolygon))
-            lst.extend(as_polygon_list(item))
+        for item in geometry:
+            lst.extend(as_geometry_list(item, singletype, multitype))
         return lst
     else:
-        raise TypeError(f'Expected Polygon or MultiPolygon. Got "{type(polygon)}"')
+        raise TypeError(f'Expected {singletype} or {multitype}. Got "{type(geometry)}"')
+        
+def as_linestring_list(linestring):
+    return as_geometry_list(linestring, LineString, MultiLineString)
+
+def as_polygon_list(polygon):
+    return as_geometry_list(polygon, Polygon, MultiPolygon)
+
+def as_point_list(point):
+    return as_geometry_list(point, Point, MultiPoint)
