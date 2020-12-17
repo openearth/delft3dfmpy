@@ -178,7 +178,8 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
                 self.geometry.type.unique().tolist()
             ))
 
-    def read_gml(self, gml_path, index_col=None, groupby_column=None, order_column=None, column_mapping={}, check_columns=True, check_geotype=True, clip=None):
+    def read_gml(self, gml_path, index_col=None, groupby_column=None, order_column=None,
+                 id_col='code', column_mapping={}, check_columns=True, check_geotype=True, clip=None):
         """
         Read GML file to GeoDataFrame.
 
@@ -260,7 +261,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             lines = {branch: [0] * count for branch, count in zip(branches, counts)}
 
             # Since the order does not always start at 1, find the starting number per group
-            startnr = {branch: 999 for branch in branches}
+            startnr = {branch: len(features)+1 for branch in branches}
             for branch, volgnr in zip(groupbyvalues, order):
                 startnr[branch] = min(volgnr, startnr[branch])
 
@@ -307,10 +308,10 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         gdf.rename(columns=column_mapping, inplace=True)
 
         # add a letter to 'exploded' multipolygons
-        sfx = ['_'+str(i) for i in range(100)]
-        for ftc in gdf.code.unique():
-            if len(gdf[gdf.code==ftc])>1:
-                gdf.loc[gdf.code==ftc,'code'] = [i+sfx[ii] for ii,i in enumerate(gdf[gdf.code==ftc].code)]
+        #sfx = ['_'+str(i) for i in range(100)]
+        for ftc in gdf[id_col].unique():
+            if len(gdf[gdf[id_col]==ftc])>1:
+                gdf.loc[gdf[id_col]==ftc,id_col] = [f'{i}_{n}' for n, i in enumerate(gdf[gdf[id_col]==ftc][id_col])]
                 print(f'{ftc} is MultiPolygon; split into single parts.')
 
         # Add data to class GeoDataFrame
