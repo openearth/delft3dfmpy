@@ -105,18 +105,75 @@ plt.show()
 
 
 
-# TODO: DETERMINE LONGITUDINAL slope of branch
+
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
+# TODO: replace dummy dem values of dem at cross-sections, dem at leftlevel, dem at rightlevel for profiles and culverts
+# TODO:
+# Temporary dummy columns added to osm.profiles, start and end of culvert
+osm.profiles['DEM_crsloc'] = 12
+osm.profiles['depth_to_bottom'] = osm.profiles[['depth', 'diameter']].max(axis=1)+0.5
+osm.profiles['bottom_level'] = osm.profiles.DEM_crsloc - osm.profiles.depth_to_bottom
+osm.culverts['DEM_leftlevel'] = 11
+osm.culverts['DEM_rightlevel'] = 10
+osm.culverts['depth_to_bottom'] = osm.culverts[['depth', 'diameter']].max(axis=1)+0.3
+osm.culverts['leftlevel'] = osm.culverts.DEM_leftlevel - osm.culverts.depth_to_bottom
+osm.culverts['rightlevel'] = osm.culverts.DEM_rightlevel - osm.culverts.depth_to_bottom
 
-# Temporary dummy columns added to osm.profiles, start and end of culverts
-osm.profiles['DEM_crs'] = 12
-osm.branches['slope'] = 0.001
-
-
+# needed variables: id, branchid, chainage, leftlevel, rightlevel, crosssection, outletlosscoef, allowedflowdir
+#  valveonoff, numlosscoeff, valveopeningheight, relopening, losscoeff,
+#                     frictiontype, frictionvalue
 
 # Start dfmmodel
 dfmmodel = DFlowFMModel()
 
+
+# Collect culverts
+# TODO: id  --> c_+ id of branchid
+osm.culverts['id'] = 'C_' + osm.culverts['id']
+
+# TODO: type  --> 'culvert' --> drain_type
+osm.culverts.drain_type #However in d-hydamo this is fixed
+
+# TODO: branchid --> branch_id
+osm.culverts.branch_id
+
+# TODO: chainage --> branch_offset
+osm.culverts.branch_offset
+
+# TODO: left level/ rightlevel
+
+# TODO: allowed flowdir --> none assumption everyhting is both direction
+osm.culverts['allowedflowdir'] = 'both'
+
+# TODO: inletloss - set standaard in inifile
+osm.culverts['inletlosscoeff'] = parameters['inletlosscoefculvert']
+# TODO: outletloss - set standaard in inifile
+osm.culverts['outletlosscoeff'] = parameters['outletlosscoefculvert']
+
+# TODO: csDefid - get branchid --> search profile
+osm.culverts['crosssection'] = [{} for _ in range(len(osm.culverts))]
+
+for culvert in osm.culverts.itertuples():
+
+    # Generate cross section definition name
+    if culvert.profile == 'round':
+        crosssection = {'shape': 'circle', 'diameter': culvert.diameter}
+
+    elif culvert.profile == 'boxed_rectangular':
+        crosssection = {'shape': 'rectangle', 'height': culvert.depth, 'width': culvert.width,
+                        'closed': 'yes'}
+    else:
+        crosssection = {'shape': 'circle', 'diameter': 0.50}
+        print(f'Culvert {culvert.id} has an unknown shape: {culvert.profile}. Applying a default profile (round - 50cm)')
+
+# TODO: valve onoff - no valve = 0
+osm.culverts['valveOnOff'] = 0
+
+# TODO: numlosscoeff - standard on 0
+osm.culverts['numlosscoef'] = 0
+
+# TODO: bedfrictiontype - inifile
+# TODO: bedfrictionvalue - material and smoothness, inifile
 
 osm.culverts.columns
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
@@ -125,8 +182,7 @@ osm.culverts.columns
 # TODO: CROSS SECTION DEFINITION - create rectangular profiles --> prof_idofbranch
 # TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
 # TODO: CROSS SECTION LOCATION - select rows with drain type other than culvert
-# TODO: STRUCTURE - select rows with draintype culvert
-# TODO: STRUCTURE - determine length and midpoint location culvert
+# TODO: STRUCTURE - determine length
 # TODO: STRUCTURE - snapping of open drains over culverts. May not be needed as wel only use parameterized profiles
 # TODO: STRUCTURE - where cross sections are meeting a culvert, it may make sense to straighten the elevation value up and downstream of culvert
 # TODO: plot branches + cross sections locations + structures
