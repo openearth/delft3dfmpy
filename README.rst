@@ -6,21 +6,13 @@ Delft3D Flexible Mesh Python
 .. image:: https://img.shields.io/pypi/v/delft3dfmpy.svg
         :target: https://pypi.python.org/pypi/delft3dfmpy
 
-.. image:: https://img.shields.io/travis/grongen/delft3dfmpy.svg
-        :target: https://travis-ci.org/grongen/delft3dfmpy
-
-.. image:: https://readthedocs.org/projects/delft3dfmpy/badge/?version=latest
-        :target: https://delft3dfmpy.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
-
-
-
+.. image:: https://img.shields.io/pypi/l/delft3dfmpy.svg
+        :target: https://img.shields.io/pypi/l/delft3dfmpy
 
 Python package to generate delft3dfm models from standardized data models or other flow models.
 
 
 * Free software: MIT license
-* Documentation: https://dhydamo.readthedocs.io.
 * WIKI (in Dutch): https://hkvconfluence.atlassian.net/wiki/spaces/DHYD/pages/222396421/Achtergrond
 
 Features
@@ -45,7 +37,7 @@ Python package ``delft3dfmpy``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 1.  Install the Python package ``delft3dfmpy`` directly, by executing the following command in an Anaconda Prompt 
 
-        ``python -m pip install git+https://github.com/openearth/delft3dfmpy.git``
+        ``python -m pip install delft3dfmpy``
 
 2.  If the command prompt states ``Successfully built delft3dfmpy`` then installation is succesful.
 

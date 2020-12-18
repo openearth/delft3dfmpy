@@ -373,7 +373,7 @@ class DFlowRRWriter:
         with open(os.path.join(self.output_dir, '../run.bat'),'w') as f:
                  f.write('@ echo off\n')
                  f.write('set OMP_NUM_THREADS=2\n')
-                 f.write('call '+self.run_dimrpad+'\n')
+                 f.write('call \"'+self.run_dimrpad+'\"\n')
                  f.write('pause\n')
 
         # coupling XML
