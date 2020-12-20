@@ -73,20 +73,13 @@ osm.profiles.set_data(pd.concat([profiles_start, profiles_end]), check_columns=F
 # Merge profile_cl and profile_open for profiles
 osm.profiles.merge_columns(col1='profile_cl', col2='profile_op', rename_col='profile')
 
-# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections and depth. this needs to be retrieved from a DEM (which we have!)
-#osm.profiles.sample_raster(rasterio,offset=None,geometry)
-
-
-
 # # Read culverts into OSM
 osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= osm.crs_out, clip = osm.clipgeo,
                       id_col=id, filter_cols=True, filter_rows={'drain_type': 'culvert'}, logger=logger)
 # Merge profile_cl and profile_open for culverts
 osm.culverts.merge_columns(col1='profile_cl', col2='profile_op', rename_col='profile')
-
 # Snap culvert to branches and determine centroid.
 osm.culverts.snap_to_branch(osm.branches, snap_method='ends')
-
 
 
 # Plot branches, cross-sections and culverts
@@ -103,16 +96,17 @@ osm.profiles.geometry.plot(ax=ax1, marker='.', color='r' , markersize=5, label='
 osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
 plt.show()
 
-
-
-
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
 # TODO: replace dummy dem values of dem at cross-sections, dem at leftlevel, dem at rightlevel for profiles and culverts
-# TODO:
-# Temporary dummy columns added to osm.profiles, start and end of culvert
+# TODO: compute depth_to_bottom for culverts and profiles
+# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections and depth. this needs to be retrieved from a DEM (which we have!)
+#osm.profiles.sample_raster(rasterio,offset=None,geometry)
+# Temporary DEM_crsloc and depth_to_bottom
 osm.profiles['DEM_crsloc'] = 12
 osm.profiles['depth_to_bottom'] = osm.profiles[['depth', 'diameter']].max(axis=1)+0.5
 osm.profiles['bottom_level'] = osm.profiles.DEM_crsloc - osm.profiles.depth_to_bottom
+
+# Temporary DEM_leftlevel, DEM_rightlevel and depth_to_bottom
 osm.culverts['DEM_leftlevel'] = 11
 osm.culverts['DEM_rightlevel'] = 10
 osm.culverts['depth_to_bottom'] = osm.culverts[['depth', 'diameter']].max(axis=1)+0.3
@@ -188,6 +182,8 @@ osm.culverts.columns
 # TODO: plot branches + cross sections locations + structures
 
 # TODO: create DFM parsers for drains, culverts and cross sections based on dfmmodel.structures.io.xxxx_from_hydamo as example
+
+# TODO: create 1D network
 
 # TODO: create 2D grid with refinement
 

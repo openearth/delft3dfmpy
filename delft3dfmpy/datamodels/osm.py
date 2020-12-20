@@ -48,6 +48,8 @@ class OSM:
         # FIXME: ensure that all culvert types and properties can be handled. We probably have circular and box-shaped culverts, sometimes with multiple openings
         self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=self.get_columns('culverts'))
 
+        self.bridges = ExtendedGeoDataFrame(geotype=Point, required_columns=self.get_columns('bridges'))
+
         # # FIXME: not sure what laterals in this context mean, but I don't think we need it at this stage.
         # self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=[
         #     'code',
