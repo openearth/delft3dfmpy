@@ -368,6 +368,15 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         return gdf_out
 
 
+    def sample_raster(self, ds, col="samples"):
+        """
+        sample raster values at geometries. Only works when geometries are Points
+
+        """
+
+        coords = list(zip(self.geometry.x, self.geometry.y))
+        self[col] = [m[0] for m in ds.sample(coords)]
+
     def merge_columns(self, col1, col2, rename_col):
         """merge columns"""
 

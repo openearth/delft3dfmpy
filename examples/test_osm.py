@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import pandas as pd
 import geopandas as gpd
+import rasterio
 
 import logging
 
@@ -27,6 +28,9 @@ path = config.get('input', 'DataPath')
 
 # Extend of study area
 fn_pilot_area = os.path.join(path, config.get('input', 'studyareafile'))
+
+# DEM
+fn_dem = config.get('input', 'DEMFile')
 
 logger.info(f'All data is expected to be in {path}')
 
@@ -100,15 +104,20 @@ osm.profiles.geometry.plot(ax=ax1, marker='.', color='r' , markersize=5, label='
 osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
 #plt.show()
 
+with rasterio.open(fn_dem) as ds:
+    osm.profiles.sample_raster(ds, col="elevation")
+
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
 # TODO: replace dummy dem values of dem at cross-sections, dem at leftlevel, dem at rightlevel for profiles and culverts
 # TODO: compute depth_to_bottom for culverts and profiles
 # TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections and depth. this needs to be retrieved from a DEM (which we have!)
 #osm.profiles.sample_raster(rasterio,offset=None,geometry)
 # Temporary DEM_crsloc and depth_to_bottom
-osm.profiles['DEM_crsloc'] = 12
+# osm.profiles['DEM_crsloc'] = 12
 osm.profiles['depth_to_bottom'] = osm.profiles[['depth', 'diameter']].max(axis=1)+0.5
-osm.profiles['bottom_level'] = osm.profiles.DEM_crsloc - osm.profiles.depth_to_bottom
+osm.profiles['bottom_level'] = osm.profiles.elevation - osm.profiles.depth_to_bottom
+
+
 
 # Temporary DEM_leftlevel, DEM_rightlevel and depth_to_bottom
 osm.culverts['DEM_leftlevel'] = 11
@@ -197,29 +206,29 @@ dfmmodel.network.generate_1dnetwork(one_d_mesh_distance=float(parameters['cellsi
 logger.info(f'Create 2D grid')
 mesh = Rectangular()
 # Generate mesh within model bounds
-mesh.generate_within_polygon(osm.clipgdf.unary_union, cellsize=float(parameters['cellsize2d']), rotation=0)
-# FIXME: DEM from raster instead of constant
-mesh.altitude_from_raster(os.path.join(path,config.get('input', 'demfile')))
-#mesh.altitude_constant(15)
-
-# Add to schematisation
-logger.info(f'Add bedlevel to grid')
-dfmmodel.network.add_mesh2d(mesh)
-
-
-# TODO: create 1D2D links
-logger.info(f'Generate 1D2D links')
-dfmmodel.network.links1d2d.generate_1d_to_2d(max_distance=50)
+# mesh.generate_within_polygon(osm.clipgdf.unary_union, cellsize=float(parameters['cellsize2d']), rotation=0)
+# # FIXME: DEM from raster instead of constant
+# mesh.altitude_from_raster(os.path.join(path,config.get('input', 'demfile')))
+# #mesh.altitude_constant(15)
+#
+# # Add to schematisation
+# logger.info(f'Add bedlevel to grid')
+# dfmmodel.network.add_mesh2d(mesh)
+#
+#
+# # TODO: create 1D2D links
+# logger.info(f'Generate 1D2D links')
+# dfmmodel.network.links1d2d.generate_1d_to_2d(max_distance=50)
 
 # Figure of 1D2D grid
 fig, ax = plt.subplots(figsize=(13, 10))
 ax.set_aspect(1.0)
 
-segments = dfmmodel.network.mesh2d.get_segments()
-ax.add_collection(LineCollection(segments, color='0.3', linewidths=0.5, label='2D-mesh'))
-links = dfmmodel.network.links1d2d.get_1d2dlinks()
-ax.add_collection(LineCollection(links, color='k', linewidths=0.5))
-ax.plot(links[:, :, 0].ravel(), links[:, :, 1].ravel(), color='k', marker='.', ls='', label='1D2D-links')
+# segments = dfmmodel.network.mesh2d.get_segments()
+# ax.add_collection(LineCollection(segments, color='0.3', linewidths=0.5, label='2D-mesh'))
+# links = dfmmodel.network.links1d2d.get_1d2dlinks()
+# ax.add_collection(LineCollection(links, color='k', linewidths=0.5))
+# ax.plot(links[:, :, 0].ravel(), links[:, :, 1].ravel(), color='k', marker='.', ls='', label='1D2D-links')
 osm.branches.plot(ax=ax, color='C0', lw=2.5, alpha=0.8, label='1D-mesh')
 ax.legend()
 #ax.set_xlim(140900, 141300)
