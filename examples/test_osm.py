@@ -94,7 +94,7 @@ osm.clipgdf.plot(ax=ax1, color='w', alpha=0.5)
 osm.branches.plot(ax=ax1, label='Channel')
 osm.profiles.geometry.plot(ax=ax1, marker='.', color='r' , markersize=5, label='Cross section')
 osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
-plt.show()
+#plt.show()
 
 # TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
 # TODO: replace dummy dem values of dem at cross-sections, dem at leftlevel, dem at rightlevel for profiles and culverts
@@ -148,7 +148,6 @@ osm.culverts['outletlosscoeff'] = parameters['outletlosscoefculvert']
 osm.culverts['crosssection'] = [{} for _ in range(len(osm.culverts))]
 
 for culvert in osm.culverts.itertuples():
-
     # Generate cross section definition name
     if culvert.profile == 'round':
         crosssection = {'shape': 'circle', 'diameter': culvert.diameter}
@@ -167,7 +166,10 @@ osm.culverts['valveOnOff'] = 0
 osm.culverts['numlosscoef'] = 0
 
 # TODO: bedfrictiontype - inifile
+friction_type = parameters['frictiontype']
+
 # TODO: bedfrictionvalue - material and smoothness, inifile
+friction_values = dict(zip(parameters['frictionmaterials'].split(','), list(map(float,parameters['frictionvalues'].split(',')))))
 
 osm.culverts.columns
 # TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
