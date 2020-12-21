@@ -843,12 +843,15 @@ class Network:
         self.mdu_parameters = dflowfmmodel.mdu_parameters
 
 
-    def set_branches(self, branches):
+    def set_branches(self, branches,id_col='code'):
         """
         Set branches from geodataframe
         """
         # Check input
         checks.check_argument(branches, 'branches', (ExtendedGeoDataFrame, gpd.GeoDataFrame))
+        # Change required_columns if id column is different from 'code'
+        if id_col!='code':
+            self.branches.required_columns = [id_col, 'geometry']
         # Add data to branches
         self.branches.set_data(branches[self.branches.required_columns])
         # Copy branches to schematised

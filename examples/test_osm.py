@@ -2,10 +2,11 @@
 
 import os
 import configparser, json
-from delft3dfmpy import OSM, DFlowFMModel
+from delft3dfmpy import OSM, DFlowFMModel, Rectangular, DFlowFMWriter
 from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
 from delft3dfmpy.core.logging import initialize_logger
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 import pandas as pd
 import geopandas as gpd
 
@@ -45,6 +46,7 @@ id = config.get('datacolumns','idcolumn')
 
 
 # Read branches and store in OSM data model
+logger.info(f'Read branches')
 osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),
                       index_col=id,
                       proj_crs=osm.crs_out,
@@ -55,6 +57,7 @@ osm.branches.read_shp(os.path.join(path,config.get('input','datafile')),
 
 
 # Read cross-sections and store in OSM data model
+logger.info(f'Read profiles')
 osm.profiles.read_shp(os.path.join(path,config.get('input','datafile')),
                       index_col=id,
                       proj_crs=osm.crs_out,
@@ -74,6 +77,7 @@ osm.profiles.set_data(pd.concat([profiles_start, profiles_end]), check_columns=F
 osm.profiles.merge_columns(col1='profile_cl', col2='profile_op', rename_col='profile')
 
 # # Read culverts into OSM
+logger.info(f'Read culverts')
 osm.culverts.read_shp(os.path.join(path,config.get('input','datafile')),index_col=id, proj_crs= osm.crs_out, clip = osm.clipgeo,
                       id_col=id, filter_cols=True, filter_rows={'drain_type': 'culvert'}, logger=logger)
 # Merge profile_cl and profile_open for culverts
@@ -119,7 +123,6 @@ osm.culverts['rightlevel'] = osm.culverts.DEM_rightlevel - osm.culverts.depth_to
 
 # Start dfmmodel
 dfmmodel = DFlowFMModel()
-
 
 # Collect culverts
 # TODO: id  --> c_+ id of branchid
@@ -172,7 +175,7 @@ friction_type = parameters['frictiontype']
 friction_values = dict(zip(parameters['frictionmaterials'].split(','), list(map(float,parameters['frictionvalues'].split(',')))))
 
 osm.culverts.columns
-# TODO: CROSS SECTIONS DEFINTION - specify roughness dependent on material add this
+
 
 # TODO: CROSS SECTION DEFINITION - create circular profiles --> prof_idofbranch
 # TODO: CROSS SECTION DEFINITION - create rectangular profiles --> prof_idofbranch
@@ -186,9 +189,62 @@ osm.culverts.columns
 # TODO: create DFM parsers for drains, culverts and cross sections based on dfmmodel.structures.io.xxxx_from_hydamo as example
 
 # TODO: create 1D network
+logger.info(f'Create 1D network')
+dfmmodel.network.set_branches(osm.branches, id_col=id)
+dfmmodel.network.generate_1dnetwork(one_d_mesh_distance=float(parameters['cellsize1d']), seperate_structures=True)
 
-# TODO: create 2D grid with refinement
+# TODO: create 2D grid
+logger.info(f'Create 2D grid')
+mesh = Rectangular()
+# Generate mesh within model bounds
+mesh.generate_within_polygon(osm.clipgdf.unary_union, cellsize=float(parameters['cellsize2d']), rotation=0)
+# FIXME: DEM from raster instead of constant
+mesh.altitude_from_raster(os.path.join(path,config.get('input', 'demfile')))
+#mesh.altitude_constant(15)
+
+# Add to schematisation
+logger.info(f'Add bedlevel to grid')
+dfmmodel.network.add_mesh2d(mesh)
+
 
 # TODO: create 1D2D links
+logger.info(f'Generate 1D2D links')
+dfmmodel.network.links1d2d.generate_1d_to_2d(max_distance=50)
+
+# Figure of 1D2D grid
+fig, ax = plt.subplots(figsize=(13, 10))
+ax.set_aspect(1.0)
+
+segments = dfmmodel.network.mesh2d.get_segments()
+ax.add_collection(LineCollection(segments, color='0.3', linewidths=0.5, label='2D-mesh'))
+links = dfmmodel.network.links1d2d.get_1d2dlinks()
+ax.add_collection(LineCollection(links, color='k', linewidths=0.5))
+ax.plot(links[:, :, 0].ravel(), links[:, :, 1].ravel(), color='k', marker='.', ls='', label='1D2D-links')
+osm.branches.plot(ax=ax, color='C0', lw=2.5, alpha=0.8, label='1D-mesh')
+ax.legend()
+#ax.set_xlim(140900, 141300)
+#ax.set_ylim(393400, 393750);
+plt.show()
+
+# TODO: add boundary condition
+
+# TODO: change runtime and output settings
+# logger.info(f'Set settings of model')
+# dfmmodel.mdu_parameters['refdate'] = 2020
+# dfmmodel.mdu_parameters['tstart'] = 0.0 * 3600
+# dfmmodel.mdu_parameters['tstop'] = 24.0 * 1 * 3600
+# dfmmodel.mdu_parameters['hisinterval'] = '120. 0. 0.'
+# dfmmodel.mdu_parameters['cflmax'] = 0.7
+
+# TODO: write FM model
+# logger.info(f'Write FM model')
+# output dir
+output_dir = os.path.join(path, 'testmodel')
+# Create writer
+fm_writer = DFlowFMWriter(dfmmodel, output_dir=output_dir, name='osm_dar_es_salaam')
+# Write as model
+fm_writer.objects_to_ldb()
+fm_writer.write_all()
+
 
 print("Hello world")
