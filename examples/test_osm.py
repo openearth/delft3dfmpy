@@ -3,7 +3,7 @@
 import os
 import configparser, json
 from delft3dfmpy import OSM, DFlowFMModel, Rectangular, DFlowFMWriter
-from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
+from delft3dfmpy.io import dfmreader
 from delft3dfmpy.core.logging import initialize_logger
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
@@ -30,7 +30,7 @@ path = config.get('input', 'DataPath')
 fn_pilot_area = os.path.join(path, config.get('input', 'studyareafile'))
 
 # DEM
-fn_dem = config.get('input', 'DEMFile')
+fn_dem = os.path.join(path,config.get('input', 'DEMFile'))
 
 logger.info(f'All data is expected to be in {path}')
 
@@ -48,6 +48,9 @@ osm = OSM(fn_pilot_area, required_columns_data,parameters['projectedcrs'], logge
 # Id column
 id = config.get('datacolumns','idcolumn')
 
+# Friction type and values
+friction_type = parameters['frictiontype']
+friction_values = dict(zip(parameters['frictionmaterials'].split(','), list(map(float,parameters['frictionvalues'].split(',')))))
 
 # Read branches and store in OSM data model
 logger.info(f'Read branches')
@@ -89,6 +92,27 @@ osm.culverts.merge_columns(col1='profile_cl', col2='profile_op', rename_col='pro
 # Snap culvert to branches and determine centroid.
 osm.culverts.snap_to_branch(osm.branches, snap_method='ends')
 
+# Determine Elevation at profiles and culvert ends
+with rasterio.open(fn_dem) as ds:
+    # Elevation at profiles
+    osm.profiles.sample_raster(ds, col="elevation")
+    # Elevation at ends of culverts
+    osm.culverts.sample_raster(ds, culvert='yes', col="elevation_left", col2='elevation_right')
+
+# Determine depth and bottom levels of channels and drains
+osm.profiles['depth_to_bottom'] = osm.profiles[['depth', 'diameter']].max(axis=1)+0.4
+osm.profiles['bottom_level'] = osm.profiles.elevation - osm.profiles.depth_to_bottom
+
+# Determine left and right level of channels and drains
+osm.culverts['depth_to_bottom'] = osm.culverts[['depth', 'diameter']].max(axis=1)+0.3
+osm.culverts['leftlevel'] = osm.culverts.elevation_left - osm.culverts.depth_to_bottom
+osm.culverts['rightlevel'] = osm.culverts.elevation_right - osm.culverts.depth_to_bottom
+
+# Set inletlosscoefficient of culverts
+osm.culverts['inletlosscoeff'] = parameters['inletlosscoefculvert'] # or specific to culvert with serie
+# Set outletlosscoefficient of culverts
+osm.culverts['outletlosscoeff'] = parameters['outletlosscoefculvert'] # or specific to culvert with serie
+
 
 # Plot branches, cross-sections and culverts
 fig1, ax1 = plt.subplots(figsize=(10, 10))
@@ -104,87 +128,12 @@ osm.profiles.geometry.plot(ax=ax1, marker='.', color='r' , markersize=5, label='
 osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5, zorder=10)
 #plt.show()
 
-with rasterio.open(fn_dem) as ds:
-    osm.profiles.sample_raster(ds, col="elevation")
-
-# TODO: CROSS SECTION LOCATION - add cross sections at start and end of branch. Take the longitudinal slope with SHIFT parameter into account
-# TODO: replace dummy dem values of dem at cross-sections, dem at leftlevel, dem at rightlevel for profiles and culverts
-# TODO: compute depth_to_bottom for culverts and profiles
-# TODO: CROSS SECTION DEFINITION -  assign elevation value to cross sections and depth. this needs to be retrieved from a DEM (which we have!)
-#osm.profiles.sample_raster(rasterio,offset=None,geometry)
-# Temporary DEM_crsloc and depth_to_bottom
-# osm.profiles['DEM_crsloc'] = 12
-osm.profiles['depth_to_bottom'] = osm.profiles[['depth', 'diameter']].max(axis=1)+0.5
-osm.profiles['bottom_level'] = osm.profiles.elevation - osm.profiles.depth_to_bottom
-
-
-
-# Temporary DEM_leftlevel, DEM_rightlevel and depth_to_bottom
-osm.culverts['DEM_leftlevel'] = 11
-osm.culverts['DEM_rightlevel'] = 10
-osm.culverts['depth_to_bottom'] = osm.culverts[['depth', 'diameter']].max(axis=1)+0.3
-osm.culverts['leftlevel'] = osm.culverts.DEM_leftlevel - osm.culverts.depth_to_bottom
-osm.culverts['rightlevel'] = osm.culverts.DEM_rightlevel - osm.culverts.depth_to_bottom
-
-# needed variables: id, branchid, chainage, leftlevel, rightlevel, crosssection, outletlosscoef, allowedflowdir
-#  valveonoff, numlosscoeff, valveopeningheight, relopening, losscoeff,
-#                     frictiontype, frictionvalue
 
 # Start dfmmodel
 dfmmodel = DFlowFMModel()
 
-# Collect culverts
-# TODO: id  --> c_+ id of branchid
-osm.culverts['id'] = 'C_' + osm.culverts['id']
-
-# TODO: type  --> 'culvert' --> drain_type
-osm.culverts.drain_type #However in d-hydamo this is fixed
-
-# TODO: branchid --> branch_id
-osm.culverts.branch_id
-
-# TODO: chainage --> branch_offset
-osm.culverts.branch_offset
-
-# TODO: left level/ rightlevel
-
-# TODO: allowed flowdir --> none assumption everyhting is both direction
-osm.culverts['allowedflowdir'] = 'both'
-
-# TODO: inletloss - set standaard in inifile
-osm.culverts['inletlosscoeff'] = parameters['inletlosscoefculvert']
-# TODO: outletloss - set standaard in inifile
-osm.culverts['outletlosscoeff'] = parameters['outletlosscoefculvert']
-
-# TODO: csDefid - get branchid --> search profile
-osm.culverts['crosssection'] = [{} for _ in range(len(osm.culverts))]
-
-for culvert in osm.culverts.itertuples():
-    # Generate cross section definition name
-    if culvert.profile == 'round':
-        crosssection = {'shape': 'circle', 'diameter': culvert.diameter}
-
-    elif culvert.profile == 'boxed_rectangular':
-        crosssection = {'shape': 'rectangle', 'height': culvert.depth, 'width': culvert.width,
-                        'closed': 'yes'}
-    else:
-        crosssection = {'shape': 'circle', 'diameter': 0.50}
-        print(f'Culvert {culvert.id} has an unknown shape: {culvert.profile}. Applying a default profile (round - 50cm)')
-
-# TODO: valve onoff - no valve = 0
-osm.culverts['valveOnOff'] = 0
-
-# TODO: numlosscoeff - standard on 0
-osm.culverts['numlosscoef'] = 0
-
-# TODO: bedfrictiontype - inifile
-friction_type = parameters['frictiontype']
-
-# TODO: bedfrictionvalue - material and smoothness, inifile
-friction_values = dict(zip(parameters['frictionmaterials'].split(','), list(map(float,parameters['frictionvalues'].split(',')))))
-
-osm.culverts.columns
-
+# Collect structures
+#dfmmodel.structures.io.culverts_from_osm(osm.culverts, friction_type, friction_values, logger=logger)
 
 # TODO: CROSS SECTION DEFINITION - create circular profiles --> prof_idofbranch
 # TODO: CROSS SECTION DEFINITION - create rectangular profiles --> prof_idofbranch
