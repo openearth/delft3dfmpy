@@ -40,12 +40,13 @@ class Mesh2D:
         ynodes : 
             Y-coordinates of mesh nodes
         edge_nodes : 
-            X-coordinates of mesh nodes
+            node ids of edges. These are assumed in 1-based numbering
         polygon : Polygon, Multipolygon or list of
         
         """
 
         # Find nodes within one of the polygons
+        logger.info('Selecting nodes within polygon.')
         index = np.zeros(len(xnodes), dtype=bool)
         for poly in geometry.as_polygon_list(polygon):
             index = index | geometry.points_in_polygon(np.c_[xnodes, ynodes], poly)
@@ -58,15 +59,21 @@ class Mesh2D:
 
         # Remove edges that intersect the clipping polygons. This is needed for when the clipping polygon is narrow,
         # So it crosses an edge without containing one of the edge nodes
-        edges = gpd.GeoDataFrame(geometry=[LineString(line) for line in np.c_[xnodes, ynodes][edge_nodes - 1]])
+        logger.info('Creating LineString for each edge.')
+        edges = [LineString(line) for line in np.c_[xnodes, ynodes][edge_nodes - 1]]
+        
+        logger.info('Checking for intersections.')
         isect = np.zeros(len(edge_nodes), dtype=bool)
         for poly in geometry.as_polygon_list(polygon):
-            isect = isect | edges.intersects(poly.exterior).values
+            prepped = prep(poly.exterior)
+            isect = isect | np.array([prepped.intersects(e) for e in edges])
             for interior in poly.interiors:
-                isect = isect | edges.intersects(interior).values
+                prepped = prep(interior)
+                isect = isect | np.array([prepped.intersects(e) for e in edges])
         edge_nodes = edge_nodes[~isect]
 
         # Remove edges that have a 1 count, until none are left
+        logger.info('Remove edges with only a single node within the clip area.')
         unique, count = np.unique(edge_nodes, return_counts=True)
         while any(count == 1):
             count1nodes = unique[count == 1]
@@ -83,7 +90,7 @@ class Mesh2D:
 
         return xnodes, ynodes, edge_nodes
 
-    def clip_mesh_by_polygon(self, polygon):
+    def clip_mesh_by_polygon(self, polygon, outside=True):
         """
         Removes part of the existing mesh within the given polygon.
 
@@ -105,7 +112,8 @@ class Mesh2D:
 
         # Clip
         logger.info('Clipping nodes.')
-        xnodes, ynodes, edge_nodes = self.clip_nodes(xnodes, ynodes, edge_nodes, polygon, keep_outside=True)
+        xnodes, ynodes, edge_nodes = self.clip_nodes(xnodes, ynodes, edge_nodes, polygon, keep_outside=outside)
+        # edge_nodes = np.sort(edge_nodes, axis=1)
 
         # Update dimensions
         self.meshgeomdim.numnode = len(xnodes)
@@ -146,54 +154,40 @@ class Mesh2D:
     def clean_nodes(self, xnodes, ynodes, edge_nodes, face_nodes):
         """
         Method to clean the nodes. Edges that do not form a cell are deleted.
+        Alternative method based on checking tuple pairs
         """
 
-        # Clip
+        # Select nodes the occur in any face
         node_selection = np.unique(face_nodes)
         node_selection = node_selection[node_selection!=-999]
-        
-        #Remove all nodes that are not in any face
-        edge_nodes = edge_nodes[np.isin(edge_nodes, node_selection).all(axis=1)]
-                
+        # If no nodes (because no faces), return None
         if not node_selection.any():
             return None
         
+        # Remove all edges that are not in this selection
+        edge_nodes = edge_nodes[np.isin(edge_nodes, node_selection).all(axis=1)]
+                
         # Remove all segments that are not part of any face
-        
-        # First build arrays for possible pairs, assuming that maximum of 4 nodes is possible.
-        # Sorting is required, as direction is irrelevant.
-        edge_array = np.sort(edge_nodes, axis=1)
+        # Direction is irrelevant, sort to compare in ascending order
+        # Convert to a contiguous array for faster comparison
+        sorted_edges = np.ascontiguousarray(np.sort(edge_nodes, axis=1)).view(np.dtype((np.void, edge_nodes.dtype.itemsize * edge_nodes.shape[1])))
+        idx = np.zeros(len(sorted_edges), dtype=bool)
 
         # Get combinations of face nodes that can form an edge
         combs = list(combinations(range(len(face_nodes[0])), 2))
-        face_arrays = []
         for comb in combs:
-            arr = np.sort(face_nodes[:, comb], axis=1)
-            arr = arr[~(arr == -999).any(axis=1)]
-            face_arrays.append(arr)
+            # Get the first, second, third, etc. possible edge of every face
+            arr = face_nodes[:, comb]
+            # Remove nodata (so for example the non-existing fourth edge of a triangular face)
+            arr = arr[(arr != -999).all(axis=1)]
+            arr = np.sort(arr, axis=1)
+            # Convert to a contiguous array for faster comparison
+            sorted_face_edges = np.ascontiguousarray(arr).view(np.dtype((np.void, arr.dtype.itemsize * arr.shape[1])))
+            # Check if face edges are in edges
+            idx |= np.isin(sorted_edges, sorted_face_edges)[:, 0]
 
-        # Main loop through all edges.
-        teller = 0
-        toetsing_array = np.zeros((len(edge_nodes), 1), dtype=bool)
-        for edge in edge_array:
-            # Format issues, could cause that not the combination was tested, but only one element.
-            edge = [edge[0], edge[1]]
-
-            for i, face_array in enumerate(face_arrays):
-                #Actual comparrison to the array
-                if np.where(edge == face_array, 1, 0).all(axis=1).any():
-                    toetsing_array[teller] = 1                   
-                    # Debugging line, to show which array has found the lines.
-                    #print(i, faces[np.where(edge==face_array)[0]])
-                    break
-            # if no match is found (no break):
-            else:
-                toetsing_array[teller] = 0
-            
-            teller = teller + 1
-            
-        # Remove all edges that are not part of a face.
-        edge_nodes = edge_nodes[np.isin(toetsing_array, True).all(axis=1)]
+        # Select the nodes that are present in faces
+        edge_nodes = edge_nodes[idx]
 
         xnodes = xnodes[node_selection - 1]
         ynodes = ynodes[node_selection - 1]
@@ -398,8 +392,8 @@ class Mesh2D:
     def set_missing_z_value(self, value):
         self.missing_z_value = value
 
-    def geom_from_netcdf(self, file):
-        gridio.from_netcdf_old(self.meshgeom, file)
+    def geom_from_netcdf(self, file, only2d=False):
+        gridio.from_netcdf_old(self.meshgeom, file, only2d=only2d)
         self._find_cells(self.meshgeom)
 
     def faces_to_centroid(self):
