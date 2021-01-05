@@ -178,18 +178,18 @@ class meshgeom(Structure):
         startnode = self.meshgeomdim.numnode
         startbranch = self.meshgeomdim.nbranches
         
-        # Add dimensions
+        # Add dimensions. Sum the new dimensions with the old ones
         for dimension in ['numnode', 'numedge', 'numface', 'nnodes', 'ngeometry', 'nbranches']:
             new = getattr(self.meshgeomdim, dimension) + getattr(geometries.meshgeomdim, dimension)
             setattr(self.meshgeomdim, dimension, new)
         
-        # Add variables
+        # Add variables. Add all new data
         for var in ['nodex', 'nodey', 'nodez', 'facex', 'facey', 'facez', 'nnodex', 'nnodey',
                     'nbranchlengths', 'nbranchorder', 'ngeopointx', 'ngeopointy', 'nbranchgeometrynodes']:
             if geometries.is_allocated(var):
                 self.add_values(var, geometries.get_values(var))
 
-        # For variables with indexes
+        # For variables with indexes. For the indexes, add the old start node
         for indexvar in ['edge_nodes', 'face_nodes', 'branchidx', 'branchoffsets']:
             if geometries.is_allocated(indexvar):
                 self.add_values(indexvar, [i + startnode for i in geometries.get_values(indexvar)]) 
@@ -298,7 +298,6 @@ class meshgeom(Structure):
         
         return idx
 
-
     def get_segments(self):
 
         # Read nodes and links from src
@@ -312,6 +311,11 @@ class meshgeom(Structure):
     def get_faces(self, geometry='exterior'):
         """
         Get cells from 2d mesh
+
+        There are three options for returning coordinates:
+        - "center": can be the circumcenter (default) or the centroid if the face centers are moved by the user
+        - "centroid": the centroid, which is calculated (again) in this function
+        - "exterior" (default): the coordinates of the face edges
         """
 
         assert self.meshgeomdim.dim == 2
@@ -320,9 +324,10 @@ class meshgeom(Structure):
         nodes = self.get_nodes()
 
         if geometry == 'center':
+            # Can be both the centroid and the circumcenter
             return np.c_[self.get_values('facex'), self.get_values('facey')]
 
-        elif geometry == 'exterior':
+        elif geometry in ['exterior', 'centroid']:
 
             # Get face nodes
             face_nodes = self.get_values('face_nodes', as_array=True)
@@ -331,21 +336,27 @@ class meshgeom(Structure):
             
             # If all cells have the same number of nodes
             if len(unique) == 1:
-                return nodes[face_nodes - 1]
+                faces = nodes[face_nodes - 1]
+                
 
             # Else, combine a list for all nodes
             else:
-                cells = [None] * len(face_nodes)
+                faces = [None] * len(face_nodes)
                 for n in unique:
                     ncells = nodes[face_nodes[(nanvalues == n), :n] - 1]
                     where = np.where(nanvalues == n)[0]
                     for i, cell in zip(where, ncells):
-                        cells[i] = cell
+                        faces[i] = cell
 
-                return cells
+            if geometry == 'exterior':
+                return faces
+            
+            # Determine the centroids by averaging the exteriors
+            if geometry == 'centroid':
+                return np.vstack([f.mean(axis=0) for f in faces])
         
         else:
-            raise ValueError('Geometry "{geometry}" not recognized. Pick "center" of "exterior"')
+            raise ValueError(f'Geometry "{geometry}" not recognized. Pick "center", "centroid" or "exterior"')
             
 
         
