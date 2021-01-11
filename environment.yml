@@ -6,7 +6,8 @@ dependencies:
   - python=3.7.*
   - git
   - pip
-  - ipykernel  
+  - ipykernel
+  - ipywidgets
   - geopandas
   - rasterio  
   - imod  
