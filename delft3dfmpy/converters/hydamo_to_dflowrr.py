@@ -12,6 +12,7 @@ import warnings
 from rasterio.transform import from_origin
 import os
 import imod
+from tqdm.auto import tqdm
 
 logger = logging.getLogger(__name__)
 def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_storage, infiltration_capacity, initial_gwd, meteo_areas, zonalstats_alltouched=None):    
@@ -417,7 +418,7 @@ def generate_seepage(catchments, seepage_folder):
     file_list = os.listdir(seepage_folder)
     times = []    
     arr = np.zeros((len(file_list), len(catchments.code)))
-    for ifile, file in enumerate(file_list):
+    for ifile, file in tqdm(enumerate(file_list),total=len(file_list),desc='Reading seepage files'):
         array, affine, time = read_raster(os.path.join(seepage_folder, file))
         times.append(time)           
         stats = zonal_stats(catchments, array, affine=affine, stats="mean", all_touched=True)
@@ -437,7 +438,7 @@ def generate_precip(areas, precip_folder):
     file_list = os.listdir(precip_folder)
     times = []        
     arr = np.zeros((len(file_list), len(areas.code)))
-    for ifile, file in enumerate(file_list):
+    for ifile, file in tqdm(enumerate(file_list),total=len(file_list),desc='Reading precipitation files'):
         array, affine, time = read_raster(os.path.join(precip_folder, file))
         times.append(time)                   
         stats = zonal_stats(areas, array, affine=affine, stats="mean", all_touched=True)
@@ -458,7 +459,7 @@ def generate_evap(areas, evap_folder):
     agg_areas = areas.iloc[0:len(areas),:].dissolve(by='dissolve',aggfunc='mean')
     times = []    
     arr = np.zeros((len(file_list), 1))
-    for ifile, file in enumerate(file_list):
+    for ifile, file in tqdm(enumerate(file_list),total=len(file_list),desc='Reading evaporation files'):
         array, affine, time = read_raster(os.path.join(evap_folder, file))
         times.append(time)                  
         stats = zonal_stats(agg_areas, array, affine=affine, stats="mean",all_touched=True)
