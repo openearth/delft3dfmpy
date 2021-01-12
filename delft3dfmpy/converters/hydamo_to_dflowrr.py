@@ -13,6 +13,7 @@ from rasterio.transform import from_origin
 import os
 import imod
 from tqdm.auto import tqdm
+import logging
 
 logger = logging.getLogger(__name__)
 def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_storage, infiltration_capacity, initial_gwd, meteo_areas, zonalstats_alltouched=None):    
@@ -77,6 +78,7 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
     for num, cat in enumerate(catchments.itertuples()):    
         # if no rasterdata could be obtained for this catchment, skip it.
         if mean_elev[num]['median'] is None: 
+            logger.warning('No rasterdata available for catchment %s' % cat.code)
             continue        
         tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
         ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code   
@@ -195,19 +197,19 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
         for isew, sew in enumerate(sewer_areas.itertuples()):            
             pav_area = 0
             for cat_ind, cat in enumerate(catchments.itertuples()):                
-                #print)
-                #if (cat.Index =='afwat_602')&(sew.Index=='BG 11 Smakterheide'):
-                #    print('stop')
                 # if no rasterdata could be obtained for this catchment, skip it.
                 if mean_elev[cat_ind]['median'] is None:
-                    continue        
+                   logger.warning('No rasterdata available for catchment %s' % cat.code)     
+                   continue
                 if(cat.geometry.intersects(sew.geometry)):
                     test_intersect = cat.geometry.intersection(sew.geometry)
                     #print(cat.Index+' '+sew.Index+' '+test_intersect.type)
                     if test_intersect.type =='LineString':
+                        logger.warning('Intersection in %s contains of LineStrings, not polygons. Skipping. '% cat.code)
                         continue
                     if test_intersect.type=='GeometryCollection':                                                
                         numpol = 0
+                        logger.info('Intersection in %s contains a GeometryCollection - splitting into polygons.'% cat.code)
                         for int_ft in test_intersect:                            
                             if int_ft.type == 'Polygon':
                                 if numpol==0:                                                                
@@ -222,7 +224,7 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
                     if intersecting_pixels=={}:
                         continue
                     if 14.0 not in intersecting_pixels:
-                        print(f'{sew.code} / {cat.code}: no paved area in sewer area!')
+                        logger.warning('%s/%s: no paved area in sewer area intersection!' % (sew.code, cat.code))
                         continue
                         
                     pav_pixels = intersecting_pixels[14.0]
@@ -269,6 +271,7 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
     for num, cat in enumerate(catchments.itertuples()):                    
         # if no rasterdata could be obtained for this catchment, skip it.
         if mean_elev[num]['median'] is None:
+            logger.warning('No rasterdata available for catchment %s' % cat.code)     
             continue
         
         # find corresponding meteo-station
@@ -326,6 +329,7 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
     for num, cat in enumerate(catchments.itertuples()):    
         # if no rasterdata could be obtained for this catchment, skip it.
         if mean_elev[num]['median'] is None:
+            logger.warning('No rasterdata available for catchment %s' % cat.code)     
             continue
                 
         # find corresponding meteo-station
@@ -396,12 +400,13 @@ def generate_boundary(boundary_nodes, catchments, overflows=None):
         # print(num, cat.code)
         if boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode].empty:
             #raise IndexError(f'{cat.code} not connected to a boundary node. Skipping.')
-            print(f'{cat.code} not connected to a boundary node. Skipping.')
+            logger.warning('%s not connected to a boundary node. Skipping.' % cat.code)
             continue
         bnd_drr.at[cat.code, 'code'] = cat.lateraleknoopcode        
         bnd_drr.at[cat.code, 'px']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].x.iloc[0]).strip()                                                                 
         bnd_drr.at[cat.code, 'py']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].y.iloc[0]).strip()
     if overflows is not None:
+        logger.info('Adding overflows to the boundary nodes.')
         for num, ovf in enumerate(overflows.itertuples()):
             bnd_drr.at[ovf.code, 'code'] = ovf.code
             bnd_drr.at[ovf.code, 'px'] = str(ovf.geometry.coords[0][0])

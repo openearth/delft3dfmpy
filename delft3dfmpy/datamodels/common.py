@@ -111,10 +111,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
             for ftc in gdf[id_col].unique():
                 if len(gdf[gdf[id_col]==ftc]) > 1:
                     gdf.loc[gdf[id_col]==ftc, id_col] = [f'{i}_{n}' for n, i in enumerate(gdf[gdf[id_col]==ftc][id_col])]
-                    print(f'{ftc} is MultiPolygon; split into single parts.')
-
-
-            #print('Features of type \"Multipolygon\" encountered: they are skipped.')
+                    logger.info('%s is MultiPolygon; split into single parts.' % ftc)
 
         # Check number of entries
         if gdf.empty:
