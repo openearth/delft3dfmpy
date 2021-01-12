@@ -32,16 +32,6 @@ The package ``delft3dfmpy`` requires you to have (a) an environment with require
 
 Please meet these two conditions first with instructions below before installing the Python package ``delft3dfmpy``.
 
-
-Python package ``delft3dfmpy``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-1.  Install the Python package ``delft3dfmpy`` directly, by executing the following command in an Anaconda Prompt 
-
-        ``python -m pip install delft3dfmpy``
-
-2.  If the command prompt states ``Successfully built delft3dfmpy`` then installation is succesful.
-
-
 Environment Preparation
 ^^^^^^^^^^^^^^^^^^^^^^^
 Prepare an environment with the correct dependencies for ``delft3dfmpy``.
@@ -65,6 +55,20 @@ Prepare an environment with the correct dependencies for ``delft3dfmpy``.
         ``conda activate delft3dfmpy``
 
     You now have a correct and activated environment for installation of the ``delft3dfmpy`` Python package
+
+
+Python package ``delft3dfmpy``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1.  Install the Python package ``delft3dfmpy`` directly, by executing the following command in an Anaconda Prompt 
+
+        ``python -m pip install delft3dfmpy``
+
+    Note that in this way the most recent version that is available on PyPi (see releases) is installed. It is also possible to force installation of older versions. For example, to install version 1.0.0 (the 'frozen' version, or the initial release):
+    
+        ``python -m pip install delft3dfmpy=1.0.0``
+     Since that version, however, no significant features have been implemented, but there were some minor improvements and bug fixes.
+     
+2.  If the command prompt states ``Successfully built delft3dfmpy`` then installation is succesful.
 
 
 Envrionment Integration in your IDE 
