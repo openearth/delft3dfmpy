@@ -50,7 +50,7 @@ id = config.get('datacolumns','idcolumn')
 
 # Friction type and values
 friction_type = parameters['frictiontype']
-friction_values = dict(zip(parameters['frictionmaterials'].split(','), list(map(float,parameters['frictionvalues'].split(',')))))
+friction_values = dict(zip(parameters['frictionmaterials'].replace(' ','').split(','), list(map(float,parameters['frictionvalues'].split(',')))))
 
 # Read branches and store in OSM data model
 logger.info(f'Read branches')
@@ -92,6 +92,7 @@ osm.culverts.merge_columns(col1='profile_cl', col2='profile_op', rename_col='pro
 # Snap culvert to branches and determine centroid.
 osm.culverts.snap_to_branch(osm.branches, snap_method='ends')
 
+# TODO: review adjusted sampling method
 # Determine Elevation at profiles and culvert ends
 with rasterio.open(fn_dem) as ds:
     # Elevation at profiles
@@ -133,18 +134,19 @@ osm.culverts.centroid.plot(ax=ax1, color='yellow', label='Culvert', markersize=5
 dfmmodel = DFlowFMModel()
 
 # Collect structures
-#dfmmodel.structures.io.culverts_from_osm(osm.culverts, friction_type, friction_values, logger=logger)
+dfmmodel.structures.io.culverts_from_osm(osm.culverts,id_col=id, roughness_type=friction_type, roughness_values=friction_values, logger=logger)
+
+# TODO: stop review here
+
+# Add cross-sections from OSM
+#dfmmodel.crosssections.io.
 
 # TODO: CROSS SECTION DEFINITION - create circular profiles --> prof_idofbranch
 # TODO: CROSS SECTION DEFINITION - create rectangular profiles --> prof_idofbranch
 # TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
+# TODO: CROSS SECTION DEFINITION - create trapezoid profiles --> prof_idofbranch
 # TODO: CROSS SECTION LOCATION - select rows with drain type other than culvert
-# TODO: STRUCTURE - determine length
-# TODO: STRUCTURE - snapping of open drains over culverts. May not be needed as wel only use parameterized profiles
-# TODO: STRUCTURE - where cross sections are meeting a culvert, it may make sense to straighten the elevation value up and downstream of culvert
 # TODO: plot branches + cross sections locations + structures
-
-# TODO: create DFM parsers for drains, culverts and cross sections based on dfmmodel.structures.io.xxxx_from_hydamo as example
 
 # TODO: create 1D network
 logger.info(f'Create 1D network')

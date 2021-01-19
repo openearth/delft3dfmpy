@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import KDTree
 
-from delft3dfmpy.converters import hydamo_to_dflowfm
+from delft3dfmpy.converters import hydamo_to_dflowfm, osm_to_dflowfm
 from delft3dfmpy.core import checks
 from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
@@ -169,6 +169,38 @@ class StructuresIO:
                     frictionvalue=culvert.ruwheidswaarde
                 )
 
+    def culverts_from_osm(self, culverts, id_col='id', roughness_type = None, roughness_values=None,logger=logging):
+        """
+        Method to convert osm culverts to dflowfm culverts.
+        """
+
+        # Convert to dflowfm input
+        logger.info(f'Culverts are generated from OSM data')
+        generated_culverts = osm_to_dflowfm.generate_culverts(culverts,id_col, roughness_values, logger=logger)
+
+        # Add to dict
+        logger.info(f'Add culverts to D-Flow FM structure')
+        for culvert in generated_culverts.itertuples():
+                self.structures.add_culvert(
+                    id=culvert.Index,
+        	        branchid=culvert.branch_id,
+        	        chainage=culvert.branch_offset,
+        	        leftlevel=culvert.leftlevel,
+        	        rightlevel=culvert.rightlevel,
+        	        crosssection=culvert.crosssection,
+        	        length=culvert.geometry.length,
+        	        inletlosscoeff=culvert.inletlosscoeff,
+        	        outletlosscoeff=culvert.outletlosscoeff,
+                    allowedflowdir=culvert.allowedflowdir,
+                    valveonoff=culvert.valveonoff,
+                    numlosscoeff=culvert.numlosscoeff,
+                    valveopeningheight=culvert.valveopeningheight,
+                    relopening=culvert.relopening,
+                    losscoeff=culvert.losscoeff,
+                    frictiontype=roughness_type,
+                    frictionvalue=culvert.friction_value
+                )
+
     def compound_structures(self, idlist, structurelist):
         """
         Method to add compound structures to the model.
@@ -183,7 +215,6 @@ class StructuresIO:
                 numstructures=compound.numstructures,
     	        structurelist=compound.structurelist
             )
-
 
 
 class CrossSectionsIO:
