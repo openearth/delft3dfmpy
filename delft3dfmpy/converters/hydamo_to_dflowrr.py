@@ -86,7 +86,7 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
         #ms = [ms for ms in meteo_areas.itertuples() if ms.geometry.contains(cat.geometry.centroid)]
         #ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]
         mapping = np.zeros(16, dtype=int)
-        for i in range(1,12):
+        for i in range(1,13):
             if i in lu_counts[num]: mapping[sobek_indices[i-1]-1] = lu_counts[num][i]*px_area            
         lu_map = ' '.join(map(str,mapping))        
         elev = mean_elev[num]['median']
