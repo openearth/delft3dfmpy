@@ -155,6 +155,7 @@ dfmmodel.network.generate_1dnetwork(one_d_mesh_distance=float(parameters['cellsi
 
 # TODO: create 2D grid
 # TODO: add created grid and check if it is also work if it is 1D2D grid
+# TODO: add posibility to add 1D to mesh
 logger.info(f'Create 2D grid')
 mesh = Rectangular()
 # Generate mesh within model bounds
