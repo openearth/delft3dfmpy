@@ -13,6 +13,7 @@ import rasterio
 
 import logging
 
+#TODO: check if it works
 root = os.path.abspath('../data/osm')
 fn_ini = os.path.join(root, 'osm_settings.ini')
 
