@@ -154,6 +154,7 @@ dfmmodel.network.set_branches(osm.branches, id_col=id)
 dfmmodel.network.generate_1dnetwork(one_d_mesh_distance=float(parameters['cellsize1d']), seperate_structures=True)
 
 # TODO: create 2D grid
+# TODO: add created grid and check if it is also work if it is 1D2D grid
 logger.info(f'Create 2D grid')
 mesh = Rectangular()
 # Generate mesh within model bounds
