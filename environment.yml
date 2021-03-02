@@ -8,7 +8,7 @@ dependencies:
   - pip
   - ipykernel
   - ipywidgets
-  - geopandas
+  - geopandas=0.8.2
   - rasterio  
   - imod  
   - numpy
