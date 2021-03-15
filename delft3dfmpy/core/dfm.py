@@ -101,7 +101,7 @@ class ExternalForcings:
         self.boundaries = {} #gpd.GeoDataFrame()
         
         # Dataframe for saving time series for structure
-        self.structures = pd.DataFrame(columns=['id', 'type', 'parameter', 'time', 'value'])
+        self.structures = pd.DataFrame(columns=['id', 'type', 'parameter', 'time', 'time_unit', 'value', 'value_unit'])
 
         # Dictionary for saving laterals
         self.laterals = {}
@@ -230,10 +230,12 @@ class ExternalForcings:
         if isinstance(series, pd.Series):
             times = ((series.index - series.index[0]).total_seconds() / 60.).tolist()
             values = series.values.tolist()
+            startdate = pd.datetime.strftime(series.index[0],'%Y%m%d')
         else:
             times = None
             values = series
-
+            startdate = '0000000000'
+        
         # Add boundary condition
         self.boundaries[name] = {
             'code': name,
@@ -243,7 +245,8 @@ class ExternalForcings:
             'filetype': 9,
             'operand': 'O',
             'method': 3,
-            'unit' : unit,            
+            'time_unit': f'minutes since {startdate[0:4]}-{startdate[4:6]}-{startdate[6:8]} {startdate[8:10]}:00:00',
+            'value_unit' : unit,            
             'nodeid': nodeid
         }
         
@@ -277,29 +280,53 @@ class ExternalForcings:
             'branchid': None
         }
 
-    def set_structure_series(self, structure_id, structure_type, parameter, times, values):
-        # Get filename
-        filename = f"{structure_type}_{structure_id}.tim"
-
+    def set_structure_series(self, structure_id, structure_type, parameter, series):        
         if structure_type == 'weir':
             weirnames = list(self.dflowfmmodel.structures.weirs.keys())
             if structure_id not in weirnames:
                 raise IndexError(f'"{structure_id}" not in index: "{",".join(weirnames)}"')
-            self.dflowfmmodel.structures.weirs[structure_id][parameter] = filename
+            self.dflowfmmodel.structures.weirs[structure_id][parameter] = 'boundaries.bc'
+            if 'crest' in parameter.lower():
+                parameter = 'weir_crestLevel'
+                unit = 'm+NAP'            
         elif structure_type == 'orifice':
             orificenames = list(self.dflowfmmodel.structures.orifices.keys())
             if structure_id not in orificenames:
                 raise IndexError(f'"{structure_id}" not in index: "{",".join(orificenames)}"')
-            self.dflowfmmodel.structures.orifices[structure_id][parameter] = filename        
+            if 'gate' in parameter.lower():
+                parameter = 'orifice_gateLowerEdgeLevel'
+                unit = 'm'
+            self.dflowfmmodel.structures.orifices[structure_id][parameter] = 'boundaries.bc'      
+        elif structure_type == 'culvert':
+            culvertnames = list(self.dflowfmmodel.structures.culverts.keys())
+            if structure_id not in culvertnames:
+                raise IndexError(f'"{structure_id}" not in index: "{",".join(culvertnames)}"')
+            if 'valve' in parameter.lower():
+                parameter = 'culvert_valveOpeningHeight'
+                unit = 'm'
+            self.dflowfmmodel.structures.culverts[structure_id][parameter] = 'boundaries.bc'              
         else:
-            raise NotImplementedError('Only implemented for weirs and orifices.')
-    # Add in structure dataframe
-     
-        # Add boundary condition
+            raise NotImplementedError('Only implemented for weirs, culverts and orifices.')
+        
+         #  Convert time to minutes
+        if isinstance(series, pd.DataFrame):
+            series = series.iloc[:,0]
+        if isinstance(series, pd.Series):
+            times = ((series.index - series.index[0]).total_seconds() / 60.).tolist()
+            values = series.values.tolist()
+            startdate = pd.datetime.strftime(series.index[0],'%Y%m%d%H')     
+        else:
+            times = None
+            values = series
+            startdate = '0000000000'
+            
+        # Add to dataframe
         self.structures.loc[structure_id] = {
             'id' : structure_id,
             'type' : structure_type,
             'parameter' : parameter,
+            'time_unit': f'minutes since {startdate[0:4]}-{startdate[4:6]}-{startdate[6:8]} {startdate[8:10]}:00:00',
+            'value_unit' : unit,
             'time': times,
             'value': values
         }
@@ -1502,7 +1529,8 @@ class ObservationPoints(ExtendedGeoDataFrame):
             obs2d = gpd.GeoDataFrame()
             obs2d['name'] = [n for nn,n in enumerate(names) if locationTypes[nn]=='2d']
             obs2d['locationType'] = '2d'
-            obs2d['geometry'] = [Point(*pt) for ipt,pt in enumerate(crds) if (locationTypes[ipt]=='2d')&(not isinstance(pt, Point))]
+            #obs2d['geometry'] = [Point(*pt) for ipt,pt in enumerate(crds) if (locationTypes[ipt]=='2d')&(not isinstance(pt, Point))]
+            obs2d['geometry'] = [Point(*pt) if not isinstance(pt, Point) else pt for ipt,pt in enumerate(crds) if (locationTypes[ipt]=='2d')]
             obs2d['x'] = [pt.coords[0][0] for pt in obs2d['geometry']]
             obs2d['y'] = [pt.coords[0][1] for pt in obs2d['geometry']]
             names1d = [n for n_i,n in enumerate(names) if locationTypes[n_i]=='1d']

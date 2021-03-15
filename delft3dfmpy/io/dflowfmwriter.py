@@ -224,16 +224,27 @@ class DFlowFMWriter:
             if any(self.dflowfmmodel.structures.compounds):
                 for _, dct in self.dflowfmmodel.structures.compounds.items():
                     self._write_dict(f, dct=dct, header='structure')
-
+        
+        refd = str(self.dflowfmmodel.mdu_parameters["refdate"])
+        
         # Write structure time series
-        for bcnd in self.dflowfmmodel.external_forcings.structures.itertuples():
-            # Write time series for structure
-            filename = f"{bcnd.type}_{bcnd.id}.tim"
+        for bcnd in self.dflowfmmodel.external_forcings.structures.iterrows():
+            
+            # write structure time series to bc file            
+            with open(os.path.join(self.output_dir, 'boundaries.bc'), 'a') as f:
+                f.write(f'\n[Forcing]\n'
+                    f'name       = {bcnd[1]["id"]}\n'
+                    f'function   = timeseries\n'
+                    f'timeInterpolation = linear\n'
+                    f'quantity   = time\n'
+                    f'unit       = {bcnd[1]["time_unit"]}\n'
+                    f'quantity   = {bcnd[1]["parameter"]}\n'
+                    f'unit       = {bcnd[1]["value_unit"]}\n'
+                   )
             # Get time series as data
-            data = list(zip(bcnd.time, bcnd.value))
+            data = list(zip(bcnd[1].time, bcnd[1].value))
             # Write file
-            write_fm_file(file=os.path.join(self.output_dir, filename), data=data)
-
+            write_fm_file(file=os.path.join(self.output_dir,  'boundaries.bc'), data=data, mode='a')
 
     def write_laterals(self):
         """
@@ -245,17 +256,13 @@ class DFlowFMWriter:
 
         for name, dct in self.dflowfmmodel.external_forcings.laterals.items():
 
-            if 'timeseries' in dct:
-                # Determine starttime from mdu parameters
-                starttime = datetime.datetime.strptime(str(self.mdu_parameters['refdate']), '%Y%m%d')
-                starttime += datetime.timedelta(seconds=int(self.mdu_parameters['tstart']))
-
+            if 'timeseries' in dct:               
                 # Write time series - this should probably be written to a .bc file
                 series = dct['timeseries'].copy()
-                series.index -= starttime
-                data = np.c_[series.index.total_seconds().values / 60, series.values]
-
-                refd = str(self.dflowfmmodel.mdu_parameters["refdate"])
+                
+                starttime = datetime.datetime.strftime(series.index[0], '%Y%m%d%H')
+                series.index -= series.index[0]
+                data = np.c_[series.index.total_seconds().values / 60, series.values]               
 
                  # and write data to the bc file
                 with open(os.path.join(self.output_dir, 'boundaries.bc'), 'a') as f:
@@ -264,7 +271,7 @@ class DFlowFMWriter:
                         f'function   = timeseries\n'
                         f'timeInterpolation = linear\n'
                         f'quantity   = time\n'
-                        f'unit       = minutes since {refd[0:4]}-{refd[4:6]}-{refd[6:9]} 00:00:00\n'
+                        f'unit       = minutes since {starttime[0:4]}-{starttime[4:6]}-{starttime[6:8]} {starttime[8:10]}:00:00\n'
                         f'quantity   = lateral_discharge\n'
                         f'unit       = m3/s\n'
                        )
@@ -344,16 +351,16 @@ class DFlowFMWriter:
                             f'function   = timeseries\n'
                             f'timeInterpolation = linear\n'
                             f'quantity   = time\n'
-                            f'unit       = minutes since {refd[0:4]}-{refd[4:6]}-{refd[6:9]} 00:00:00\n'
+                            f'unit       = {bc["time_unit"]}\n'
                             f'quantity   = {bc["bctype"]}\n'
-                            f'unit       = {bc["unit"]}\n'
+                            f'unit       = {bc["value_unit"]}\n'
                            )
                     if headerType=='constant':
                         f.write(f'\n[Forcing]\n'
                             f'name       = {bc["nodeid"]}\n'
                             f'function   = constant\n'
                             f'quantity   = {bc["bctype"]}\n'
-                            f'unit       = {bc["unit"]}\n'
+                            f'unit       = {bc["value_unit"]}\n'
                             f'{data}\n'
                            )
                 if headerType=='timeseries':
@@ -403,7 +410,7 @@ class DFlowFMWriter:
                     with open(os.path.join(initcondpath,'initialFields.ini'),'a') as f:
                         dct  = {'quantity': 'waterLevel',
                                 'dataFileType': 'polygon',
-                                'dataFile': f'{row.Index}.pol',
+                                'dataFile': initcondfolder+f'/{row.Index}.pol',
                                 'interpolationMethod': 'constant',
                                 'value': f'{row.waterlevel}'
                                 }
@@ -436,7 +443,7 @@ class DFlowFMWriter:
                         dct  = {'quantity': 'waterDepth',
                                 'unit': 'm',
                                 'dataFileType': 'polygon',
-                                'dataFile': f'{row.Index}.pol',
+                                'dataFile': initcondfolder+f'/{row.Index}.pol',
                                 'interpolationMethod': 'constant',
                                 'value': f'{row.waterdepth}'
                                 }
