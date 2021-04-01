@@ -918,7 +918,7 @@ class Network:
         self.mesh1d.set_values('nbranchorder', branchorder)
 
     # generate network and 1d mesh
-    def generate_1dnetwork(self, one_d_mesh_distance=40.0, seperate_structures=True, max_dist_to_struc=None):
+    def generate_1dnetwork(self, one_d_mesh_distance=40.0, seperate_structures=True, max_dist_to_struc=None, urban_branches=None):
         """
         Parameters
         ----------
@@ -941,7 +941,7 @@ class Network:
 
         # If offsets are not predefined, generate them base on one_d_mesh_distance
         if not self.offsets:
-            self.generate_offsets(one_d_mesh_distance, structures=structures, max_dist_to_struc=max_dist_to_struc)
+            self.generate_offsets(one_d_mesh_distance, structures=structures, max_dist_to_struc=max_dist_to_struc, urban_branches=urban_branches)
 
         # Add the network data to the 1d mesh structure
         sorted_branches = self.branches.iloc[self.branches.length.argsort().values]
@@ -988,6 +988,7 @@ class Network:
 
             # Get offsets from dictionary
             offsets = self.offsets[branch.Index]
+
             # The number of links on the branch
             nlinks = len(offsets) - 1
 
@@ -1010,10 +1011,19 @@ class Network:
                 offsets = offsets[:-1]
 
             # If no points remain, add an extra halfway: each branch should have at least 1 node
-            if len(offsets) == 0:
-                offsets = np.array([branch.geometry.length / 2.])
-                edge_offsets = np.array([i*branch.geometry.length for i in [0.25,0.75]])
-                nlinks += 1
+            if urban_branches is not None:
+                if urban_branches.str.contains(branch.BRANCH_ID).any():
+                    offsets = self.offsets[branch.Index]
+                else:
+                    if len(offsets) == 0:
+                        offsets = np.array([branch.geometry.length / 2.])
+                        edge_offsets = np.array([i * branch.geometry.length for i in [0.25, 0.75]])
+                        nlinks += 1
+            else:
+                if len(offsets) == 0:
+                    offsets = np.array([branch.geometry.length / 2.])
+                    edge_offsets = np.array([i*branch.geometry.length for i in [0.25,0.75]])
+                    nlinks += 1
 
             # Get the index of the first and last node in the dictionary (1 based, so +1)
             i_from = nodes.index(first_point) + 1
@@ -1110,7 +1120,7 @@ class Network:
 
         return np.asarray(offsets)
 
-    def generate_offsets(self, one_d_mesh_distance, structures=None, max_dist_to_struc=None):
+    def generate_offsets(self, one_d_mesh_distance, structures=None, max_dist_to_struc=None, urban_branches=None):
         """
         Method to generate 1d network grid point locations. The distances are generated
         based on the 1d mesh distance and anchor points. The anchor points can for
@@ -1119,7 +1129,13 @@ class Network:
         # For each branch
         for branch in self.branches.itertuples():
             # Distribute points along network [1d mesh]
-            offsets = self._generate_1d_spacing([0.0, branch.geometry.length], one_d_mesh_distance)
+            if urban_branches is not None:
+                if urban_branches.str.contains(branch.BRANCH_ID).any():
+                    offsets = self._generate_1d_spacing([0.0, branch.geometry.length], branch.geometry.length)
+                else:
+                    offsets = self._generate_1d_spacing([0.0, branch.geometry.length], one_d_mesh_distance)
+            else:
+                offsets = self._generate_1d_spacing([0.0, branch.geometry.length], one_d_mesh_distance)
             self.offsets[branch.Index] = offsets
 
         if structures is not None:
