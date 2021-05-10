@@ -1,3 +1,10 @@
+What is new in version 1.1.4
+
+Bug fixes
+- dfm.py
+	- add_boundary_condition: pd.datetime.strftime() fixed 00: (hours) were missing, not accepted by D-Hydro interface 
+
+
 What is new in version 0.2.0
 
 Bug fixes
