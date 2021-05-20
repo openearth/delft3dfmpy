@@ -230,7 +230,7 @@ class ExternalForcings:
         if isinstance(series, pd.Series):
             times = ((series.index - series.index[0]).total_seconds() / 60.).tolist()
             values = series.values.tolist()
-            startdate = pd.datetime.strftime(series.index[0],'%Y-%m-%d %M:%H:%S')
+            startdate = pd.datetime.strftime(series.index[0],'%Y-%m-%d %H:%M:%S')
         else:
             times = None
             values = series
