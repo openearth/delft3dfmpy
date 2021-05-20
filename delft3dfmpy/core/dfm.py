@@ -230,11 +230,11 @@ class ExternalForcings:
         if isinstance(series, pd.Series):
             times = ((series.index - series.index[0]).total_seconds() / 60.).tolist()
             values = series.values.tolist()
-            startdate = pd.datetime.strftime(series.index[0],'%Y%m%d')
+            startdate = pd.datetime.strftime(series.index[0],'%Y-%m-%d %H:%M:%S')
         else:
             times = None
             values = series
-            startdate = '0000000000'
+            startdate = '0000-00-00 00:00:00'
         
         # Add boundary condition
         self.boundaries[name] = {
@@ -245,7 +245,7 @@ class ExternalForcings:
             'filetype': 9,
             'operand': 'O',
             'method': 3,
-            'time_unit': f'minutes since {startdate[0:4]}-{startdate[4:6]}-{startdate[6:8]} {startdate[8:10]}:00:00',
+            'time_unit': f'minutes since {startdate}',
             'value_unit' : unit,            
             'nodeid': nodeid
         }
