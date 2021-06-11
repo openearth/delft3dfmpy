@@ -19,7 +19,7 @@ class DFlowFMWriter:
 
     # versioning info
     version = { 'number'        : delft3dfmpy.__version__,
-                'date'          : datetime.datetime.strftime(datetime.datetime.today(),'%Y-%m-%d %H:%M:%S'),
+                'date'          :  datetime.datetime.strftime(datetime.datetime.utcnow(),'%Y-%m-%dT%H:%M:%S.%fZ'),
                 'dfm_version'   : '1.2.105.67228M',
                 'dimr_version'  : '2.13.02.67836',
                 'suite_version' : '(Beta) 0.9.6.51435'} 
