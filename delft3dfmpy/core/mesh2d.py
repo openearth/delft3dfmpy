@@ -12,7 +12,7 @@ from shapely.geometry import (
     LineString, MultiLineString, MultiPolygon, Point, Polygon, box)
 from shapely.ops import unary_union
 from shapely.prepared import prep
-
+import sys
 from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.cstructures import meshgeom, meshgeomdim
 from delft3dfmpy.io import gridio
@@ -207,8 +207,10 @@ class Mesh2D:
         """
 
         dimensions = geometries.meshgeomdim
-
-        wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'gridgeom.dll'))
+        if sys.platform == 'win32':
+            wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'gridgeom.dll'))
+        else:
+            wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'libgridgeom.so'))
         ierr = wrapperGridgeom.ggeo_deallocate()
         assert ierr == 0
 
