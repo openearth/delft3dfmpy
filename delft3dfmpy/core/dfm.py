@@ -91,9 +91,8 @@ class ExternalForcings:
     def __init__(self, dflowfmmodel):
         # Point to relevant attributes from parent
         self.dflowfmmodel = dflowfmmodel
-        self.initial_waterlevel_polygons = gpd.GeoDataFrame(columns=['waterlevel', 'geometry'])
-        self.initial_waterdepth_polygons = gpd.GeoDataFrame(columns=['waterdepth', 'geometry'])
-        self.initial_waterlevel_xyz = []
+        self.initial_waterlevel_polygons = gpd.GeoDataFrame(columns=['waterlevel', 'geometry','locationType'])
+        self.initial_waterdepth_polygons = gpd.GeoDataFrame(columns=['waterdepth', 'geometry','locationType'])
         self.missing = None
         self.mdu_parameters = dflowfmmodel.mdu_parameters
 
@@ -108,7 +107,7 @@ class ExternalForcings:
 
         self.io = dfmreader.ExternalForcingsIO(self)
 
-    def set_initial_waterlevel(self, level, polygon=None, name=None):
+    def set_initial_waterlevel(self, level, polygon=None, name=None, locationtype='1d'):
         """
         Method to set initial water level. A polygon can be given to
         limit the initial water level to a certain extent. 
@@ -119,7 +118,11 @@ class ExternalForcings:
             name = 'wlevpoly{:04d}'.format(len(self.initial_waterlevel_polygons) + 1)
 
         # Add to geodataframe
-        self.initial_waterlevel_polygons.loc[name] = {'waterlevel': level, 'geometry': polygon}
+        if polygon==None:
+            new_df = pd.DataFrame({'waterlevel': depth, 'geometry': polygon, 'locationType':locationtype}, index=[name])            
+            self.initial_waterlevel_polygons =  new_df
+        else:            
+            self.initial_waterlevel_polygons.loc[name] = {'waterlevel': level, 'geometry': polygon, 'locationType':locationtype}
 
     def set_missing_waterlevel(self, missing):
         """
@@ -133,7 +136,7 @@ class ExternalForcings:
         """
         self.mdu_parameters['WaterLevIni'] = missing
     
-    def set_initial_waterdepth(self, depth, polygon=None, name=None):
+    def set_initial_waterdepth(self, depth, polygon=None, name=None, locationtype='1d'):
         """
         Method to set the initial water depth in the 1d model. The water depth is
         set by determining the water level at the locations of the cross sections.
@@ -145,15 +148,15 @@ class ExternalForcings:
         """
          # Get name is not given as input
         if name is None:
-            name = 'wlevpoly{:04d}'.format(len(self.initial_waterlevel_polygons) + 1)
+            name = 'wlevpoly{:04d}'.format(len(self.initial_waterdepth_polygons) + 1)
         # Add to geodataframe
         if polygon==None:
             
-            new_df = pd.DataFrame({'waterdepth': depth, 'geometry': polygon}, index=[name])
+            new_df = pd.DataFrame({'waterdepth': depth, 'geometry': polygon, 'locationType':locationtype}, index=[name])
             
             self.initial_waterdepth_polygons =  new_df
         else:
-            self.initial_waterdepth_polygons.loc[name] = {'waterdepth': depth, 'geometry': polygon}
+            self.initial_waterdepth_polygons.loc[name] = {'waterdepth': depth, 'geometry': polygon, 'locationType':locationtype}
         
     def add_rainfall_2D(self, fName, bctype='rainfall'):
         """
