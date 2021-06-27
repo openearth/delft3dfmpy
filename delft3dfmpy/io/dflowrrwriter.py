@@ -416,8 +416,6 @@ class DFlowRRWriter:
                  f.write('\t\t<targetComponent>'+RR_comp_name+'</targetComponent>\n')		     
                  for i in self.rrmodel.external_forcings.boundary_nodes.items():
                      f.write('\t\t\t<item>\n')                     
-                     # FOr now use one observation ponit- until water levels can be read from other nodes
-                     #f.write('\t\t\t\t<sourceName>observations/'+str(i[0])+'/water_level</sourceName>\n')
                      f.write('\t\t\t\t<sourceName>laterals/'+str(i[0])+'/water_level</sourceName>\n')
                      f.write('\t\t\t\t<targetName>catchments/'+str(i[0])+'/water_level</targetName>\n')
                      f.write('\t\t\t</item>\n')                                  
