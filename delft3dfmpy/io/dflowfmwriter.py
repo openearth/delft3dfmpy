@@ -391,7 +391,9 @@ class DFlowFMWriter:
                 # no polygons defined - global definition
                 with open(os.path.join(initcondpath,'initialWaterLevel.ini'),'w') as f:
                     self._write_header(f, '1dField',2.00)
-                    dct = {'quantity': 'waterLevel','unit': 'm+NAP','value': self.dflowfmmodel.external_forcings.initial_waterlevel_polygons.waterlevel[0]}
+                    dct = {'quantity': 'waterLevel','unit': 'm+NAP',
+                           'value': self.dflowfmmodel.external_forcings.initial_waterlevel_polygons.waterlevel[0], 
+                           'locationType': self.dflowfmmodel.external_forcings.initial_waterlevel_polygons.locationType[0]}
                     self._write_dict(f, dct, 'Global')
 
                 with open(os.path.join(initcondpath,'initialFields.ini'),'a') as f:
@@ -412,7 +414,8 @@ class DFlowFMWriter:
                                 'dataFileType': 'polygon',
                                 'dataFile': initcondfolder+f'/{row.Index}.pol',
                                 'interpolationMethod': 'constant',
-                                'value': f'{row.waterlevel}'
+                                'value': f'{row.waterlevel}',
+                                'locationType': f'{row.locationType}'
                                 }
                         self._write_dict(f,dct,'Initial')
 
@@ -422,7 +425,9 @@ class DFlowFMWriter:
                 # no polygons defined - global definition
                 with open(os.path.join(initcondpath,'initialWaterDepth.ini'),'w') as f:
                     self._write_header(f, '1dField',2.00)
-                    dct = {'quantity': 'waterDepth','unit': 'm','value': self.dflowfmmodel.external_forcings.initial_waterdepth_polygons.waterdepth[0]}
+                    dct = {'quantity': 'waterDepth','unit': 'm',
+                           'value': self.dflowfmmodel.external_forcings.initial_waterdepth_polygons.waterdepth[0],
+                           'locationType': self.dflowfmmodel.external_forcings.initial_waterdepth_polygons.locationType[0]}
                     self._write_dict(f, dct, 'Global')
 
                 with open(os.path.join(initcondpath,'initialFields.ini'),'a') as f:
@@ -445,7 +450,8 @@ class DFlowFMWriter:
                                 'dataFileType': 'polygon',
                                 'dataFile': initcondfolder+f'/{row.Index}.pol',
                                 'interpolationMethod': 'constant',
-                                'value': f'{row.waterdepth}'
+                                'value': f'{row.waterdepth}',
+                                'locationType': f'{row.locationType}'
                                 }
                         self._write_dict(f,dct,'Initial')
 
