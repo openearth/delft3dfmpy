@@ -406,7 +406,7 @@ class ExternalForcingsIO:
                 }
             else:
                 if lateral_discharges is None:
-                    logger.warning(f'No lateral_discharges provied. {lateral.code} expects them. Skipping.')
+                    logger.warning(f'No lateral_discharges provided. {lateral.code} expects them. Skipping.')
                     continue
                 else:
                     if lateral.code not in lateral_discharges.columns:
