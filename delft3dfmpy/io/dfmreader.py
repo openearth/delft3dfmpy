@@ -397,16 +397,21 @@ class ExternalForcingsIO:
             # crd = nodes1d[nearest_idx]
             #nid = f'{nodes1d[nidx][0]:g}_{nodes1d[nidx][1]:g}'
             
+            if 'os_1' in lateral.code:
+                code = 'pav_'+lateral.code+'_boundary'
+            else:
+                code = lateral.code
             # Check if a time is provided for the lateral
-            if lateral.code in rr_boundaries:                
+            if code in rr_boundaries: 
+                 
                 # Add to dictionary
-                self.external_forcings.laterals[lateral.code] = {
+                self.external_forcings.laterals[code] = {
                     'branchid': lateral.branch_id,
                     'branch_offset': str(lateral.branch_offset)                    
                 }
             else:
                 if lateral_discharges is None:
-                    logger.warning(f'No lateral_discharges provied. {lateral.code} expects them. Skipping.')
+                    logger.warning(f'No lateral_discharges provided. {lateral.code} expects them. Skipping.')
                     continue
                 else:
                     if lateral.code not in lateral_discharges.columns:
@@ -417,7 +422,7 @@ class ExternalForcingsIO:
                 series = lateral_discharges.loc[:, lateral.code]
                 
                 # Add to dictionary
-                self.external_forcings.laterals[lateral.code] = { 
+                self.external_forcings.laterals[code] = { 
                     'branchid': lateral.branch_id,
                     'branch_offset': str(lateral.branch_offset), 
                     'timeseries': series            
