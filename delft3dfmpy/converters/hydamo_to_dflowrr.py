@@ -261,7 +261,10 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
                 paved_drr.at[ov.code,'meteostat'] = ms
                 paved_drr.at[ov.code, 'px'] = f'{ov.geometry.coords[0][0]+10:.0f}'
                 paved_drr.at[ov.code, 'py'] = f'{ov.geometry.coords[0][1]:.0f}'
-                paved_drr.at[ov.code, 'boundary'] = ov.code              
+                paved_drr.at[ov.code, 'boundary'] = 'pav_'+ov.code+'_boundary'
+                #paved_drr.at[ov.code, 'boundary'] = ov.code              
+                # temporary
+                             
     else:    
         # in this case only the catchments are taken into account. A node is created for every catchment nonetheless, but only nodes with a remaining area >0 are written.
         paved_drr.set_data( pd.DataFrame(np.zeros((len(catchments),10)), 
@@ -298,7 +301,8 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
         paved_drr.at[cat.code,'meteostat'] = ms
         paved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+10:.0f}'
         paved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        paved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
+        paved_drr.at[cat.code, 'boundary'] = 'pav_'+cat.lateraleknoopcode.lstrip('unp_')       
+                                
     return paved_drr   
        
 def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_areas, zonalstats_alltouched=None):    
@@ -347,7 +351,10 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
         gh_drr.at[cat.code, 'meteostat'] = ms
         gh_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+20:.0f}'
         gh_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        gh_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
+        gh_drr.at[cat.code, 'boundary'] = 'gh_'+cat.lateraleknoopcode.strip('unp_')   
+        #gh_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
+        #temporary:
+                           
     return gh_drr   
 
 def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=None):    
@@ -386,29 +393,44 @@ def generate_boundary(boundary_nodes, catchments, overflows=None):
 
     """
     if overflows is not None:
-        numlats = len(catchments)+len(overflows)
+        numlats = len(boundary_nodes)+len(overflows)
     else:
-        numlats = len(catchments)
+        numlats = len(boundary_nodes)
     bnd_drr = ExtendedDataFrame(required_columns=['code'])
     bnd_drr.set_data( pd.DataFrame(np.zeros((numlats,3)), 
                                        columns=['code', 'px', 'py'], dtype="str"), index_col='code')                                        
     if overflows is not None:
-        bnd_drr.index = catchments.code.append(overflows.code)
+        #bnd_drr.index = catchments.code.append(overflows.code)
+        bnd_drr.index = boundary_nodes.code.append(overflows.code)
     else:
-        bnd_drr.index = catchments.code
-    for num, cat in enumerate(catchments.itertuples()):    
+        #bnd_drr.index = catchments.code
+        bnd_drr.index = boundary_nodes.code
+    for num, cat in enumerate(catchments.itertuples()):        
         # print(num, cat.code)
         if boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode].empty:
             #raise IndexError(f'{cat.code} not connected to a boundary node. Skipping.')
             logger.warning('%s not connected to a boundary node. Skipping.' % cat.code)
             continue
-        bnd_drr.at[cat.code, 'code'] = cat.lateraleknoopcode        
-        bnd_drr.at[cat.code, 'px']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].x.iloc[0]).strip()                                                                 
-        bnd_drr.at[cat.code, 'py']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].y.iloc[0]).strip()
+        bnd_drr.at[cat.lateraleknoopcode, 'code'] = cat.lateraleknoopcode        
+        bnd_drr.at[cat.lateraleknoopcode, 'px']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].x.iloc[0]).strip()                                                                 
+        bnd_drr.at[cat.lateraleknoopcode, 'py']  = str(boundary_nodes[boundary_nodes['code']==cat.lateraleknoopcode]['geometry'].y.iloc[0]).strip()
+        
+        # tijdelijk: een lateraal per knoop voor de GUI        
+        if not boundary_nodes[boundary_nodes['code']=='pav_'+cat.lateraleknoopcode.lstrip('unp_')].empty:
+            bnd_drr.at['pav_'+cat.lateraleknoopcode.lstrip('unp_'), 'code'] = 'pav_'+cat.lateraleknoopcode.lstrip('unp_')      
+            bnd_drr.at['pav_'+cat.lateraleknoopcode.lstrip('unp_'), 'px']  = str(boundary_nodes[boundary_nodes['code']=='pav_'+cat.lateraleknoopcode.lstrip('unp_')  ]['geometry'].x.iloc[0]).strip()                                                                 
+            bnd_drr.at['pav_'+cat.lateraleknoopcode.lstrip('unp_'), 'py']  = str(boundary_nodes[boundary_nodes['code']=='pav_'+cat.lateraleknoopcode.lstrip('unp_')  ]['geometry'].y.iloc[0]).strip()
+
+        if not boundary_nodes[boundary_nodes['code']=='gh_'+cat.lateraleknoopcode.lstrip('unp_')].empty:
+            bnd_drr.at['gh_'+cat.lateraleknoopcode.lstrip('unp_'), 'code'] = 'gh'+cat.lateraleknoopcode.lstrip('unp_')       
+            bnd_drr.at['gh_'+cat.lateraleknoopcode.lstrip('unp_'), 'px']  = str(boundary_nodes[boundary_nodes['code']=='gh_'+cat.lateraleknoopcode.lstrip('unp_')  ]['geometry'].x.iloc[0]).strip()                                                                 
+            bnd_drr.at['gh_'+cat.lateraleknoopcode.lstrip('unp_'), 'py']  = str(boundary_nodes[boundary_nodes['code']=='gh_'+cat.lateraleknoopcode.lstrip('unp_')  ]['geometry'].y.iloc[0]).strip()
+
     if overflows is not None:
+        
         logger.info('Adding overflows to the boundary nodes.')
         for num, ovf in enumerate(overflows.itertuples()):
-            bnd_drr.at[ovf.code, 'code'] = ovf.code
+            bnd_drr.at[ovf.code, 'code'] = 'pav_'+ovf.code+'_boundary'
             bnd_drr.at[ovf.code, 'px'] = str(ovf.geometry.coords[0][0])
             bnd_drr.at[ovf.code, 'py'] = str(ovf.geometry.coords[0][1])       
     return bnd_drr    
