@@ -47,8 +47,8 @@ class UgridWriter:
         # File where we going to write
         ncfile = Dataset(path, 'w', format=outformat)
 
-        # global attributes
-        ncfile.Conventions = "CF-1.8 UGRID-1.0"
+        # global attributes   (conventions must be CF-1.8 UGRID-1.0 Deltares-0.10 for the GUI)
+        ncfile.Conventions = "CF-1.8 UGRID-1.0 Deltares-0.10"
         ncfile.title = 'Delft3D-FM 1D2D network for model '+os.path.split(path)[-1].rstrip('_net.nc')
         ncfile.source = f"delft3dfmpy v.{version['number']}, D-HyDAMO, model {os.path.split(path)[-1].rstrip('_net.nc')}"
         ncfile.history = f"Created on {version['date']} by {os.path.split(__file__)[-1]}."        
