@@ -141,7 +141,7 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         # Copy content
         for col, values in gdf.iteritems():
-            self[col] = values.values
+            self[col] = values#.values
 
         if index_col is None:
             self.index = gdf.index
