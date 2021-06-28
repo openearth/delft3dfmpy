@@ -331,7 +331,7 @@ class meshgeom(Structure):
 
             # Get face nodes
             face_nodes = self.get_values('face_nodes', as_array=True)
-            nanvalues = (face_nodes != -999).sum(axis=1).astype(int)
+            nanvalues = (face_nodes != -999).astype(int).sum(axis=1)
             unique = np.unique(nanvalues)
             
             # If all cells have the same number of nodes
