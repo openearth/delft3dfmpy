@@ -213,10 +213,7 @@ class Mesh2D:
         else:            
             wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'libgridgeom.so'))                            
         ierr = wrapperGridgeom.ggeo_deallocate()
-        
-        print('Error message:')
-        print(ierr)
-        
+                
         assert ierr == 0
 
         start_index = c_int(1)
@@ -231,6 +228,10 @@ class Mesh2D:
             byref(meshout),
             byref(start_index)
         )
+        
+        print('Error message:')
+        print(ierr)
+                
         assert ierr == 0
 
         print(meshdimout)
