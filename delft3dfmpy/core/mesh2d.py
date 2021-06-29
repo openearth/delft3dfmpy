@@ -214,9 +214,7 @@ class Mesh2D:
             wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'libgridgeom.so'))                            
         ierr = wrapperGridgeom.ggeo_deallocate()
          
-        print('Error message 1:')
-        print(ierr)
-        #assert ierr == 0
+        assert ierr == 0
 
         start_index = c_int(1)
 
@@ -229,15 +227,8 @@ class Mesh2D:
             byref(meshdimout),
             byref(meshout),
             byref(start_index)
-        )
-        
-        print('Error message 2:')
-        print(ierr)
-                
+        )              
         assert ierr == 0
-
-        print(meshdimout)
-        print(meshout)        
 
         dimensions.numface = meshdimout.numface
         if maxnumfacenodes is None:
@@ -485,8 +476,8 @@ class Rectangular(Mesh2D):
         dimensions.numnode = len(xnodes)
         dimensions.numedge = len(edge_nodes)
 
-        print('Before find_cells (numnodes): ',dimensions.numnode)
-        print('Before find_cells (numedge): ',dimensions.numedge)
+        # print('Before find_cells (numnodes): ',dimensions.numnode)
+        # print('Before find_cells (numedge): ',dimensions.numedge)
         
         # Add nodes and links
         geometries.set_values('nodex', xnodes)
@@ -645,5 +636,5 @@ class Rectangular(Mesh2D):
         # Find cells
         self._find_cells(self.meshgeom)
     
-        os.remove('out_net.nc')
-        os.remove(temppath)
+        #os.remove('out_net.nc')
+        #os.remove(temppath)
