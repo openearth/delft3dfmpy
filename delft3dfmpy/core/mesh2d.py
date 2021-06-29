@@ -477,6 +477,9 @@ class Rectangular(Mesh2D):
         dimensions.numnode = len(xnodes)
         dimensions.numedge = len(edge_nodes)
 
+        print('Before find_cells (numnodes): ',dimensions.numnode)
+        print('Before find_cells (numedge): ',dimensions.numedge)
+        
         # Add nodes and links
         geometries.set_values('nodex', xnodes)
         geometries.set_values('nodey', ynodes)
