@@ -217,8 +217,8 @@ class Mesh2D:
         start_index = c_int(1)
 
         meshdimout = meshgeomdim()
-        meshout = meshgeom(meshdimout)
-
+        meshout = meshgeom(meshdimout)        
+               
         ierr = wrapperGridgeom.ggeo_find_cells(
             byref(dimensions),
             byref(geometries),
@@ -227,6 +227,9 @@ class Mesh2D:
             byref(start_index)
         )
         assert ierr == 0
+
+        print(meshdimout)
+        print(meshout)        
 
         dimensions.numface = meshdimout.numface
         if maxnumfacenodes is None:
