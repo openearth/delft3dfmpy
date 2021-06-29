@@ -207,15 +207,16 @@ class Mesh2D:
         """
 
         dimensions = geometries.meshgeomdim
-        print(dimensions)
         
         if sys.platform == 'win32':
             wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'gridgeom.dll'))
-        else:
-            print('we gaan naar linux')
-            wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'libgridgeom.so'))                    
-            print(wrapperGridgeom)
+        else:            
+            wrapperGridgeom = CDLL(os.path.join(os.path.dirname(__file__), '..', 'lib', 'libgridgeom.so'))                            
         ierr = wrapperGridgeom.ggeo_deallocate()
+        
+        print('Error message:')
+        print(ierr)
+        
         assert ierr == 0
 
         start_index = c_int(1)
