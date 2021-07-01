@@ -415,10 +415,11 @@ class DFlowRRWriter:
                  f.write('\t\t<sourceComponent>'+DFM_comp_name+'</sourceComponent>\n')
                  f.write('\t\t<targetComponent>'+RR_comp_name+'</targetComponent>\n')		     
                  for i in self.rrmodel.external_forcings.boundary_nodes.items():
-                     f.write('\t\t\t<item>\n')                     
-                     f.write('\t\t\t\t<sourceName>laterals/'+str(i[0])+'/water_level</sourceName>\n')
-                     f.write('\t\t\t\t<targetName>catchments/'+str(i[0])+'/water_level</targetName>\n')
-                     f.write('\t\t\t</item>\n')                                  
+                     if i[0].startswith('unp_'):
+                         f.write('\t\t\t<item>\n')                     
+                         f.write('\t\t\t\t<sourceName>laterals/'+str(i[0])+'/water_level</sourceName>\n')
+                         f.write('\t\t\t\t<targetName>catchments/'+str(i[0])+'/water_level</targetName>\n')
+                         f.write('\t\t\t</item>\n')                                  
                  f.write('\t\t<logger>\n')
                  f.write('\t\t\t<workingDir>.</workingDir>\n')
                  f.write('\t\t\t<outputFile>dflowfm_to_rr.nc</outputFile>\n')

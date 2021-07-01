@@ -336,3 +336,29 @@ class ExternalForcingsIO:
                  px = bn.px,
                  py = bn.py
              )
+             
+    def boundary_from_nodes(self, branches, unpaved=None, paved=None, greenhouse=None, openwater=None):    
+        """
+        Method to generate RR boundary nodes from input.
+
+        Parameters
+        ----------
+        boundary_nodes : shapely point object
+            Lateral nodes in DFM that are associated with RR catchments 
+        catchments : shapely polygon object.
+            Catchment areas; every cachtment gets a set of RR-nodes.
+        overflows [optional] : shapely point object.
+            Overflows; every overflow location gets a lateral node in DFM.
+            
+        Returns
+        -------
+        None.
+
+        """
+        geconverteerd = hydamo_to_dflowrr.generate_boundary2(  branches, unpaved=unpaved, paved=paved, greenhouse=greenhouse, openwater=openwater)
+        for bn in geconverteerd.itertuples():
+             self.external_forcings.add_boundary_node(
+                 id = bn.code,
+                 px = str(bn.px),
+                 py = str(bn.py)
+             )

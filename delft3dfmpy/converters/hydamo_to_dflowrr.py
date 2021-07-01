@@ -7,6 +7,9 @@ from shapely.geometry import LineString
 from rasterstats import zonal_stats
 from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.common import ExtendedDataFrame
+from delft3dfmpy.core import geometry
+from shapely.geometry import Point
+    
 import rasterio
 import warnings
 from rasterio.transform import from_origin
@@ -110,7 +113,7 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
         unpaved_drr.at[cat.code, 'meteostat'] = ms
         unpaved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-10:.0f}'
         unpaved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        unpaved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                
+        unpaved_drr.at[cat.code, 'boundary'] = 'unp_'+cat.code+'_boundary'               
     return unpaved_drr          
     
 def generate_ernst(catchments, depths, resistance, infiltration_resistance, runoff_resistance):    
@@ -301,7 +304,7 @@ columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat'
         paved_drr.at[cat.code,'meteostat'] = ms
         paved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+10:.0f}'
         paved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        paved_drr.at[cat.code, 'boundary'] = 'pav_'+cat.lateraleknoopcode.lstrip('unp_')       
+        paved_drr.at[cat.code, 'boundary'] = 'pav_'+cat.code+'_boundary'       
                                 
     return paved_drr   
        
@@ -351,7 +354,7 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
         gh_drr.at[cat.code, 'meteostat'] = ms
         gh_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+20:.0f}'
         gh_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        gh_drr.at[cat.code, 'boundary'] = 'gh_'+cat.lateraleknoopcode.strip('unp_')   
+        gh_drr.at[cat.code, 'boundary'] = 'gh_'+cat.code+'_boundary'
         #gh_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
         #temporary:
                            
@@ -384,7 +387,7 @@ def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=N
         ow_drr.at[cat.code, 'meteostat'] = ms
         ow_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-20:.0f}'
         ow_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        ow_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
+        ow_drr.at[cat.code, 'boundary'] = 'ow_'+cat.code+'_boundary'                       
     return ow_drr   
 
 def generate_boundary(boundary_nodes, catchments, overflows=None):
@@ -434,6 +437,42 @@ def generate_boundary(boundary_nodes, catchments, overflows=None):
             bnd_drr.at[ovf.code, 'px'] = str(ovf.geometry.coords[0][0])
             bnd_drr.at[ovf.code, 'py'] = str(ovf.geometry.coords[0][1])       
     return bnd_drr    
+
+def generate_boundary2(branches, unpaved=None, paved=None, greenhouse=None, openwater=None):
+    """
+    Method to create boundary  nodes for RR.
+
+    """
+    unp_bnd = gpd.GeoDataFrame()    
+    unp_bnd['code'] = ['unp_'+i[0]+'_boundary' for i in unpaved.items() if np.sum([float(d) for d in i[1]['ar'].split(' ')]) > 0.0]
+    unp_bnd['geometry'] = [Point(int(i[1]['px']), int(i[1]['py'])) for i in unpaved.items() if np.sum([float(d) for d in i[1]['ar'].split(' ')]) > 0.0]
+    
+    pav_bnd = gpd.GeoDataFrame()    
+    pav_bnd['code'] = ['pav_'+i[0]+'_boundary' for i in paved.items() if float(i[1]['ar']) > 0.]
+    pav_bnd['geometry'] = [Point(int(i[1]['px']), int(i[1]['py'])) for i in paved.items() if float(i[1]['ar']) > 0.]
+    
+    gh_bnd = gpd.GeoDataFrame()    
+    gh_bnd['code'] = ['gh_'+i[0]+'_boundary' for i in greenhouse.items() if float(i[1]['ar']) > 0.]
+    gh_bnd['geometry'] = [Point(int(i[1]['px']), int(i[1]['py'])) for i in greenhouse.items() if float(i[1]['ar']) > 0.]
+    
+    ow_bnd = gpd.GeoDataFrame()    
+    ow_bnd['code'] = ['ow_'+i[0]+'_boundary' for i in openwater.items() if float(i[1]['ar']) > 0.]
+    ow_bnd['geometry'] = [Point(int(i[1]['px']), int(i[1]['py'])) for i in openwater.items() if float(i[1]['ar']) > 0.]
+    
+    bnd = pd.concat([unp_bnd, pav_bnd, gh_bnd, ow_bnd])
+    bnd.index = range(len(bnd))
+    # snap to branch
+    geometry.find_nearest_branch(branches,bnd, method='overal', maxdist=10000.) 
+    # and recalculate coordinates
+    branche_coords = [geom.coords[:] for geom in branches.loc[bnd.branch_id].geometry]
+    distances = [np.r_[0, np.cumsum(np.hypot(np.diff(np.array(b)[:,0]),np.diff(np.array(b)[:,1])))] for b in branche_coords]
+    index = [np.abs(distances[i]-bnd.branch_offset[i]).argmin() for i in range(len(branche_coords))]
+    coords = [b[index[ii]] for ii,b in enumerate(branche_coords)]
+    # add them to the dataframe
+    bnd['px'] = [coords[i][0] for i in range(len(branche_coords))]
+    bnd['py'] = [coords[i][1] for i in range(len(branche_coords))]
+    bnd.index  = bnd.code
+    return bnd
 
 def generate_seepage(catchments, seepage_folder):    
     """

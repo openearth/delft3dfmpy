@@ -7,7 +7,9 @@ from scipy.spatial import KDTree
 
 from delft3dfmpy.converters import hydamo_to_dflowfm
 from delft3dfmpy.core import checks
+from delft3dfmpy.core import geometry
 from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
+
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
 logger = logging.getLogger(__name__)
@@ -355,7 +357,7 @@ class ExternalForcingsIO:
             # Check if a 1d2d link should be removed
             #self.external_forcings.dflowfmmodel.network.links1d2d.check_boundary_link(self.external_forcings.boundaries.loc[key])
 
-    def read_laterals(self, locations, lateral_discharges=None, rr_boundaries=None):
+    def read_laterals(self, locations, lateral_discharges=None, rr_boundaries=None, branches=None):
         """
         Process laterals
 
@@ -368,10 +370,19 @@ class ExternalForcingsIO:
         rr_boundaries: pd.DataFrame
             DataFrame with RR-catchments that are coupled 
         """
+        if type(locations)==dict:
+            laterals = ExtendedGeoDataFrame(Point)
+            laterals['code'] = locations.keys()
+            laterals['X'] = [float(loc[1]['px']) for loc in locations.items()]
+            laterals['Y'] = [float(loc[1]['py']) for loc in locations.items()]            
+            laterals['geometry'] = [Point(i) for i in zip(laterals.X, laterals.Y)]
+            geometry.find_nearest_branch(branches,laterals, method='overal', maxdist=10.) 
+        else:
+            laterals = locations
 
         if rr_boundaries is None: rr_boundaries = []
         # Check argument
-        checks.check_argument(locations, 'locations', gpd.GeoDataFrame, columns=['geometry'])
+        checks.check_argument(laterals, 'laterals', gpd.GeoDataFrame, columns=['geometry'])
         if lateral_discharges is not None:
             checks.check_argument(lateral_discharges, 'lateral_discharges', pd.DataFrame)
 
@@ -381,9 +392,9 @@ class ExternalForcingsIO:
             raise ValueError('1d network has not been generated or loaded. Do this before adding laterals.')
 
         # in case of 3d points, remove the 3rd dimension
-        locations['geometry2'] = [Point([point.geometry.x, point.geometry.y]) for _,point in locations.iterrows()]    
-        locations.drop('geometry', inplace=True, axis=1)
-        locations.rename(columns={'geometry2':'geometry'}, inplace=True)
+        laterals['geometry2'] = [Point([point.geometry.x, point.geometry.y]) for _,point in laterals.iterrows()]    
+        laterals.drop('geometry', inplace=True, axis=1)
+        laterals.rename(columns={'geometry2':'geometry'}, inplace=True)
         
         # Find nearest 1d node per location and find the nodeid
         #lateral_crds = np.vstack([loc.geometry.coords[0] for loc in locations.itertuples()])             
@@ -393,7 +404,7 @@ class ExternalForcingsIO:
                 
         # Get time series and add to dictionary
         #for nidx, lateral in zip(nearest_idx, locations.itertuples()):
-        for lateral in locations.itertuples():
+        for lateral in laterals.itertuples():
             # crd = nodes1d[nearest_idx]
             #nid = f'{nodes1d[nidx][0]:g}_{nodes1d[nidx][1]:g}'
             
