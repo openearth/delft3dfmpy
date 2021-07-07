@@ -408,10 +408,10 @@ class ExternalForcingsIO:
             # crd = nodes1d[nearest_idx]
             #nid = f'{nodes1d[nidx][0]:g}_{nodes1d[nidx][1]:g}'
             
-            if 'os_1' in lateral.code:
-                code = 'pav_'+lateral.code+'_boundary'
-            else:
-                code = lateral.code
+            #if 'os_1' in lateral.code:
+            #    code = 'pav_'+lateral.code+'_boundary'
+            #else:
+            code = lateral.code
             # Check if a time is provided for the lateral
             if code in rr_boundaries: 
                  
