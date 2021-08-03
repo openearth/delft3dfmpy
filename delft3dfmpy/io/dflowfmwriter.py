@@ -82,6 +82,8 @@ class DFlowFMWriter:
         if hasattr(self, 'run_dimrpad'):
             # Files for running DIMR
             self.write_dimrfiles()
+        # Storage nodes
+        self.write_storagenodes()
         
         # Change mdu parameters
         for parameter, value in self.mdu_parameters.items():
@@ -140,6 +142,18 @@ class DFlowFMWriter:
 
         self.mdu_parameters['frictFile'] = ';'.join(roughnessfiles)
 
+    def write_storagenodes(self):
+        filename = 'storagenodes.ini'
+        filepath = os.path.join(self.output_dir, filename)
+        with open(filepath, 'w') as f:
+            self._write_header(f, filetype='storageNodes', fileversion=2.00)
+
+            if any(self.dflowfmmodel.storagenodes.storagenodes):
+                for _, dct in self.dflowfmmodel.storagenodes.storagenodes.items():
+                    self._write_dict(f, dct=dct, header='StorageNode')
+
+        self.mdu_parameters['StorageNodeFile'] = filename
+
     def write_crosssection_locations(self):
         # Write cross section locations
         with open(os.path.join(self.output_dir, 'cross_section_locations.ini'), 'w') as f:
@@ -190,6 +204,11 @@ class DFlowFMWriter:
             # write header
             self._write_header(f, filetype='structure', fileversion=2.00)
 
+            # General structures
+            if any(self.dflowfmmodel.structures.generalstructures):
+                for _, dct in self.dflowfmmodel.structures.generalstructures.items():
+                    self._write_dict(f, dct=dct, header='Structure')
+            
             # Culverts
             if any(self.dflowfmmodel.structures.culverts):
                 for _, dct in self.dflowfmmodel.structures.culverts.items():
@@ -465,7 +484,14 @@ class DFlowFMWriter:
 
         network = self.dflowfmmodel.network
         crosssections = self.dflowfmmodel.crosssections
-        structures = self.dflowfmmodel.structures.as_dataframe(weirs=True, pumps=True, bridges=True, culverts=True, uweirs=True, orifices=True, compounds=True)
+        structures = self.dflowfmmodel.structures.as_dataframe(generalstructures=True,
+                                                               weirs=True,
+                                                               pumps=True,
+                                                               bridges=True,
+                                                               culverts=True,
+                                                               uweirs=True,
+                                                               orifices=True,
+                                                               compounds=True)
 
         for name, css in crosssections.crosssection_loc.items():
             sch_branch = network.schematised.at[css['branchid'], 'geometry']
@@ -498,7 +524,12 @@ class DFlowFMWriter:
                 # Get offset on schematised branch
                 offset = sch_branch.project(geo_branch.interpolate(structure.chainage))
 
-                if structure.structype == 'pump':
+                if structure.structype == 'generalstructure':
+                    # Get circle coordinates
+                    coords.append(sch_branch.interpolate(offset).buffer(20.0).simplify(0.5).exterior.coords[:])
+                    names.append(structure.Index)
+
+                elif structure.structype == 'pump':
                     # Get circle coordinates
                     coords.append(sch_branch.interpolate(offset).buffer(20.0).simplify(0.5).exterior.coords[:])
                     names.append(structure.Index)
