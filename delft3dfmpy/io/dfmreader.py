@@ -17,6 +17,62 @@ class StructuresIO:
 
     def __init__(self, structures):
         self.structures = structures
+    
+    def generalstructures_from_datamodel(self, generalstructures):
+        """"From parsed data model of orifices"""
+        for generalstructure_idx, generalstructure in generalstructures.iterrows():
+            self.structures.add_generalstructure(
+                id=generalstructure.id,
+                name=generalstructure.name if 'name' in generalstructure.index else np.nan,
+                branchid=generalstructure.branch_id,
+                chainage=generalstructure.branch_offset,
+                allowedflowdir='both',
+                upstream1width=generalstructure.upstream1width if 'upstream1width' in generalstructure.index else np.nan,
+                upstream1level=generalstructure.upstream1level if 'upstream1level' in generalstructure.index else np.nan,
+                upstream2width=generalstructure.upstream2width if 'upstream2width' in generalstructure.index else np.nan,
+                upstream2level=generalstructure.upstream2level if 'upstream2level' in generalstructure.index else np.nan,
+                crestwidth=generalstructure.crestwidth if 'crestwidth' in generalstructure.index else np.nan,
+                crestlevel=generalstructure.crestlevel if 'crestlevel' in generalstructure.index else np.nan,
+                crestlength=generalstructure.crestlength if 'crestlength' in generalstructure.index else np.nan,
+                downstream1width=generalstructure.downstream1width if 'downstream1width' in generalstructure.index else np.nan,
+                downstream1level=generalstructure.downstream1level if 'downstream1level' in generalstructure.index else np.nan,
+                downstream2width=generalstructure.downstream2width if 'downstream2width' in generalstructure.index else np.nan,
+                downstream2level=generalstructure.downstream2level if 'downstream2level' in generalstructure.index else np.nan,
+                gateloweredgelevel=generalstructure.gateloweredgelevel if 'gateloweredgelevel' in generalstructure.index else np.nan,
+                posfreegateflowcoeff=generalstructure.posfreegateflowcoeff if 'posfreegateflowcoeff' in generalstructure.index else np.nan,
+                posdrowngateflowcoeff=generalstructure.posdrowngateflowcoeff if 'posdrowngateflowcoeff' in generalstructure.index else np.nan,
+                posfreeweirflowcoeff=generalstructure.posfreeweirflowcoeff if 'posfreeweirflowcoeff' in generalstructure.index else np.nan,
+                posdrownweirflowcoeff=generalstructure.posdrownweirflowcoeff if 'posdrownweirflowcoeff' in generalstructure.index else np.nan,
+                poscontrcoeffreegate=generalstructure.poscontrcoeffreegate if 'poscontrcoeffreegate' in generalstructure.index else np.nan,
+                negfreegateflowcoeff=generalstructure.negfreegateflowcoeff if 'negfreegateflowcoeff' in generalstructure.index else np.nan,
+                negdrowngateflowcoeff=generalstructure.negdrowngateflowcoeff if 'negdrowngateflowcoeff' in generalstructure.index else np.nan,
+                negfreeweirflowcoeff=generalstructure.negfreeweirflowcoeff if 'negfreeweirflowcoeff' in generalstructure.index else np.nan,
+                negdrownweirflowcoeff=generalstructure.negdrownweirflowcoeff if 'negdrownweirflowcoeff' in generalstructure.index else np.nan,
+                negcontrcoeffreegate=generalstructure.negcontrcoeffreegate if 'negcontrcoeffreegate' in generalstructure.index else np.nan,
+                extraresistance=generalstructure.extraresistance if 'extraresistance' in generalstructure.index else np.nan,
+                gateheight=generalstructure.gateheight if 'gateheight' in generalstructure.index else np.nan,
+                gateopeningwidth=generalstructure.gateopeningwidth if 'gateopeningwidth' in generalstructure.index else np.nan,
+                gateopeninghorizontaldirection=generalstructure.gateopeninghorizontaldirection if 'gateopeninghorizontaldirection' in generalstructure.index else np.nan,
+                usevelocityheight=generalstructure.usevelocityheight if 'usevelocityheight' in generalstructure.index else np.nan,
+            )
+    
+    def pumps_from_datamodel(self, pumps):
+        """"From parsed data model of pumps"""
+        for pump_idx, pump in pumps.iterrows():
+            self.structures.add_pump(
+                id=pump.id,
+                name=pump.name if 'name' in pump.index else np.nan,
+                branchid=pump.branch_id,
+                chainage=pump.branch_offset,
+                orientation='positive',
+                numstages=1,
+                controlside=pump.controlside,
+                capacity=pump.maximumcapacity,
+                startlevelsuctionside=pump.startlevelsuctionside,
+                stoplevelsuctionside=pump.stoplevelsuctionside,
+                startleveldeliveryside=pump.startleveldeliveryside,
+                stopleveldeliveryside=pump.stopleveldeliveryside
+            )
 
     def pumps_from_hydamo(self, pompen, sturing, gemalen):
         """
@@ -37,6 +93,25 @@ class StructuresIO:
                 capacity=pump.maximalecapaciteit,
                 startlevelsuctionside=pump.startlevelsuctionside,
                 stoplevelsuctionside=pump.stoplevelsuctionside                
+            )
+
+    def orifices_from_datamodel(self, orifices):
+        """"From parsed data model of orifices"""
+        for orifice_idx, orifice in orifices.iterrows():
+            self.structures.add_orifice(
+                id=orifice.id,
+                name=orifice.name if 'name' in orifice.index else np.nan,
+                branchid=orifice.branch_id,
+                chainage=orifice.branch_offset,
+                allowedflowdir='both',
+                crestlevel=orifice.crestlevel,
+                crestwidth=orifice.crestwidth,
+                gateloweredgelevel=orifice.gateloweredgelevel,
+                corrcoeff=orifice.corrcoef,
+                uselimitflowpos=orifice.uselimitflowpos,
+                limitflowpos=orifice.limitflowpos,
+                uselimitflowneg=orifice.uselimitflowneg,
+                limitflowneg=orifice.limitflowneg,
             )
 
     def orifices_from_hydamo(self, orifices):
@@ -60,7 +135,35 @@ class StructuresIO:
                 limitflowneg=orifice.limitflow,
                 corrcoeff=orifice.afvoercoefficient                               
             )
+    
+    def weirs_from_datamodel(self, weirs):
+        """"From parsed data model of weirs"""
+        for weir_idx, weir in weirs.iterrows():
+            self.structures.add_weir(
+                id=weir.id,
+                name=weir.name if 'name' in weir.index else np.nan,
+                branchid=weir.branch_id,
+                chainage=weir.branch_offset,
+                crestlevel=weir.crestlevel,
+                crestwidth=weir.crestwidth,
+                corrcoeff=weir.corrcoeff
+            )
             
+    def uweirs_from_datamodel(self, uweirs):
+        """"From parsed data model of universal weirs"""
+        for uweir_idx, uweir in uweirs.iterrows():
+            self.structures.add_uweir(
+                id=uweir.id,
+                name=uweir.name if 'name' in uweir.index else np.nan,
+                branchid=uweir.branch_id,
+                chainage=uweir.branch_offset,                
+                crestlevel=uweir.crestlevel,
+                yvalues=uweir.yvalues,
+                zvalues=uweir.zvalues,
+                allowedflowdir='both',
+                dischargecoeff=uweir.dischargecoeff                
+            )  
+     
     def weirs_from_hydamo(self, weirs, yz_profiles=None, parametrised_profiles=None, afsluitmiddel=None, sturing=None):
         """
         Method to convert dflowfm weirs from hydamo weirs.
@@ -108,8 +211,7 @@ class StructuresIO:
                 id=uweir.code,
                 branchid=uweir.branch_id,
                 chainage=uweir.branch_offset,                
-                crestlevel=uweir.laagstedoorstroomhoogte,                
-                numlevels=uweir.numlevels,
+                crestlevel=uweir.laagstedoorstroomhoogte,
                 yvalues=uweir.yvalues,
                 zvalues=uweir.zvalues,
                 allowedflowdir='both',
@@ -137,6 +239,34 @@ class StructuresIO:
                 outletlosscoeff=bridge.uittreeverlies,
                 frictiontype=hydamo_to_dflowfm.roughness_gml[bridge.ruwheidstypecode],
                 frictionvalue=bridge.ruwheidswaarde
+            )
+
+    def culverts_from_datamodel(self, culverts):
+        """
+        Method to convert dflowfm orifices from datamodel.
+        """
+
+        # Add to dict
+        for culvert_idx, culvert in culverts.iterrows():
+            self.structures.add_culvert(
+                id=culvert.id,
+                name=culvert.name if 'name' in culvert.index else np.nan,
+                branchid=culvert.branch_id,
+                chainage=culvert.branch_offset,
+                leftlevel=culvert.leftlevel,
+                rightlevel=culvert.rightlevel,
+                crosssection=culvert.crosssectiondefinitionid,
+                length=culvert.geometry.length if 'geometry' in culvert.index else culvert.length,
+                inletlosscoeff=culvert.inletlosscoeff,
+                outletlosscoeff=culvert.outletlosscoeff,
+                allowedflowdir='both',
+                valveonoff=0,
+                numlosscoeff=0,
+                valveopeningheight=np.nan,
+                relopening=np.nan,
+                losscoeff=np.nan,
+                frictiontype=culvert.frictiontype,
+                frictionvalue=culvert.frictionvalue
             )
             
 
@@ -190,6 +320,64 @@ class CrossSectionsIO:
 
     def __init__(self, crosssections):
         self.crosssections = crosssections
+
+    def from_datamodel(self, crsdefs=None, crslocs=None):
+        """"
+        From parsed data models of crsdefs and crs locs
+        """
+
+        if crslocs is not None:
+            for crsloc_idx, crsloc in crslocs.iterrows():
+                # add location
+                self.crosssections.add_crosssection_location(branchid=crsloc['branch_id'],
+                                                             chainage=crsloc['branch_offset'],
+                                                             shift=crsloc['shift'],
+                                                             definition=crsloc['crosssectiondefinitionid'])
+
+        if crsdefs is not None:
+            crsdefs = crsdefs.drop_duplicates(subset=['crosssectiondefinitionid'])
+            for crsdef_idx, crsdef in crsdefs.iterrows():
+                # Set roughness value on default if cross-section has non defined (e.g. culverts)
+                roughtype = crsdef['frictionid'].split('_')[0] if isinstance(crsdef['frictionid'], str) else 'Chezy'
+                roughval = float(crsdef['frictionid'].split('_')[-1]) if isinstance(crsdef['frictionid'], str) else 45
+                # add definition
+                if crsdef['type'] == 'circle':
+                    self.crosssections.add_circle_definition(diameter=crsdef['diameter'],
+                                                             roughnesstype=roughtype,
+                                                             roughnessvalue=roughval,
+                                                             name=crsdef['crosssectiondefinitionid'])
+                elif crsdef['type'] == 'rectangle':
+                    self.crosssections.add_rectangle_definition(height=crsdef['height'],
+                                                                width=crsdef['width'],
+                                                                closed=crsdef['closed'],
+                                                                roughnesstype=roughtype,
+                                                                roughnessvalue=roughval,
+                                                                name=crsdef['crosssectiondefinitionid'])
+
+                elif crsdef['type'] == 'trapezium':
+                    self.crosssections.add_trapezium_definition(slope=(crsdef['t_width'] - crsdef['width'])/2/crsdef['height'],
+                                                                maximumflowwidth=crsdef['t_width'],
+                                                                bottomwidth=crsdef['width'],
+                                                                closed=crsdef['closed'],
+                                                                roughnesstype=roughtype,
+                                                                roughnessvalue=roughval,
+                                                                name=crsdef['crosssectiondefinitionid'])
+                    raise NotImplementedError
+                elif crsdef['type'] == 'zw':
+                    self.crosssections.add_zw_definition(numLevels=crsdef["numlevels"],
+                                                         levels=crsdef["levels"],
+                                                         flowWidths=crsdef["flowwidths"],
+                                                         totalWidths=crsdef["totalwidths"],
+                                                         roughnesstype=roughtype,
+                                                         roughnessvalue=roughval,
+                                                         name=crsdef['crosssectiondefinitionid'])
+
+                elif crsdef['type'] == 'yz':
+                    # TODO BMA: add yz
+                    raise NotImplementedError
+
+                else:
+                    raise NotImplementedError
 
     def from_hydamo(self, dwarsprofielen, parametrised=None, branches=None):
         """
@@ -406,7 +594,7 @@ class ExternalForcingsIO:
                 }
             else:
                 if lateral_discharges is None:
-                    logger.warning(f'No lateral_discharges provided. {lateral.code} expects them. Skipping.')
+                    logger.warning(f'No lateral_discharges provied. {lateral.code} expects them. Skipping.')
                     continue
                 else:
                     if lateral.code not in lateral_discharges.columns:
@@ -421,6 +609,27 @@ class ExternalForcingsIO:
                     'branchid': lateral.branch_id,
                     'branch_offset': str(lateral.branch_offset), 
                     'timeseries': series            
-                }                                   
-        
-        
+                }
+
+
+class StorageNodesIO:
+
+    def __init__(self, storagenodes):
+        self.storagenodes = storagenodes
+
+    def storagenodes_from_datamodel(self, storagenodes):
+        """"From parsed data model of storage nodes"""
+        for storagenode_idx, storagenode in storagenodes.iterrows():
+            self.storagenodes.add_storagenode(
+                id=storagenode.id,
+                name=storagenode.name if 'name' in storagenode.index else np.nan,
+                usestreetstorage=storagenode.usestreetstorage,
+                nodetype='unspecified',
+                nodeid=storagenode.nodeid,
+                usetable='false',
+                bedlevel=storagenode.bedlevel,
+                area=storagenode.area,
+                streetlevel=storagenode.streetlevel,
+                streetstoragearea=storagenode.streetstoragearea,
+                storagetype=storagenode.storagetype
+            )
