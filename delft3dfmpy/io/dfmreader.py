@@ -231,7 +231,7 @@ class StructuresIO:
                 branchid=bridge.branch_id,
                 chainage=bridge.branch_offset,
                 length=bridge.lengte,
-                bedlevel=bridge.bedlevel,
+                shift=bridge.shift,
                 upperheight=bridge.hoogtebovenzijde,
                 lowerheight=bridge.hoogteonderzijde,                
                 crosssection=bridge.crosssection,
@@ -362,7 +362,7 @@ class CrossSectionsIO:
                                                                 roughnesstype=roughtype,
                                                                 roughnessvalue=roughval,
                                                                 name=crsdef['crosssectiondefinitionid'])
-                    raise NotImplementedError
+                    
                 elif crsdef['type'] == 'zw':
                     self.crosssections.add_zw_definition(numLevels=crsdef["numlevels"],
                                                          levels=crsdef["levels"],
@@ -458,7 +458,7 @@ class CrossSectionsIO:
                         bottomwidth=css['bottomwidth'],
                         closed=css['closed'],
                         roughnesstype=css['ruwheidstypecode'],
-                        roughnessvalue=css['ruwheidswaarde']
+                        roughnessvalue=css['ruwheidswaarde']                        
                     ) 
     
                 # Add location
@@ -507,7 +507,7 @@ class CrossSectionsIO:
                             width=css['width'],
                             closed=css['closed'],
                             roughnesstype=css['ruwheidstypecode'],
-                            roughnessvalue=css['ruwheidswaarde'],
+                            roughnessvalue=css['ruwheidswaarde'],                           
                             name=strucid,                        
                         )
         
@@ -519,6 +519,7 @@ class CrossSectionsIO:
                             closed=css['closed'],
                             roughnesstype=css['ruwheidstypecode'],
                             roughnessvalue=css['ruwheidswaarde'],
+                            bottomlevel=css['bottomlevel'],
                             name=strucid
                         ) 
                         

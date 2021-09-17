@@ -1,31 +1,64 @@
-What is new in version 1.1.4
+Release notes delft3dfmpy 
 
-Bug fixes
-- dfm.py
-	- add_boundary_condition: pd.datetime.strftime() fixed 00: (hours) were missing, not accepted by D-Hydro interface 
+----------------------------------------------------------------------------------------------------------------------
+ v1.2.0: September, 2021
 
+This release of delft3dfmpy is intended to accompany the release of D-Hydro suite v1.0.0.
 
-What is new in version 0.2.0
+Updates:
+- improvement in treatment of RR-FM laterals: when boundaries are not linked to any RR-nodes (e.g. in small (urban only) catchments where all the area is treated in a sewer area), they are removed from the boundaries, and the FM-lateral is switched to a time series lateral (if one is available).
+- Bedlevels of bridges are now set in the profile definition. The bridge defintion contains a 'shift' parameter which is set to 0. Bridge crosssections need to be either of type yx or parameterized. Closed profiles cannot be used, in that case the bridge will need to be schematized as a culvert.
+- Extra parameters were added to the MDU-file
+- AAF parameter removed from PAVED definition
+- GW parameter in UNPAVED changed to GA
+- support for storage nodes is implemented. 
+- IDs for 1d-network nodes, and therefore nodeids of boundaries changed
+- initial conditions are now directly placed in the 'fm' folder and no longer in separate subfolder
+- header of the file BoundaryConditions.bc updated
+- zonalstats_alltouched argument: documentation incorrectly said that only pixels that are entirely inside the polygon are taken into account. It should say that pixels of which the centroids are inside the polygon are taken into account.
 
-Bug fixes
-- Spelling of 'parametrised' is harmonised throughout the package and notebook;
-- node coordinates for the 1D-connection nodes were not correctly written to the netcdf, now they are;
+Note that some things do not work correctly with the GUI yet:
+ - 2d observations points cannot be imported
+ - structure time series, currently written in the BC-file, are not imported and should be provided through RTC (not supported yet)
+ - Initial condition by polygon does not work correctly
+ - Time series for seepage are not supported
+ - Some settings in the RR-model, that can considerably affect results, are not imported. Most importantly this pertains to 'UnpavedPercolationLikeSobek213’.
+ 
+ ----------------------------------------------------------------------------------------------------------------------
+ v1.1.3: March 2021
+ 
+Minor modifications and bug fixes:
 
-1D
-- new structures added:
-	- bridges (must have an associated crossection);
-	- universal weirs (weir is universal if it has an associated crossection);
-	- orifices;
-	- compound structures;
-- culvert length is derived from HyDAMO setting in the GML file instead of the line geometry;
-- pumps now expect their margins in m+NAP instead of cm. I.e., the margins are now used directly to set the start/stoplevelsuctionside. Previously they were related to the 'streefwaarde';
-- boundary conditions can be added to the model as 'dfmmodel.external_forcings.io.from_hydamo(hydamo.boundary_conditions)' instead of running 'add_boundary_condition' in a loop. This does not work (yet) for time series, only for constant boundary conditions;
-- the module was breaking down when pandas was updated to version 1.0.1. Workarounds were immplemented to avoid this.
-- the old format .ext-file has been abandoned; all laterals and boundary conditions are now in the new format .ext file. Initial conditions are referred to from the MDU file.
+structure time series now imlemented in *.bc format.
+structure time series can be provided for weir crestlevels, orifice lower gate edges and culvert valves.
+time series starttime independent of refdate in MDU
+bug fixed in the path of initial condition .pol file
+observations points can now be provided as both shapely Point() objects and (x,y)-tuples
+notebooks extended to accomodate and test these features
 
-2D
-- method 'from_netcdf' added to mesh2d, so a more complex mesh geometry can be added from existing netcdf;
+----------------------------------------------------------------------------------------------------------------------
+ v1.1.2: January 2021
+Bug fix: land use type 12 (bare soil) was (incorrectly) not taken into account.
+2D grid generation considerably speeded up.
 
-RR
-- functionality has been implemented to generate also the RR-components of a coupled RR-FM D-HYDRO model.
+----------------------------------------------------------------------------------------------------------------------
+ v.1.1.1: January 2021
+Added logging and progress bars to RR
 
+----------------------------------------------------------------------------------------------------------------------
+ v1.1.0: December 2020
+Added general functionality, e.g. option to incorporate OSM data.
+
+----------------------------------------------------------------------------------------------------------------------
+ v1.0.2: December 2021
+Optimized meteo-raster processing for speed; enabled multi-polygon intersections for paved areas in RR.
+
+----------------------------------------------------------------------------------------------------------------------
+ v1.0.1: November 2021
+constant boundaries are not written as time series anymore
+removed netcdf output option from RR model
+input instance check implemented
+
+----------------------------------------------------------------------------------------------------------------------
+ v.1.0.: November 2020
+Initial release of delft3dfmpy.

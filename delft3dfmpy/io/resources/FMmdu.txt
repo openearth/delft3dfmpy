@@ -69,6 +69,13 @@ Numtopsig                         = 0                   # Nr of sigmalayers in t
 SigmaGrowthFactor                 = 1.                  # layer thickness growth factor from bed up
 dxDoubleAt1DEndNodes              = true                # Extend endnodes with half ∆x.
 AllowBndAtBifurcation             = 1                   # Allow boundary nodes to be placed at connection of 2 channels (1 to allow boundaries, 0 to ignore boundary at bifurcation. 
+ChangeVelocityAtStructures        = true                # Use the upstream velocity at culverts in stead of the velocity at the culverts, when calculating the cell centered flow velocities
+ChangeStructureDimensions         = false                # Change the structure dimensions in case these are inconsistent with the channel dimensions
+
+[volumeTables]
+useVolumeTables                   = 0                   # Use volume tables for 1D grid cells (1: yes, 0 = no)
+increment                         = 0.2                 # The height increment for the volume tables
+useVolumeTableFile                = 0                   # Read and write the volume table from/to file (1: yes, 0: no).
 
 [numerics]
 CFLMax                            = 0.7                 # Maximum Courant number
@@ -97,6 +104,8 @@ AntiCreep                         = 0                   # Flag for AntiCreep opt
 Maxwaterleveldiff                 = 0.                  # upper bound (in m) on water level changes, <= 0: no bounds
 Maxvelocitydiff                   = 0.                  # upper bound (in m/s) on velocity changes, <= 0: no bounds
 Epshu                             = 1.d-4               # Threshold water depth for wet and dry cells
+EpsMaxLev                         = 1.d-4               # Sequential performance
+EpsMaxLevm                        = 1.d-4               # Sequential performance
 
 [physics]
 UnifFrictCoef                     = 0.03                  # Uniform friction coefficient (0: no friction)
@@ -194,10 +203,13 @@ Wrimap_chezy                      = 1                   # Write the chezy roughn
 Wrimap_turbulence                 = 1                   # Write vicww, k and eps to map file (1: yes, 0: no)
 Wrimap_wind                       = 1                   # Write wind velocities to map file (1: yes, 0: no)
 Wrimap_tidal_potential            = 1                   # Write tidal potential to map file (1: yes, 0: no)
+Wrimap_flow_analysis              = 0                   # Write flow analysis parameters to the map file (1:yes,  0:no).
 Wrihis_structure_compound         = 1                   # Write output for compound structures
 MapOutputTimeVector               =                     # File (*.mpt) containing fixed map output times (s) w.r.t. RefDate
 FullGridOutput                    = 0                   # Full grid output mode (0: compact, 1: full time-varying grid data)
 EulerVelocities                   = 0                   # Euler velocities output (0: GLM, 1: Euler velocities)
 Wrirst_bnd                        = 1                   # Write waterlevel, bedlevel and coordinates of boundaries to restart files
 Writepart_domain                  = 1                   # Write partition domain info. for postprocessing
-
+NcFormat                          = 3                   # Format for all NetCDF output files (3: classic, 4: NetCDF4+HDF5)
+NcNoUnlimited                     = 0                   # Write full-length time-dimension instead of unlimited dimension (1: yes, 0: no). (Might require NcFormat=4.)
+NcNoForcedFlush                   = 0                   # Do not force flushing of map-like files every output timestep (1: yes, 0: no)
