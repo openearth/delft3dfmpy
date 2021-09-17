@@ -66,6 +66,7 @@ Python package ``delft3dfmpy``
     Note that in this way the most recent version that is available on PyPi (see releases) is installed. It is also possible to force installation of older versions. For example, to install version 1.0.0 (the 'frozen' version, or the initial release):
     
         ``python -m pip install delft3dfmpy=1.0.0``
+
      Since that version, however, no significant features have been implemented, but there were some minor improvements and bug fixes.
      
 2.  If the command prompt states ``Successfully built delft3dfmpy`` then installation is succesful.
