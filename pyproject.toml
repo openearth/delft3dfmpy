@@ -5,6 +5,7 @@ build-backend = "flit_core.buildapi"
 [tool.flit.metadata]
 module = "delft3dfmpy"
 author = "Deltares - HKV"
+author-email = "hurkmans@hkv.nl"
 home-page = "https://github.com/openearth/delft3dfmpy"
 classifiers = ["License :: OSI Approved :: MIT License"]
 description-file = "README.rst"
