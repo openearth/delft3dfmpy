@@ -21,3 +21,4 @@ notebooks/tempgrid_net.nc
 data/testmodel_fmonly/*
 notebooks/unstruc.dia
 .vscode/launch.json
+.vscode/settings.json
