@@ -190,7 +190,7 @@ def generate_paved( catchments=None,
         
         # initialize the array of paved nodes, which should contain a node for all catchments and all overflows
         paved_drr.set_data( pd.DataFrame(np.zeros((len(catchments)+len(overflows),10)), 
-columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat','px', 'py', 'boundary'], dtype="str"), index_col='code')
+                            columns=['code','area','mvlevel', 'streetstor', 'sewstor', 'pumpcap','meteostat','px', 'py', 'boundary'], dtype="str"), index_col='code')
         paved_drr.index = catchments.code.append(overflows.code)
         
         # find the paved area in the sewer areas
@@ -309,7 +309,7 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
     all_touched=False if zonalstats_alltouched is None else zonalstats_alltouched
         
     lu_rast, lu_affine = read_raster(landuse, static=True)
-    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=all_touched)   
+    lu_counts = zonal_stats(catchments, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)   
     rast, affine = read_raster(surface_level, static=True)
     mean_elev = zonal_stats(catchments, rast, affine=affine, stats="median", all_touched=all_touched) 
     # optional rasters
@@ -380,15 +380,35 @@ def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=N
         ow_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
     return ow_drr   
 
-def generate_boundary(boundary_nodes, catchments, overflows=None):
+def generate_boundary(boundary_nodes, catchments, drrmodel, overflows=None):
     """
     Method to create boundary  nodes for RR.
 
     """
+    # find the catchments that have no area attached and no nodes that will be attached to the boundary        
+    not_occurring = []
+    for cat in catchments.itertuples():
+        occurs = False
+        if cat.lateraleknoopcode in [val['boundary_node'] for val in drrmodel.unpaved.unp_nodes.values() if np.sum([float(d) for d in val['ar'].split(' ')]) > 0.0]:
+            occurs = True
+        if cat.lateraleknoopcode in [val['boundary_node'] for val in drrmodel.paved.pav_nodes.values() if float(val['ar']) > 0.0]:
+            occurs = True
+        if cat.lateraleknoopcode in [val['boundary_node'] for val in drrmodel.greenhouse.gh_nodes.values() if float(val['ar']) >  0.0]:
+            occurs = True
+        if cat.lateraleknoopcode in [val['boundary_node'] for val in drrmodel.openwater.ow_nodes.values() if float(val['ar']) >  0.0]:
+            occurs = True                       
+        if occurs== False:
+            not_occurring.append(cat.lateraleknoopcode) 
+    
+    for i in not_occurring:
+        catchments.drop(catchments[catchments.lateraleknoopcode==i].code.iloc[0], axis=0, inplace=True)
+        
     if overflows is not None:
         numlats = len(catchments)+len(overflows)
     else:
-        numlats = len(catchments)
+        numlats = len(catchments)        
+    
+    
     bnd_drr = ExtendedDataFrame(required_columns=['code'])
     bnd_drr.set_data( pd.DataFrame(np.zeros((numlats,3)), 
                                        columns=['code', 'px', 'py'], dtype="str"), index_col='code')                                        
@@ -411,7 +431,7 @@ def generate_boundary(boundary_nodes, catchments, overflows=None):
             bnd_drr.at[ovf.code, 'code'] = ovf.code
             bnd_drr.at[ovf.code, 'px'] = str(ovf.geometry.coords[0][0])
             bnd_drr.at[ovf.code, 'py'] = str(ovf.geometry.coords[0][1])       
-    return bnd_drr    
+    return bnd_drr                   
 
 def generate_seepage(catchments, seepage_folder):    
     """

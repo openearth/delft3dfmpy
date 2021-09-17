@@ -115,7 +115,7 @@ class DFlowRRWriter:
                         f.write('NODE id \''+dct['id']+'\' nm \''+dct['id']+'\' ri \'-1\' mt 1 \'21\' nt 46 ObID \'OW_PRECIP\' px '+dct['px']+' py '+dct['py']+' node\n')
                       
             # Boundary_nodes
-            if any(self.rrmodel.external_forcings.boundary_nodes):
+            if any(self.rrmodel.external_forcings.boundary_nodes):               
                 for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():
                     f.write('NODE id \''+dct['id']+'\' nm \''+dct['id']+'\' ri \'-1\' mt 1 \'6\' nt 78 ObID \'SBK_SBK-3B-NODE\' px '+dct['px']+' py '+dct['py']+' node\n')
                     
@@ -152,7 +152,7 @@ class DFlowRRWriter:
                 
         # BoundaryConditions.bc
         filepath = os.path.join(self.output_dir, 'BoundaryConditions.bc')
-        header = {'majorVersion':'1', 'minorVersion':'0', 'fileType':'boundConds'}
+        header = {'fileVersion': '1.01', 'fileType':'boundConds'}
         with open(filepath, 'w') as f:                        
             self._write_dict(f, header, 'General','\n')            
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
@@ -173,7 +173,7 @@ class DFlowRRWriter:
             with open(filepath, 'w') as f:
                 for _, dct in self.rrmodel.unpaved.unp_nodes.items():
                     if np.sum([float(d) for d in dct['ar'].split(' ')]) > 0.0:                    
-                        f.write('UNPV id \''+dct['id']+'\' na '+dct['na']+' gw '+dct['ga']+' ar '+dct['ar']+' lv '+dct['lv']+' co '+dct['co']+' su '+dct['su']+' sd \'sto_'+dct['id']+'\' ic \'inf_'+dct['id']+'\' bt '+dct['bt']+' ed \''+dct['ed']+'\' sp \''+dct['sp']+'\' ig 0 '+dct['ig']+' mg '+dct['mg']+' gl '+dct['gl']+' is '+dct['is']+' ms \''+dct['ms']+'\' unpv\n')                    
+                        f.write('UNPV id \''+dct['id']+'\' na '+dct['na']+' ga '+dct['ga']+' ar '+dct['ar']+' lv '+dct['lv']+' co '+dct['co']+' su '+dct['su']+' sd \'sto_'+dct['id']+'\' ic \'inf_'+dct['id']+'\' bt '+dct['bt']+' ed \''+dct['ed']+'\' sp \''+dct['sp']+'\' ig 0 '+dct['ig']+' mg '+dct['mg']+' gl '+dct['gl']+' is '+dct['is']+' ms \''+dct['ms']+'\' unpv\n')                    
                 
             filepath = os.path.join(self.output_dir, 'UNPAVED.STO')
             with open(filepath, 'w') as f:            
@@ -189,7 +189,8 @@ class DFlowRRWriter:
     
             filepath = os.path.join(self.output_dir, 'UNPAVED.ALF')
             with open(filepath, 'w') as f:            
-                for _, dct in self.rrmodel.unpaved.ernst_defs.items():                    
+                for _, dct in self.rrmodel.unpaved.ernst_defs.items():        
+                    if np.sum([float(d) for d in self.rrmodel.unpaved.unp_nodes[_]['ar'].split(' ')]) > 0.0:
                         f.write('ERNS id \''+dct['id']+'\' nm \''+dct['id']+'\' cvi '+dct['cvi']+' cvo 0 '+dct['cvo']+' cvs '+dct['cvs']+' lv '+dct['lv']+' erns\n')                    
                                                 
             filepath = os.path.join(self.output_dir, 'UNPAVED.SEP')
@@ -216,7 +217,7 @@ class DFlowRRWriter:
             with open(filepath, 'w') as f:          
                 for _, dct in self.rrmodel.paved.pav_nodes.items():                    
                     if float(dct['ar']) > 0.0:                    
-                        f.write('PAVE id \''+dct['id']+'\' ar '+dct['ar']+' lv '+dct['lv']+' sd \'sto_'+dct['id']+'\' ss 0 qc 0 '+dct['qc']+' 0 qo 1 0 ms \''+dct['ms']+'\' aaf 1 is '+dct['is']+' np '+dct['np']+' dw \'Def_DWA\' ro '+dct['ro']+' ru '+dct['ru']+' qh \'\' pave\n')
+                        f.write('PAVE id \''+dct['id']+'\' ar '+dct['ar']+' lv '+dct['lv']+' sd \'sto_'+dct['id']+'\' ss 0 qc 0 '+dct['qc']+' 0 qo 1 0 ms \''+dct['ms']+'\' is '+dct['is']+' np '+dct['np']+' dw \'Def_DWA\' ro '+dct['ro']+' ru '+dct['ru']+' qh \'\' pave\n')
                                                                                                                                                                                                            
             filepath = os.path.join(self.output_dir, 'PAVED.STO')                       
             with open(filepath, 'w') as f:           
@@ -377,8 +378,8 @@ class DFlowRRWriter:
                  f.write('pause\n')
 
         # coupling XML
-        DFM_comp_name = 'CoupledTest1_DFM'
-        RR_comp_name = 'CoupledTest1_RR'
+        DFM_comp_name = 'DFM'
+        RR_comp_name = 'RR'
         with open(os.path.join(self.output_dir, '../dimr_config.xml'),'w') as f:       
                  f.write('<?xml version="1.0" encoding="utf-8" standalone="yes"?>\n')
                  f.write('<dimrConfig xmlns="http://schemas.deltares.nl/dimr" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.deltares.nl/dimr http://content.oss.deltares.nl/schemas/dimr-1.2.xsd">\n')

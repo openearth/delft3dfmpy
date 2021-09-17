@@ -218,9 +218,9 @@ class ExternalForcings:
         nodes1d = np.asarray([n.split('_') for n in self.dflowfmmodel.network.mesh1d.description1d['network_node_ids']], dtype='float')
         get_nearest = KDTree(nodes1d)
         distance, idx_nearest = get_nearest.query(pt)
-        nodeid = f'{nodes1d[idx_nearest][0]:g}_{nodes1d[idx_nearest][1]:g}'
+        nodeid = f'{nodes1d[idx_nearest][0]:6f}_{nodes1d[idx_nearest][1]:6f}'
         
-        # # If branch is not given explicitly, find the nearest
+        # # If   branch is not given explicitly, find the nearest
         # if branchid is None:
         #     branchid = self.dflowfmmodel.network.branches.distance(pt).idxmin()
 
@@ -462,7 +462,7 @@ class CrossSections:
 
         return name
 
-    def add_trapezium_definition(self, slope, maximumflowwidth, bottomwidth, closed, roughnesstype, roughnessvalue, name=None):
+    def add_trapezium_definition(self, slope, maximumflowwidth, bottomwidth, closed, roughnesstype, roughnessvalue, bottomlevel=None, name=None):
         """
         Add rectangle cross section. The cross section name is derived from the shape and roughness,
         so similar cross sections will result in a single definition.
@@ -473,12 +473,15 @@ class CrossSections:
         
         # Get roughnessname
         roughnessname = self.get_roughnessname(roughnesstype, roughnessvalue)
-
+        
+        if bottomlevel is None:
+            bottomlevel = 0.0
+            
         if not closed:
-            levels = '0 100'
-            flowwidths = f'{bottomwidth:.2f} {bottomwidth + 2 * slope * 100:.2f}'
+            levels = f'{bottomlevel} 100'
+            flowwidths = f'{bottomwidth:.2f} {bottomwidth + 2.*((100.0-bottomlevel)*slope):.2f}'
         else:
-            levels = f'0 {(maximumflowwidth - bottomwidth) / (2 * slope):.2f}'
+            levels = f'0 {((maximumflowwidth - bottomwidth)/2.0) / slope:.2f}'
             flowwidths = f'{bottomwidth:.2f} {maximumflowwidth:.2f}'
 
         # Add to dictionary
@@ -1752,7 +1755,7 @@ class Structures:
             'useVelocityHeight': usevelocityheight            
         })
     
-    def add_bridge(self, id, branchid, chainage, length, bedlevel, upperheight, lowerheight,crosssection,
+    def add_bridge(self, id, branchid, chainage, length, shift, upperheight, lowerheight,crosssection,
                    inletlosscoeff, outletlosscoeff, name=np.nan, allowedflowdir='both',
                    frictiontype='Strickler', frictionvalue=75.0):
         """
@@ -1777,7 +1780,7 @@ class Structures:
             "chainage": chainage,            
             "allowedFlowDir": allowedflowdir,
             "csDefId": crosssection,
-            "bedLevel": bedlevel,
+            "shift": shift,
             "inletLossCoeff": inletlosscoeff,
             "outletLossCoeff": outletlosscoeff,            
             "frictionType": frictiontype,

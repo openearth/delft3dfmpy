@@ -20,10 +20,10 @@ class DFlowFMWriter:
     # versioning info
     version = { 'number'        : delft3dfmpy.__version__,
                 'date'          :  datetime.datetime.strftime(datetime.datetime.utcnow(),'%Y-%m-%dT%H:%M:%S.%fZ'),
-                'dfm_version'   : '1.2.105.67228M',
-                'dimr_version'  : '2.13.02.67836',
-                'suite_version' : '(Beta) 0.9.6.51435'} 
-   
+                'dfm_version'   : 'Deltares, D-Flow FM Version 1.2.124.69571M',
+                'dimr_version'  : 'Deltares, DIMR_EXE Version 2.00.00.69571M (Win64)',
+                'suite_version' : 'D-HYDRO Suite 1D2D (1.0.0.53506),'} 
+     
     def __init__(self, dflowfmmodel, output_dir, name):
         self.dflowfmmodel = dflowfmmodel
         self.output_dir = os.path.join(output_dir, 'fm')
@@ -145,14 +145,14 @@ class DFlowFMWriter:
     def write_storagenodes(self):
         filename = 'storagenodes.ini'
         filepath = os.path.join(self.output_dir, filename)
-        with open(filepath, 'w') as f:
-            self._write_header(f, filetype='storageNodes', fileversion=2.00)
-
-            if any(self.dflowfmmodel.storagenodes.storagenodes):
+        if any(self.dflowfmmodel.storagenodes.storagenodes):
+        
+            with open(filepath, 'w') as f:
+                self._write_header(f, filetype='storageNodes', fileversion=2.00)            
                 for _, dct in self.dflowfmmodel.storagenodes.storagenodes.items():
                     self._write_dict(f, dct=dct, header='StorageNode')
 
-        self.mdu_parameters['StorageNodeFile'] = filename
+            self.mdu_parameters['StorageNodeFile'] = filename
 
     def write_crosssection_locations(self):
         # Write cross section locations
@@ -202,7 +202,7 @@ class DFlowFMWriter:
         filepath = os.path.join(self.output_dir, 'structure.ini')
         with open(filepath, 'w') as f:
             # write header
-            self._write_header(f, filetype='structure', fileversion=2.00)
+            self._write_header(f, filetype='structure', fileversion=3.00)
 
             # General structures
             if any(self.dflowfmmodel.structures.generalstructures):
@@ -392,7 +392,7 @@ class DFlowFMWriter:
         """
 
         # Create folder for initial conditions if it does not exist yet
-        initcondfolder = 'initialconditions'
+        initcondfolder = '.'
 
         # initial files are not in the ext-file in the new format...
         self.dflowfmmodel.mdu_parameters['IniFieldFile'] = initcondfolder+'/initialFields.ini'
@@ -600,9 +600,8 @@ class DFlowFMWriter:
                 self._write_header(f, filetype='obsPoints', fileversion=2.00)
                 self.dflowfmmodel.observation_points.drop('geometry', axis=1, inplace=True)
                 if self.dflowfmmodel.observation_points['locationType'].str.count("1d").sum()>0:
-                    obs1d = self.dflowfmmodel.observation_points[self.dflowfmmodel.observation_points['locationType']=='1d']
-                    if self.dflowfmmodel.observation_points['locationType'].str.count("2d").sum()>0:
-                        obs1d.drop(['x','y'], axis=1, inplace=True)
+                    obs1d = self.dflowfmmodel.observation_points[self.dflowfmmodel.observation_points['locationType']=='1d']                    
+                    obs1d.drop(['x','y'], axis=1, inplace=True)
                     obs1ddct = obs1d.to_dict(orient='row')
                     for dct in obs1ddct:
                         self._write_dict(f, dct=dct, header='ObservationPoint')

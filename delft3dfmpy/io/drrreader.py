@@ -226,7 +226,7 @@ class OpenwaterIO:
         None.
 
         """
-        geconverteerd = hydamo_to_dflowrr.generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=None)
+        geconverteerd = hydamo_to_dflowrr.generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=zonalstats_alltouched)
 
         for ow in geconverteerd.itertuples():
              self.openwater.add_openwater(
@@ -311,7 +311,7 @@ class ExternalForcingsIO:
                  series = cat[1] 
             )
             
-    def boundary_from_input(self, boundary_nodes, catchments, overflows=None):    
+    def boundary_from_input(self, boundary_nodes, catchments, drrmodel, overflows=None):    
         """
         Method to generate RR boundary nodes from input.
 
@@ -329,7 +329,7 @@ class ExternalForcingsIO:
         None.
 
         """
-        geconverteerd = hydamo_to_dflowrr.generate_boundary( boundary_nodes, catchments, overflows=overflows)
+        geconverteerd = hydamo_to_dflowrr.generate_boundary( boundary_nodes, catchments, drrmodel, overflows=overflows)
         for bn in geconverteerd.itertuples():
              self.external_forcings.add_boundary_node(
                  id = bn.code,
