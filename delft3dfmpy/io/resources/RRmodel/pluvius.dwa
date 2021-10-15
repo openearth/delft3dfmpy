@@ -1,0 +1,5 @@
+DWA id 'Default_DWA' nm 'Default_DWA' do 1 wc 12 wd 120 wh 1.5 1.5 1.5 1.5 1.5 3 4 5 6 6.5 7.5 8.5 7.5 6.5 6 5 5 5 4 3.5 3 2.5 2 2 dwa
+DWA id 'Inwoner' nm 'Inwoner' do 2 wc 5 wd 120 wh 1.5 1.5 1.5 1.5 1.5 3 4 5 6 6.5 7.5 8.5 7.5 6.5 6 5 5 5 4 3.5 3 2.5 2 2 dwa
+DWA id 'Bedrijf' nm 'Bedrijf' do 2 wc 2.5 wd 60 wh 0 0 0 0 0 0 0 0 10 10 10 10 10 10 10 10 10 10 0 0 0 0 0 0 dwa
+DWA id 'LatDeb1' nm 'LatDeb1' do 1 wc 11016 wd 264384 wh 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 dwa
+DWA id 'LatDeb2' nm 'LatDeb2' do 1 wc 11988 wd 287712 wh 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 dwa

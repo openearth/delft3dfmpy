@@ -133,7 +133,3 @@
 'wqrtc.his'                               *121. coupling WQ salt RTC
 'BoundaryConditions.bc'                           *122. RR Boundary conditions file for SOBEK3
 'ASCIIRestartOpenDA.txt'                          *123. Optional RR ASCII restart (test) for OpenDA
-'CacheFile.txt'                   *124. Optional LGSI cachefile
-'Precipitation_RR.nc'             *125. Optional meteo NetCdf timeseries inputfile rainfall
-'Evaporation_RR.nc'               *126. Optional meteo NetCdf timeseries inputfile evaporation
-'Precipitation_RR.nc'               *127. Optional meteo NetCdf timeseries inputfile temperature (only for RR-HBV)

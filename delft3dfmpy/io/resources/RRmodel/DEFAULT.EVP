@@ -1,0 +1,7 @@
+*Verdampingsfile
+*Meteo data: evaporation intensity in mm/day
+*First record: start date, data in mm/day
+*Datum (year month day), verdamping (mm/dag) voor elk weerstation
+*jaar maand dag verdamping[mm]
+2020    1    1    0.16 
+2020    1    2    0 
