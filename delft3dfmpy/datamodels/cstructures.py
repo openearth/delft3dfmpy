@@ -2,6 +2,7 @@ from ctypes import POINTER, Structure, c_char, c_double, c_int
 import os
 
 import numpy as np
+import pandas as pd
 from shapely.geometry import LineString
 
 
@@ -49,7 +50,7 @@ class meshgeom(Structure):
         ('branchidx', POINTER(c_int)),
         ('branchoffsets', POINTER(c_double)),
         #('edge_branchidx', POINTER(c_int)),
-        #('edge_branchoffsets', POINTER(c_double)),        
+        #('edge_branchoffsets', POINTER(c_double)),
         ('nodex', POINTER(c_double)),
         ('nodey', POINTER(c_double)),
         ('nodez', POINTER(c_double)),
@@ -67,7 +68,7 @@ class meshgeom(Structure):
         """
         Constructor
         """
-        
+
         self.meshgeomdim = geometries
 
         # This dictionary contains some extra variables for 1d meshes
@@ -85,7 +86,7 @@ class meshgeom(Structure):
             'nodey': {'ctype': c_double, 'size': ['numnode'], 'allocated': False},
             'nodez': {'ctype': c_double, 'size': ['numnode'], 'allocated': False},
             'branchoffsets': {'ctype': c_double, 'size': ['numnode'], 'allocated': False},
-            'branchidx': {'ctype': c_int, 'size': ['numnode'], 'allocated': False},            
+            'branchidx': {'ctype': c_int, 'size': ['numnode'], 'allocated': False},
             #'edge_branchoffsets': {'ctype': c_double, 'size': ['numedge'], 'allocated': False},
             #'edge_branchidx': {'ctype': c_int, 'size': ['numedge'], 'allocated': False},
             'nnodex': {'ctype': c_double, 'size': ['nnodes'], 'allocated': False},
@@ -144,18 +145,18 @@ class meshgeom(Structure):
 
 
     def add_values(self, var, values):
-        
+
         # If not yet allocated, don't add but set
         if not self.is_allocated(var):
             self.set_values(var, values)
-        
+
         # Get old values
         old_values = self.get_values(var, size=(self.get_size(var)-len(values)))
-        
+
         # First allocate
         self.allocate(var)
         size = self.get_size(var)
-        
+
         if size != (len(values) + len(old_values)):
             raise ValueError(f'Size of values ({len(values) + len(old_values)}) does not match allocated size ({size})')
 
@@ -177,12 +178,12 @@ class meshgeom(Structure):
         # Get the counter offset for the nodes
         startnode = self.meshgeomdim.numnode
         startbranch = self.meshgeomdim.nbranches
-        
+
         # Add dimensions. Sum the new dimensions with the old ones
         for dimension in ['numnode', 'numedge', 'numface', 'nnodes', 'ngeometry', 'nbranches']:
             new = getattr(self.meshgeomdim, dimension) + getattr(geometries.meshgeomdim, dimension)
             setattr(self.meshgeomdim, dimension, new)
-        
+
         # Add variables. Add all new data
         for var in ['nodex', 'nodey', 'nodez', 'facex', 'facey', 'facez', 'nnodex', 'nnodey',
                     'nbranchlengths', 'nbranchorder', 'ngeopointx', 'ngeopointy', 'nbranchgeometrynodes']:
@@ -192,19 +193,19 @@ class meshgeom(Structure):
         # For variables with indexes. For the indexes, add the old start node
         for indexvar in ['edge_nodes', 'face_nodes', 'branchidx', 'branchoffsets']:
             if geometries.is_allocated(indexvar):
-                self.add_values(indexvar, [i + startnode for i in geometries.get_values(indexvar)]) 
+                self.add_values(indexvar, [i + startnode for i in geometries.get_values(indexvar)])
 
         # Network indexvar
         indexvar = 'nedge_nodes'
         if geometries.is_allocated(indexvar):
-            self.add_values(indexvar, [i + startbranch for i in geometries.get_values(indexvar)]) 
+            self.add_values(indexvar, [i + startbranch for i in geometries.get_values(indexvar)])
 
         # Network descriptive variables
         for var in ['network_node_ids', 'network_node_long_names', 'network_branch_ids',
                     'network_branch_long_names', 'mesh1d_node_ids', 'mesh1d_node_long_names']:
             self.description1d[var] += geometries.description1d[var]
-        
-        
+
+
     def process_1d_network(self):
         """
         Determine x, y locations of 1d network
@@ -219,7 +220,7 @@ class meshgeom(Structure):
         ngeometrynodes = self.get_values('nbranchgeometrynodes')
         branchids = self.get_values('branchidx', as_array=True)
         offsets = self.get_values('branchoffsets', as_array=True)
-        
+
         # Collect branches
         branches = {}
         schematised = {}
@@ -229,17 +230,29 @@ class meshgeom(Structure):
             linestring = LineString([ngeom.pop(0) for _ in range(nnodes)])
             branches[name.strip()] = linestring
             # Determine mesh node position on network branch
-            branchoffsets = offsets[branchids == (i + 1)]
-            meshcrds = [linestring.interpolate(offset).coords[0] for offset in branchoffsets]
-            crds.extend(meshcrds[:])
-            # Determine if a start or end coordinate needs to be added for constructing a complete LineString
-            if not np.isclose(branchoffsets[0], 0.0):
-                meshcrds = [linestring.coords[0]] + meshcrds
-            if not np.isclose(branchoffsets[-1], linestring.length):
-                meshcrds = meshcrds + [linestring.coords[-1]]
+            if np.sum(branchids == (i + 1)) > 0:
+                # there are mesh nodes on the branches (branch drawing up by offsets)
+                branchoffsets = offsets[branchids == (i + 1)]
+                meshcrds = [linestring.interpolate(offset).coords[0] for offset in branchoffsets]
+                # extend crds (add new mesh nodes to crds)
+                crds.extend(meshcrds[:])
+                # Determine if a start or end coordinate needs to be added for constructing a complete LineString
+                if not np.isclose(branchoffsets[0], 0.0):
+                    meshcrds = [linestring.coords[0]] + meshcrds
+                if not np.isclose(branchoffsets[-1], linestring.length):
+                    # check if end node already exist, avoid precision issue
+                    if linestring.coords[-1] != meshcrds[-1]:
+                        # (addtional meshes on branch, multiple edges) add a coordinates at the end to complete a LineString
+                        meshcrds = meshcrds + [linestring.coords[-1]]
+            else:
+                # there are no mesh nodes on the branches (branch that connect two existing mesh nodes)
+                meshcrds = linestring.coords[:] # because the pipe coords has been cleaned up in the generate_1dnetwork function, other wise [0] and [-1] should be used
+                # do not extend crds (mesh nodes already exist)
             schematised[name.strip()] = LineString(meshcrds)
 
         # Add values to mesh
+        import pandas as pd
+        crds = pd.Series(crds).drop_duplicates().values
         nodex, nodey = list(zip(*crds))
         self.set_values('nodex', nodex)
         self.set_values('nodey', nodey)
@@ -253,7 +266,7 @@ class meshgeom(Structure):
     def get_nodes(self):
         """
         Return nodes.
-        
+
         Returns
         -------
         np.ndarray
@@ -274,17 +287,17 @@ class meshgeom(Structure):
 
         Note that each nodes belongs to a single branch in the network.
         This can provide unexpected results on intersections.
-        
+
         Parameters
         ----------
         branchid : str or list
             Branchid for which to return the nodes.
-        
+
         Returns
         -------
         np.ndarray
             boolean array with True for nodes that are on the branch(es)
-        """        
+        """
         if branchid is None:
             return np.ones(len(self.get_values('nodex')), dtype=bool)
 
@@ -295,7 +308,7 @@ class meshgeom(Structure):
         branchidx = np.where(np.isin(self.description1d['network_branch_ids'], branchid))[0] + 1
         # Select which of the nodes are in the branches
         idx = np.isin(self.get_values('branchidx'), branchidx)
-        
+
         return idx
 
     def get_segments(self):
@@ -319,7 +332,7 @@ class meshgeom(Structure):
         """
 
         assert self.meshgeomdim.dim == 2
-        
+
         # Read nodes and links from src
         nodes = self.get_nodes()
 
@@ -333,11 +346,11 @@ class meshgeom(Structure):
             face_nodes = self.get_values('face_nodes', as_array=True)
             nanvalues = (face_nodes != -999).sum(axis=1).astype(int)
             unique = np.unique(nanvalues)
-            
+
             # If all cells have the same number of nodes
             if len(unique) == 1:
                 faces = nodes[face_nodes - 1]
-                
+
 
             # Else, combine a list for all nodes
             else:
@@ -350,13 +363,13 @@ class meshgeom(Structure):
 
             if geometry == 'exterior':
                 return faces
-            
+
             # Determine the centroids by averaging the exteriors
             if geometry == 'centroid':
                 return np.vstack([f.mean(axis=0) for f in faces])
-        
+
         else:
             raise ValueError(f'Geometry "{geometry}" not recognized. Pick "center", "centroid" or "exterior"')
-            
 
-        
+
+

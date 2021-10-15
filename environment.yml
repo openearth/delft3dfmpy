@@ -1,11 +1,12 @@
-name: delft3dfmpy
+name: delft3dfmpy-deltares_urban
 channels:
   - conda-forge
   - default
 dependencies:
-  - python=3.7.*
+  - python=3.8.*
   - git=2.30.0
   - pip=21.0
+  - conda-build
   - ipykernel=5.4.3
   - ipywidgets=7.6.3
   - geopandas=0.8.2
@@ -22,5 +23,9 @@ dependencies:
   - descartes=1.1.0
   - contextily=1.0.1
   - fire=0.4.0
+  - networkx=2.5.1
+  - contextily
+  - pygraphviz
+  - hydromt
   - pip:
     - hkvsobekpy==1.5

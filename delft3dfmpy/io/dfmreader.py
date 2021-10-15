@@ -218,6 +218,25 @@ class StructuresIO:
                 dischargecoeff=uweir.afvoercoefficient                
             )    
         
+    def bridges_from_datamodel(self, bridges):
+        """
+        Method to convert dflowfm bridges from datamodel bridges.
+        """
+        # Add to dict
+        for bridge in bridges.itertuples():
+            self.structures.add_bridge(
+                id=bridge.id,
+                branchid=bridge.branchid,
+                chainage=bridge.chainage,
+                length=float(bridge.length),
+                shift=float(bridge.shift),
+                crosssection=bridge.crosssection,
+                inletlosscoeff=float(bridge.inletlosscoeff),
+                outletlosscoeff=float(bridge.outletlosscoeff),
+                frictiontype=bridge.frictionid.split('_')[0],
+                frictionvalue=float(bridge.frictionid.split('_')[-1]),
+            )
+
     def bridges_from_hydamo(self, bridges, yz_profiles=None, parametrised_profiles=None):
         """
         Method to convert dflowfm bridges from hydamo bridges.
@@ -241,34 +260,61 @@ class StructuresIO:
                 frictionvalue=bridge.ruwheidswaarde
             )
 
+    def gates_from_datamodel(self, gates):
+        """
+        Method to convert dflowfm gates from datamodel gates.
+        """
+        # Add to dict
+        if 'geometry' in gates.columns:
+            gates = gates.drop(columns = 'geometry')
+
+        for gate in gates.itertuples(index = False):
+            self.structures.add_gate(**gate._asdict())
+
+    def pumps_from_datamodel(self, pumps):
+        """
+        Method to convert dflowfm pumps from datamodel pumps.
+        """
+        # Add to dict
+        if 'geometry' in pumps.columns:
+            pumps = pumps.drop(columns = 'geometry')
+
+        for pump in pumps.itertuples(index = False):
+            self.structures.add_pump(**pump._asdict())
     def culverts_from_datamodel(self, culverts):
         """
-        Method to convert dflowfm orifices from datamodel.
+        Method to convert dflowfm culverts from datamodel pumps.
         """
-
         # Add to dict
-        for culvert_idx, culvert in culverts.iterrows():
-            self.structures.add_culvert(
-                id=culvert.id,
-                name=culvert.name if 'name' in culvert.index else np.nan,
-                branchid=culvert.branch_id,
-                chainage=culvert.branch_offset,
-                leftlevel=culvert.leftlevel,
-                rightlevel=culvert.rightlevel,
-                crosssection=culvert.crosssectiondefinitionid,
-                length=culvert.geometry.length if 'geometry' in culvert.index else culvert.length,
-                inletlosscoeff=culvert.inletlosscoeff,
-                outletlosscoeff=culvert.outletlosscoeff,
-                allowedflowdir='both',
-                valveonoff=0,
-                numlosscoeff=0,
-                valveopeningheight=np.nan,
-                relopening=np.nan,
-                losscoeff=np.nan,
-                frictiontype=culvert.frictiontype,
-                frictionvalue=culvert.frictionvalue
-            )
-            
+        if 'geometry' in culverts.columns:
+            culverts = culverts.drop(columns = 'geometry')
+
+        for culvert in culverts.itertuples(index = False):
+            self.structures.add_culvert(**culvert._asdict())
+    def compounds_from_datamodel(self, compounds):
+        """
+        Method to convert dflowfm culverts from datamodel compounds.
+        """
+        # Add to dict
+        if 'geometry' in compounds.columns:
+            compounds = compounds.drop(columns = 'geometry')
+
+        for compound in compounds.itertuples(index = False):
+            self.structures.add_compound(**compound._asdict())
+
+    def fixedweirs_from_datamodel(self, fixedweirs):
+        """
+        Method to convert dflowfm fixedweirs from datamodel fixedweirs.
+        """
+        for fw_index, fw in fixedweirs.iterrows():
+
+            # prepare
+            fixedweir = {}
+            fixedweir['x'] = [x for x, y in fw.geometry.coords]
+            fixedweir['y'] = [y for x, y in fw.geometry.coords]
+            fixedweir['crestlevel'] = [fw.crestlevel] * len(fw.geometry.coords)
+
+            self.structures.add_fixedweir(id = fw_index, **fixedweir)
 
     def culverts_from_hydamo(self, culverts, afsluitmiddel=None):
         """
@@ -299,6 +345,37 @@ class StructuresIO:
                     frictionvalue=culvert.ruwheidswaarde
                 )
         
+    def culverts_from_osm(self, culverts, id_col='id', roughness_type = None, roughness_values=None,logger=logging):
+        """
+        Method to convert osm culverts to dflowfm culverts.
+        """
+
+        # Convert to dflowfm input
+        logger.info(f'Culverts are generated from OSM data')
+        generated_culverts = osm_to_dflowfm.generate_culverts(culverts,id_col, roughness_values, logger=logger)
+
+        # Add to dict
+        logger.info(f'Add culverts to D-Flow FM structure')
+        for culvert in generated_culverts.itertuples():
+                self.structures.add_culvert(
+                    id=culvert.Index,
+        	        branchid=culvert.branch_id,
+        	        chainage=culvert.branch_offset,
+        	        leftlevel=culvert.leftlevel,
+        	        rightlevel=culvert.rightlevel,
+        	        crosssection=culvert.crosssection,
+        	        length=culvert.geometry.length,
+        	        inletlosscoeff=culvert.inletlosscoeff,
+        	        outletlosscoeff=culvert.outletlosscoeff,
+                    allowedflowdir=culvert.allowedflowdir,
+                    valveonoff=culvert.valveonoff,
+                    numlosscoeff=culvert.numlosscoeff,
+                    valveopeningheight=culvert.valveopeningheight,
+                    relopening=culvert.relopening,
+                    losscoeff=culvert.losscoeff,
+                    frictiontype=roughness_type,
+                    frictionvalue=culvert.friction_value
+                )
     def compound_structures(self, idlist, structurelist):
         """
         Method to add compound structures to the model.
@@ -321,63 +398,73 @@ class CrossSectionsIO:
     def __init__(self, crosssections):
         self.crosssections = crosssections
 
-    def from_datamodel(self, crsdefs=None, crslocs=None):
-        """"
-        From parsed data models of crsdefs and crs locs
+    def from_datamodel(self, crsdefs, crslocs):
+        """"From parsed data models of crsdefs and crs locs
+
+        # NOTE BMA: added isshared parameter: branches have isShared = True, while structures have isShared = False
         """
 
-        if crslocs is not None:
-            for crsloc_idx, crsloc in crslocs.iterrows():
-                # add location
-                self.crosssections.add_crosssection_location(branchid=crsloc['branch_id'],
-                                                             chainage=crsloc['branch_offset'],
-                                                             shift=crsloc['shift'],
-                                                             definition=crsloc['crosssectiondefinitionid'])
+        # add location
+        for crsloc_idx, crsloc in crslocs.iterrows():
+            self.crosssections.add_crosssection_location(branchid=crsloc['branchid'], chainage=crsloc['chainage'],
+                                                         shift=crsloc['shift'], definitionId=crsloc['definitionId'])
 
-        if crsdefs is not None:
-            crsdefs = crsdefs.drop_duplicates(subset=['crosssectiondefinitionid'])
-            for crsdef_idx, crsdef in crsdefs.iterrows():
-                # Set roughness value on default if cross-section has non defined (e.g. culverts)
-                roughtype = crsdef['frictionid'].split('_')[0] if isinstance(crsdef['frictionid'], str) else 'Chezy'
-                roughval = float(crsdef['frictionid'].split('_')[-1]) if isinstance(crsdef['frictionid'], str) else 45
-                # add definition
-                if crsdef['type'] == 'circle':
-                    self.crosssections.add_circle_definition(diameter=crsdef['diameter'],
-                                                             roughnesstype=roughtype,
-                                                             roughnessvalue=roughval,
-                                                             name=crsdef['crosssectiondefinitionid'])
-                elif crsdef['type'] == 'rectangle':
-                    self.crosssections.add_rectangle_definition(height=crsdef['height'],
-                                                                width=crsdef['width'],
-                                                                closed=crsdef['closed'],
-                                                                roughnesstype=roughtype,
-                                                                roughnessvalue=roughval,
-                                                                name=crsdef['crosssectiondefinitionid'])
+        # add definition
+        for _,crsdef in crsdefs.iterrows():
+            if crsdef['type'] == 'circle':
+                self.crosssections.add_circle_definition(diameter=crsdef['diameter'],
+                                                         roughnesstype=crsdef['frictionid'].split('_')[0],
+                                                         roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
+                                                         name=crsdef['id'],
+                                                         isshared=str(crsdef['is_shared']))
+            elif crsdef['type'] == 'rectangle':
+                self.crosssections.add_rectangle_definition(height=crsdef['height'],
+                                                            width=crsdef['width'],
+                                                            closed=crsdef['closed'],
+                                                            roughnesstype=crsdef['frictionid'].split('_')[0],
+                                                            roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
+                                                            name=crsdef['id'],
+                                                            isshared=str(crsdef['is_shared']))
 
-                elif crsdef['type'] == 'trapezium':
-                    self.crosssections.add_trapezium_definition(slope=(crsdef['t_width'] - crsdef['width'])/2/crsdef['height'],
-                                                                maximumflowwidth=crsdef['t_width'],
-                                                                bottomwidth=crsdef['width'],
-                                                                closed=crsdef['closed'],
-                                                                roughnesstype=roughtype,
-                                                                roughnessvalue=roughval,
-                                                                name=crsdef['crosssectiondefinitionid'])
-                    
-                elif crsdef['type'] == 'zw':
-                    self.crosssections.add_zw_definition(numLevels=crsdef["numlevels"],
-                                                         levels=crsdef["levels"],
-                                                         flowWidths=crsdef["flowwidths"],
-                                                         totalWidths=crsdef["totalwidths"],
-                                                         roughnesstype=roughtype,
-                                                         roughnessvalue=roughval,
-                                                         name=crsdef['crosssectiondefinitionid'])
+            elif crsdef['type'] == 'trapezium':
+                self.crosssections.add_trapezium_definition(
+                    slope=(crsdef['t_width'] - crsdef['width']) / 2 / crsdef['height'],
+                    maximumflowwidth=crsdef['t_width'],
+                    bottomwidth=crsdef['width'],
+                    closed=crsdef['closed'],
+                    roughnesstype=crsdef['frictionid'].split('_')[0],
+                    roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
+                    name=crsdef['id'] ,
+                    isshared=str(crsdef['is_shared']))
+                raise NotImplementedError
 
-                elif crsdef['type'] == 'yz':
-                    # TODO BMA: add yz
-                    raise NotImplementedError
+            elif crsdef['type'] == 'xyz':
+                # FIXME writing xyz profile does not work yet, because of frictionPositon must be the same as length derived from zy. precision is an issue.
+                # self.crosssections.add_xyz_definition(xyzl=crsdef[['xCoordinates', 'yCoordinates', 'zCoordinates', 'xylength']].values,
+                #                                         roughnesstype=crsdef['frictionid'].split('_')[0],
+                #                                         roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
+                #                                         name= crsdef['id'],)
+                # FIXME yz cross section does not work: might be a bug in yz cross sections
+                self.crosssections.add_yz_definition(yz=crsdef[['xylength', 'zCoordinates']].values,
+                                                        roughnesstype=crsdef['frictionid'].split('_')[0],
+                                                        roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
+                                                        name= crsdef['id'],)
+                # add as zw cross section (use _yz2zw for conversion)
+                # self.crosssections.add_zw_definition(zw=self._yz2zwRiver(crsdef[['xylength', 'zCoordinates']].values),
+                #                                          type = 'zwRiver',
+                #                                          roughnesstype=crsdef['frictionid'].split('_')[0],
+                #                                          roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
+                #                                      name=crsdef['id'])
 
-                else:
-                    raise NotImplementedError
+
+            elif crsdef['type'] == 'yz':
+                self.crosssections.add_yz_definition(yz=crsdef[['xylength', 'zCoordinates']].values,
+                                                        roughnesstype=crsdef['frictionid'].split('_')[0],
+                                                        roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
+                                                        name= crsdef['id'],)
+
+            else:
+                raise NotImplementedError
 
     def from_hydamo(self, dwarsprofielen, parametrised=None, branches=None):
         """
@@ -526,10 +613,58 @@ class CrossSectionsIO:
         nnocross = len(self.crosssections.get_structures_without_crosssection())
         logger.info(f'After adding \'normgeparametriseerd\' the number of structures without cross section is: {nnocross}.')
             
+    def _yz2zwRiver(self, yz):
+        """Function to convert a yz cross section to zwRiver cross section
+        only zwRiver allows non-mono-increasing width
+        """
+
+        _y, _z = yz.T
+        _flowarea = np.trapz(max(_z)-np.array(_z),x=_y)
+
+        _z_sorted = np.unique(np.sort(_z))
+        z = np.zeros_like(_z_sorted)
+        w = np.zeros_like(_z_sorted)
+        area = np.zeros_like(_z_sorted)
+        for i, zi in enumerate(_z_sorted):  # water level
+            diff = zi - _z  # calculate difference
+            posPart = np.maximum(diff, 0)  # only keep positive part, set other values to zero
+            posArea = np.trapz(posPart, x=_y)
+            area[i] = posArea
+            # approximate as trapezoid for positive area (Not used, will result in weired concave shape)
+            # if i == 0:
+            #     w[i] = 0
+            #     z[i] = zi
+            # else:
+            #     w[i] = 2. * (area[i] - area[i - 1]) / (_z_sorted[i] - _z_sorted[i - 1]) - w[i-1]
+            #     z[i] = zi
+            # approximate as rectangle for positive area
+            if i == 0:
+                w[i] = 0
+                z[i] =  zi
+            elif i == len(_z_sorted)-1:
+                w[i] = w[i-1]
+                z[i] = zi
+            else:
+                w[i] = (area[i] - area[i - 1]) / (_z_sorted[i] - _z_sorted[i - 1])
+                z[i] = _z_sorted[i - 1] + 0.5 * (_z_sorted[i] - _z_sorted[i - 1])
+
+        zw = np.array([z,w]).T
+        flowarea = np.sum(np.diff(z) * np.array([w[i] + w[i + 1] for i in range(len(w) - 1)]) / 2)
+
+        if _flowarea/flowarea < 0.99:
+            print(f'Warning: area loss {1-_flowarea/flowarea} greater than 1% when converting yz to zwRiver')
+
+        return zw
 class ExternalForcingsIO:
 
     def __init__(self, external_forcings):
         self.external_forcings = external_forcings
+
+    def from_datamodel(self, boundaries):
+        # Add all items
+        for key, item in boundaries.iterrows():
+            self.external_forcings.add_boundary_condition(name=item['name'], pt= [item.geometry.x,item.geometry.y],
+                                                              bctype=item['bctype'], series= item['series'])
 
     def from_hydamo(self, boundary_conditions):
 

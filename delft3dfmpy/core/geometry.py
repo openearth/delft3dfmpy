@@ -10,11 +10,54 @@ import rasterio
 from matplotlib import path
 from shapely import affinity
 from shapely.geometry import MultiLineString, LineString, MultiPolygon, Polygon, MultiPoint, Point
-
+from scipy.spatial import KDTree
 from delft3dfmpy.core import checks
 from delft3dfmpy.core.logging import ProgressLogger
 
 logger = logging.getLogger(__name__)
+
+def snap_nodes_to_nodes(nodes:gpd.GeoDataFrame, nodes_prior:gpd.GeoDataFrame, offset:float = 1, logger = logging):
+
+    """
+    Method to snap nodes to nodes_prior.
+    index of nodes_prior will be overwritten by index of nodes.
+    index column will be retained as in nodes_prior.
+
+    Parameters
+    offset : float
+        Maximum distance between end points. If the distance is larger, they are not snapped.
+    """
+    id_col = str(nodes_prior.index.name)
+
+    # Collect points_prior in nodes_prior
+    points_prior = [(node.geometry.x, node.geometry.y) for node in nodes_prior.itertuples()]
+    points_prior_index = nodes_prior.index.to_list()
+
+    # Collect points in nodes
+    points = [(node.geometry.x, node.geometry.y) for node in nodes.itertuples()]
+    points_index = nodes.index.to_list()
+
+    # Create KDTree of points_prior
+    snapped = 0
+
+    # For every points determine the distance to the nearest points_prior
+    for pointid, point in zip(points_index, points):
+        mindist, minidx = KDTree(points_prior).query(point)
+
+        # snapped if dist is smaller than offset (also include 0.0).
+        if mindist <= offset:
+
+            # Change index columns of nodes_prior
+            points_prior_index[minidx] = pointid
+            snapped += 1
+
+    logging.info(f'Snapped {snapped} points.')
+    # reindex
+    nodes_prior_ = nodes_prior.copy()
+    nodes_prior_['ORIG_' + id_col] = list(nodes_prior.index)
+    nodes_prior_[id_col] = points_prior_index
+    nodes_prior_.index = nodes_prior_[id_col]
+    return nodes_prior_
 
 
 def rotate_coordinates(origin, theta, xcrds, ycrds):
@@ -81,11 +124,11 @@ def possibly_intersecting(dataframebounds, geometry, buffer=0):
     return idx
 
 
-def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
+def find_nearest_branch(branches, geometries, method='overall', maxdist=5, move_geometries = False):
     """
     Method to determine nearest branch for each geometry.
     The nearest branch can be found by finding t from both ends (ends) or the nearest branch from the geometry
-    as a whole (overal), the centroid (centroid), or intersecting (intersect).
+    as a whole (overall), the centroid (centroid), or intersecting (intersect).
 
     Parameters
     ----------
@@ -93,7 +136,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
         Geodataframe with branches
     geometries : geopandas.GeoDataFrame
         Geodataframe with geometries to snap
-    method='overal' : str
+    method='overall' : str
         Method for determine branch
     maxdist=5 : int or float
         Maximum distance for finding nearest geometry
@@ -101,7 +144,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
         Minimum offset from the end of the corresponding branch in case of method=equal
     """
     # Check if method is in allowed methods
-    allowed_methods = ['intersecting', 'overal', 'centroid', 'ends']
+    allowed_methods = ['intersecting', 'overall', 'centroid', 'ends']
     if method not in allowed_methods:
         raise NotImplementedError(f'Method "{method}" not implemented.')
 
@@ -138,7 +181,7 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
             nearidx = possibly_intersecting(branch_bounds, geometry.geometry, buffer=maxdist)
             selectie = branches.loc[nearidx]
 
-            if method == 'overal':
+            if method == 'overall':
                 # Determine distances to branches
                 dist = selectie.distance(geometry.geometry)
             elif method == 'centroid':
@@ -160,9 +203,14 @@ def find_nearest_branch(branches, geometries, method='overal', maxdist=5):
 
                 # Calculate offset
                 branchgeo = branches.at[branchidxmin, 'geometry']
+                branchtype = branches.at[branchidxmin, 'branchType']
                 mindist = min(0.1, branchgeo.length / 2.)
                 offset = max(mindist, min(branchgeo.length - mindist, round(branchgeo.project(geo), 3)))
                 geometries.at[geometry.Index, 'branch_offset'] = offset
+                geometries.at[geometry.Index, 'branch_type'] = branchtype
+
+                if move_geometries == True:
+                    geometries.at[geometry.Index, 'geometry'] = geo
 
 def orthogonal_line(line, offset, width=1.0):
     """
@@ -258,6 +306,36 @@ def points_in_polygon(points, polygon):
 
     return mainindex
 
+def xyzp2xyzl(xyz: pd.DataFrame, sort_by: list = ['x', 'y']):
+
+    """xyz point to xyz line"""
+    sort_by = [s.lower() for s in sort_by]
+
+    if xyz is not None:
+        yz_index = xyz.index.unique()
+        xyz.columns = [c.lower() for c in xyz.columns]
+        xyz.reset_index(drop=True, inplace=True)
+
+        # sort
+        xyz_sorted = xyz.sort_values(by=sort_by)
+
+        # FIXME temporary
+        new_z = xyz_sorted.z.to_list()
+        new_z[0] = 1.4
+        new_z[-1] = 1.4
+
+        line = LineString([(px, py) for px, py in zip(xyz_sorted.x, xyz_sorted.y)])
+        xyz_line = gpd.GeoSeries({'geometry': line,
+                                  'l': list(np.r_[0., np.cumsum(
+                                      np.hypot(np.diff(line.coords, axis=0)[:, 0], np.diff(line.coords, axis=0)[:, 1]))]),
+                                  'index': yz_index.to_list()[0],
+                                  'x': xyz_sorted.x.to_list(),
+                                  'y': xyz_sorted.y.to_list(),
+                                  'z': new_z, # xyz_sorted.z.to_list(),
+                                  })
+
+
+    return xyz_line
 class RasterPart:
 
     def __init__(self, f, xmin, ymin, xmax, ymax):
@@ -437,7 +515,10 @@ def check_geodateframe_rasterstats(facedata):
 
     # Check if coordinates are present.
     if 'crds' not in facedata.columns:
-        facedata['crds'] =[row.coords[:] for row in facedata.geometry]
+        try:
+            facedata['crds'] = [row.coords[:] for row in facedata.geometry]
+        except:
+            facedata['crds'] =[row.exterior.coords[:] for row in facedata.geometry] # polygon
 
 
 def raster_stats_fine_cells(rasterpath, facedata, stats=['mean']):
@@ -625,3 +706,15 @@ def as_polygon_list(polygon):
 
 def as_point_list(point):
     return as_geometry_list(point, Point, MultiPoint)
+def sample_raster_values(points, rasterpath):
+    """sampel points values from raster (path)"""
+
+    # geo coordinates from points
+    coords = [(x, y) for x, y in zip(points.geometry.x, points.geometry.y)]
+
+    # Open the raster and store metadata
+    src = rasterio.open(rasterpath)
+
+    # Sample the raster at every point location and store values in DataFrame
+    points['raster_value'] = [x[0] for x in src.sample(coords)]
+    return points

@@ -365,6 +365,20 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         return gdf_out
 
 
+    def sample_raster(self, ds,culvert='no', col="samples", col2=None):
+        """
+        sample raster values at geometries. This method works when geometries are Points or culvert is yes. For the
+        latter the left and right ends are determined and applied to sample raster data.
+
+        """
+        if culvert=='yes':
+            coords_left = list(zip(self.interpolate(0).x,self.interpolate(0).y))
+            coords_right = list(zip(self.interpolate(self.length).x,self.interpolate(self.length).y))
+            self[col] = [m[0] for m in ds.sample(coords_left)]
+            self[col2] = [m[0] for m in ds.sample(coords_right)]
+        else:
+            coords = list(zip(self.geometry.x, self.geometry.y))
+            self[col] = [m[0] for m in ds.sample(coords)]
     def merge_columns(self, col1, col2, rename_col):
         """merge columns"""
 

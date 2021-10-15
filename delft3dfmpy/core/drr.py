@@ -34,7 +34,8 @@ class DFlowRRModel:
         self.greenhouse = Greenhouse(self)               
         
         self.openwater = Openwater(self)               
-                
+
+        self.nwrw = NWRW(self)
         self.external_forcings = ExternalForcings(self)
         
         self.dimr_path = ''
@@ -206,3 +207,27 @@ class Openwater:
             'boundary_node': boundary_node
         }
          
+class NWRW:
+    """
+    Class for nwrw nodes
+    """
+
+    def __init__(self, dflowrrmodel):
+        self.dflowrrmodel = dflowrrmodel
+        self.nwrw_nodes = {}
+        # Create the io class
+        self.io = drrreader.NWRWIO(self)
+
+    #    NWRW id ’1’ sl 2.0 ar 1. 2. 3. 4. 5. 6. 7. 8. 9. 10. 11. 12. np 3 dw ’125_lcd’ ms ’meteostat1’ nwrw
+
+    def add_nwrw(self, id, areas, inhabitant, dwf_def, meteo_id, px = 0, py = 0):
+        self.nwrw_nodes[id] = {
+            'id': id,
+            'ar': areas,
+            'np': inhabitant,
+            'dw': dwf_def,
+            'ms': meteo_id,
+            'px': px,
+            'py': py,
+
+        }

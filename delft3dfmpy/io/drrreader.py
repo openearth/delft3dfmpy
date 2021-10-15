@@ -239,11 +239,52 @@ class OpenwaterIO:
          )
           
             
+class NWRWIO:
+    def __init__(self, nwrw):
+        self.nwrw = nwrw
+
+    def nwrw_from_datamodel(self, catchments, id_col = 'ManholeId'):
+        """
+         Method to create an RR openwater-node from input.
+
+        Parameters
+        ----------
+        catchments : shapely polygon object.
+            Catchment areas; every cachtment gets a set of RR-nodes.
+        # FIXME BMA: temp function
+        Returns
+        -------
+        None.
+
+        """
+        for ni,nw in catchments.iterrows():
+             self.nwrw.add_nwrw(
+                 id = nw['ManholeId'],
+                 areas = [nw['cl_slope'], nw['cl_flat'], nw['cl_stretch'],
+                         nw['op_slope'], nw['op_flat'], nw['op_stretch'],
+                         nw['rf_slope'], nw['rf_flat'], nw['rf_stretch'],
+                         nw['up_slope'], nw['up_flat'], nw['up_stretch']],
+                 inhabitant = nw['inhabitant'],
+                 dwf_def= nw['dwf_def'],
+                 meteo_id = nw['meteo_id'],
+                 px = nw['px'],
+                 py = nw['py'],
+         )
 class ExternalForcingsIO:
 
     def __init__(self, external_forcings):
         self.external_forcings = external_forcings
 
+    def precip_from_datamodel(self, precip):
+        """
+       Method to get precipitation from df.
+       """
+
+        for cat in precip.iteritems():
+            self.external_forcings.add_precip(
+                id=cat[0],
+                series=cat[1]
+            )
     def seepage_from_input(self, catchments, seepage_folder):  
         """
         Method to get seepage fluxes from raster input.
