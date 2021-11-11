@@ -426,7 +426,7 @@ class CrossSectionsIO:
                                                             name=crsdef['id'],
                                                             isshared=str(crsdef['is_shared']))
 
-            elif crsdef['type'] == 'trapezium':
+            elif crsdef['type'] == 'trapezoid':
                 self.crosssections.add_trapezium_definition(
                     slope=(crsdef['t_width'] - crsdef['width']) / 2 / crsdef['height'],
                     maximumflowwidth=crsdef['t_width'],
@@ -436,7 +436,7 @@ class CrossSectionsIO:
                     roughnessvalue=float(crsdef['frictionid'].split('_')[-1]),
                     name=crsdef['id'] ,
                     isshared=str(crsdef['is_shared']))
-                raise NotImplementedError
+
 
             elif crsdef['type'] == 'xyz':
                 # FIXME writing xyz profile does not work yet, because of frictionPositon must be the same as length derived from zy. precision is an issue.
