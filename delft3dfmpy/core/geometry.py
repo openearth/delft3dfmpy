@@ -319,10 +319,11 @@ def xyzp2xyzl(xyz: pd.DataFrame, sort_by: list = ['x', 'y']):
         # sort
         xyz_sorted = xyz.sort_values(by=sort_by)
 
-        # FIXME temporary
+
         new_z = xyz_sorted.z.to_list()
-        new_z[0] = 1.4
-        new_z[-1] = 1.4
+        # temporary
+        # new_z[0] = 1.4
+        # new_z[-1] = 1.4
 
         line = LineString([(px, py) for px, py in zip(xyz_sorted.x, xyz_sorted.y)])
         xyz_line = gpd.GeoSeries({'geometry': line,
@@ -331,10 +332,8 @@ def xyzp2xyzl(xyz: pd.DataFrame, sort_by: list = ['x', 'y']):
                                   'index': yz_index.to_list()[0],
                                   'x': xyz_sorted.x.to_list(),
                                   'y': xyz_sorted.y.to_list(),
-                                  'z': new_z, # xyz_sorted.z.to_list(),
+                                  'z': new_z,
                                   })
-
-
     return xyz_line
 class RasterPart:
 
