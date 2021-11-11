@@ -1374,7 +1374,7 @@ class Network:
         edges_nodeids_dict = {}
 
         # Check if any structures present (if not, structures will be None)
-        structures = self.dflowfmmodel.structures.as_dataframe(weirs=True, bridges=True, culverts=True, pumps=True, uweirs=True, orifices=True, compounds=True)
+        structures = self.dflowfmmodel.structures.as_dataframe(compounds=True) # FIXME: for now, only compounds are considered because a compound i
 
         # If offsets are not predefined, generate them base on one_d_mesh_distance
         if not self.offsets:
@@ -1586,6 +1586,7 @@ class Network:
 
         if structures is not None:
             # Check argument
+            structures.columns = structures.columns.str.lower()
             checks.check_argument(structures, 'structures', (pd.DataFrame, gpd.GeoDataFrame),
                                   columns=['branchid', 'chainage'])
 
