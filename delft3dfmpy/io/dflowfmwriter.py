@@ -67,10 +67,10 @@ class DFlowFMWriter:
         self.writeMdFiles()
         # Roughness files
         self.write_roughness()
-        # Cross section definitions
-        self.write_crosssection_definitions()
         # Cross section locations
         self.write_crosssection_locations()
+        # Cross section definitions
+        self.write_crosssection_definitions()        
         # Structures (weirs, pumps, culverts)
         self.write_structures()
         # Initial conditions
@@ -167,13 +167,22 @@ class DFlowFMWriter:
                 # Find branches without profile
                 no_css = self.dflowfmmodel.crosssections.get_branches_without_crosssection()
                 branches = (self.dflowfmmodel.network.branches.loc[no_css, 'geometry'].length / 2).to_dict()
-                for branchid, chainage in branches.items():
+                ibranch=0
+                for branchid, chainage in branches.items():                    
+                    ibranch+=1
+                    self.dflowfmmodel.crosssections.crosssection_def['default_'+str(ibranch)] = {'id':'default_'+str(ibranch),
+                             'type': self.dflowfmmodel.crosssections.crosssection_def['default']['type'],
+                             'thalweg': self.dflowfmmodel.crosssections.crosssection_def['default']['thalweg'],
+                             'height': self.dflowfmmodel.crosssections.crosssection_def['default']['height'],
+                             'width': self.dflowfmmodel.crosssections.crosssection_def['default']['width'],
+                             'closed': self.dflowfmmodel.crosssections.crosssection_def['default']['closed'],
+                             'frictionId': self.dflowfmmodel.crosssections.crosssection_def['default']['frictionId']}
                     dct = {
                         'id': f'{branchid}_{chainage:.1f}',
                         'branchid': branchid,
                         'chainage': chainage,
                         'shift': self.dflowfmmodel.crosssections.default_definition_shift,
-                        'definitionId': self.dflowfmmodel.crosssections.default_definition
+                        'definitionId': self.dflowfmmodel.crosssections.crosssection_def['default_'+str(ibranch)]['id']
                     }
                     # Write the cross section item
                     self._write_dict(f, dct=dct, header='CrossSection')
@@ -698,4 +707,5 @@ def write_fm_file(file, data, names=None, mode='w'):
 
     with open(file, mode) as f:
         f.write(string)
+
 
