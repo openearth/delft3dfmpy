@@ -1529,16 +1529,16 @@ class Network:
 
     def get_roughness_description(self, roughnesstype, value):
 
-        if np.isnan(value):
+        if np.isnan(float(value)):
             raise ValueError('Roughness value should not be NaN.')
 
         # Check input
-        checks.check_argument(roughnesstype, 'roughness type', (str, int))
-        checks.check_argument(value, 'roughness value', (float, int, np.float, np.integer))
+        #checks.check_argument(roughnesstype, 'roughness type', (str, int))
+        #checks.check_argument(value, 'roughness value', (float, int, np.float, np.integer))
 
         # Convert integer to string
-        if isinstance(roughnesstype, int):
-            roughnesstype = hydamo_to_dflowfm.roughness_gml[roughnesstype]
+        #if isinstance(roughnesstype, int):
+        #    roughnesstype = hydamo_to_dflowfm.roughness_gml[roughnesstype]
         
         # Get name
         name = f'{roughnesstype}_{float(value)}'
@@ -1546,7 +1546,7 @@ class Network:
         # Check if the description is already known
         if name.lower() in map(str.lower, self.roughness_definitions.keys()):
             return name
-
+        print(name)
         # Convert roughness type string to integer for dflowfm
         delft3dfmtype = roughnesstype
 
@@ -1755,7 +1755,7 @@ class Structures:
             'useVelocityHeight': usevelocityheight            
         })
     
-    def add_bridge(self, id, branchid, chainage, length, shift, upperheight, lowerheight,crosssection,
+    def add_bridge(self, id, branchid, chainage, length, shift, crosssection,
                    inletlosscoeff, outletlosscoeff, name=np.nan, allowedflowdir='both',
                    frictiontype='Strickler', frictionvalue=75.0):
         """

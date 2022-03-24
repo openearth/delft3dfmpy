@@ -107,10 +107,10 @@ def generate_unpaved(catchments, landuse, surface_level, soiltype,  surface_stor
             unpaved_drr.at[cat.code, 'initial_gwd'] = f'{initial_gwd:.2f}'  
         else:
             unpaved_drr.at[cat.code, 'initial_gwd'] = f'{ini_gwds[num]["mean"]:.2f}'
-        unpaved_drr.at[cat.code, 'meteostat'] = ms
+        unpaved_drr.at[cat.code, 'meteostat'] = str(ms)
         unpaved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-10:.0f}'
         unpaved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        unpaved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                
+        unpaved_drr.at[cat.code, 'boundary'] = str(cat.lateraleknoopcode)
     return unpaved_drr          
     
 def generate_ernst(catchments, depths, resistance, infiltration_resistance, runoff_resistance):    
@@ -258,7 +258,7 @@ def generate_paved( catchments=None,
                     paved_drr.at[ov.code, 'pumpcap'] = f'{pump_capacity}'
                 else:
                     paved_drr.at[ov.code, 'pumpcap'] = f'{pump_caps_sa[isew]["mean"]:.2f}'    
-                paved_drr.at[ov.code,'meteostat'] = ms
+                paved_drr.at[ov.code,'meteostat'] = str(ms)
                 paved_drr.at[ov.code, 'px'] = f'{ov.geometry.coords[0][0]+10:.0f}'
                 paved_drr.at[ov.code, 'py'] = f'{ov.geometry.coords[0][1]:.0f}'
                 paved_drr.at[ov.code, 'boundary'] = ov.code              
@@ -295,7 +295,7 @@ def generate_paved( catchments=None,
             paved_drr.at[cat.code, 'pumpcap'] = f'{pump_capacity}'
         else:
             paved_drr.at[cat.code, 'pumpcap'] = f'{pump_caps[num]["mean"]:.2f}'    
-        paved_drr.at[cat.code,'meteostat'] = ms
+        paved_drr.at[cat.code,'meteostat'] = str(ms)
         paved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+10:.0f}'
         paved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
         paved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
@@ -344,7 +344,7 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
             gh_drr.at[cat.code, 'roofstor'] = f'{roof_storage:.2f}'
         else:
             gh_drr.at[cat.code, 'roofstor'] = f'{roofstors[num]["mean"]:.2f}'    
-        gh_drr.at[cat.code, 'meteostat'] = ms
+        gh_drr.at[cat.code, 'meteostat'] = str(ms)
         gh_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+20:.0f}'
         gh_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
         gh_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
@@ -374,7 +374,7 @@ def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=N
         
         ow_drr.at[cat.code, 'code'] = str(cat.code)
         ow_drr.at[cat.code, 'area'] = str(lu_counts[num][13]*px_area) if 13 in lu_counts[num] else '0'        
-        ow_drr.at[cat.code, 'meteostat'] = ms
+        ow_drr.at[cat.code, 'meteostat'] = str(ms)
         ow_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-20:.0f}'
         ow_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
         ow_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
@@ -441,6 +441,7 @@ def generate_seepage(catchments, seepage_folder):
     """
     warnings.filterwarnings('ignore')
     file_list = os.listdir(seepage_folder)
+    file_list = [file for file in file_list if file.lower().endswith('_l1.idf')]
     times = []    
     arr = np.zeros((len(file_list), len(catchments.code)))
     for ifile, file in tqdm(enumerate(file_list),total=len(file_list),desc='Reading seepage files'):
@@ -448,7 +449,7 @@ def generate_seepage(catchments, seepage_folder):
         times.append(time)           
         stats = zonal_stats(catchments, array, affine=affine, stats="mean", all_touched=True)
         arr[ifile,:] = [s['mean'] for s in stats]        
-    result = pd.DataFrame(arr,columns='sep_'+catchments.code)
+    result = pd.DataFrame(arr,columns=['sep_'+str(cat) for cat in catchments.code])
     result.index = times 
     # convert units
     result_mmd = (result / (1e-3*(affine[0]*-affine[4])))/((times[2]-times[1]).total_seconds()/86400.)
@@ -468,7 +469,7 @@ def generate_precip(areas, precip_folder):
         times.append(time)                   
         stats = zonal_stats(areas, array, affine=affine, stats="mean", all_touched=True)
         arr[ifile,:]= [s['mean'] for s in stats]        
-    result = pd.DataFrame(arr, columns='ms_'+areas.code)
+    result = pd.DataFrame(arr, columns=['ms_'+str(area) for area in areas.code])
     result.index = times 
     return result
 
@@ -489,7 +490,7 @@ def generate_evap(areas, evap_folder):
         times.append(time)                  
         stats = zonal_stats(agg_areas, array, affine=affine, stats="mean",all_touched=True)
         arr[ifile,:] = [s['mean'] for s in stats]       
-    result = pd.DataFrame(arr,columns=['ms_'+areas.iloc[0,0]])
+    result = pd.DataFrame(arr,columns=['ms_'+str(areas.iloc[0,0])])
     result.index = times 
     return result
 
@@ -511,7 +512,7 @@ def read_raster(file, static=False):
     """
     if not static:         
         time = pd.Timestamp(os.path.split(file)[1].split('_')[1].split('.')[0])
-    if file.lower().endswith('idf'):        
+    if str(file).lower().endswith('idf'):        
         dataset = imod.idf.open(file)
         header = imod.idf.header(file,pattern=None)        
         grid = dataset[0,0,:,:].values        
