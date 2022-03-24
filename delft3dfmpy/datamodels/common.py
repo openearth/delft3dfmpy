@@ -634,7 +634,9 @@ class ExtendedDataFrame(pd.DataFrame):
 
         # Create geodataframe
         gmldf = pd.DataFrame(fields, columns=columns)
-
+        if column_mapping is not None:
+            gmldf.rename(columns=column_mapping, inplace=True)
+			
         # Add data to class GeoDataFrame
         self.set_data(gmldf, index_col=index_col)
 
