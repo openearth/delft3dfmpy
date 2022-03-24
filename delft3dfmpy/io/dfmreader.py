@@ -196,7 +196,7 @@ class StructuresIO:
                 chainage=weir.branch_offset,                
                 crestlevel=weir.laagstedoorstroomhoogte,
                 crestwidth=weir.laagstedoorstroombreedte,
-                corrcoeff=weir.afvoercoefficient
+                corrcoeff=float(weir.afvoercoefficient)
             )
     
         universal = ExtendedGeoDataFrame(geotype=Point, required_columns=weirs.required_columns)
@@ -215,7 +215,7 @@ class StructuresIO:
                 yvalues=uweir.yvalues,
                 zvalues=uweir.zvalues,
                 allowedflowdir='both',
-                dischargecoeff=uweir.afvoercoefficient                
+                dischargecoeff=float(uweir.afvoercoefficient)                
             )    
         
     def bridges_from_hydamo(self, bridges, yz_profiles=None, parametrised_profiles=None):
@@ -235,8 +235,8 @@ class StructuresIO:
                 upperheight=bridge.hoogtebovenzijde,
                 lowerheight=bridge.hoogteonderzijde,                
                 crosssection=bridge.crosssection,
-                inletlosscoeff=bridge.intreeverlies,
-                outletlosscoeff=bridge.uittreeverlies,
+                inletlosscoeff=float(bridge.intreeverlies),
+                outletlosscoeff=float(bridge.uittreeverlies),
                 frictiontype=hydamo_to_dflowfm.roughness_gml[bridge.ruwheidstypecode],
                 frictionvalue=bridge.ruwheidswaarde
             )
@@ -287,14 +287,14 @@ class StructuresIO:
         	        rightlevel=culvert.hoogtebinnenonderkantbenedenstrooms,
         	        crosssection=culvert.crosssection,
         	        length=culvert.lengte,#geometry.length,
-        	        inletlosscoeff=culvert.intreeverlies,
-        	        outletlosscoeff=culvert.uittreeverlies,
+        	        inletlosscoeff=float(culvert.intreeverlies),
+        	        outletlosscoeff=float(culvert.uittreeverlies),
                     allowedflowdir=culvert.allowedflowdir,
                     valveonoff=culvert.valveonoff,
                     numlosscoeff=culvert.numlosscoeff, 
                     valveopeningheight=culvert.valveopeningheight,
                     relopening=culvert.relopening,
-                    losscoeff=culvert.losscoeff,                                    
+                    losscoeff=float(culvert.losscoeff),                                    
                     frictiontype=hydamo_to_dflowfm.roughness_gml[culvert.ruwheidstypecode],
                     frictionvalue=culvert.ruwheidswaarde
                 )

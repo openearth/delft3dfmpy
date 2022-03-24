@@ -1,4 +1,25 @@
 Release notes delft3dfmpy 
+----------------------------------------------------------------------------------------------------------------------
+ v1.2.2: March, 2022
+
+- now more than one 'afsluitmidddel' can be connected to a culvert (e.g. of types schuif and a terugslagklep)
+- function added to remove 1d2d-links to end nodes in the 1d-network. They are interpreted as boundaries by D_Hydro and therefore should not have 1d2d-links connected to them
+- bug fix in notebook to add quotes around DELFT3B.INI start- and endtime definitions
+- added a WWTP to paved nodes
+- added possibility of column mapping to hydamo objects without a geometry (e.g. afsluitmiddel).
+
+There are still some known issues:
+- compound structures are not read by the GUI
+- in the GUI, structure related time series (e.g. crest levels) need to be schematized using RTC, so no time series can be provided as is possible using DIMR.
+- after running the model in the GUI, there is an error regaring the import of certain RR-output (3blinks.his). This is a known issue.
+- the GUI issues some warnings about the links to and from paved notes (dry weather flow and WWTP). This will addressed in the next version.
+
+
+----------------------------------------------------------------------------------------------------------------------
+ v1.2.1: December, 2021
+
+
+The D-HYDRO GUI requires a unique crosssection definitiation for every location. This didn't work correctly for a 'default'-profile when this is used for multiple locations. Now, the default definition is copied for all separate locations. Note that in the default profile definition in the workflow, an argument "name" should be added and called 'default': ", name='dafault". See example notebooks for details.
 
 ----------------------------------------------------------------------------------------------------------------------
  v1.2.0: September, 2021

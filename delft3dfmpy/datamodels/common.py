@@ -448,7 +448,7 @@ class ExtendedDataFrame(pd.DataFrame):
                     column, ', '.join(present_columns), ', '.join(self.required_columns)))
 
 
-    def read_gml(self, gml_path, index_col=None):
+    def read_gml(self, gml_path, column_mapping=None, index_col=None):
         """
         Read GML file to GeoDataFrame.
 
@@ -486,7 +486,9 @@ class ExtendedDataFrame(pd.DataFrame):
 
         # Create geodataframe
         gmldf = pd.DataFrame(fields, columns=columns)
-
+        if column_mapping is not None:
+            gmldf.rename(columns=column_mapping, inplace=True)
+        
         # Add data to class GeoDataFrame
         self.set_data(gmldf, index_col=index_col)
 

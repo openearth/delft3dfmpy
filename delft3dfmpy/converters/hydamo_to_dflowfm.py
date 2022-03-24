@@ -292,17 +292,18 @@ def generate_culverts(culverts,afsluitmiddel):
         culverts_dfm.at[culvert.Index, 'losscoeff'] = 0
         # check whether an afsluitmiddel is present and take action dependent on its settings
         if afsluitmiddel is not None:
-            if not afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code].empty:
-                if len(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code])!=1:
-                    raise IndexError(f'Multiple (or no) instances of afsluitmiddel associated with culvert {culvert.code}')
-                if int(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['soortafsluitmiddelcode'])==5:
-                    culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'positive'
-                if int(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['soortafsluitmiddelcode'])==4:
-                    culverts_dfm.at[culvert.Index, 'valveonoff'] = 1
-                    culverts_dfm.at[culvert.Index, 'valveopeningheight'] = float(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['hoogte'])
-                    culverts_dfm.at[culvert.Index, 'numlosscoeff'] = 1
-                    culverts_dfm.at[culvert.Index, 'relopening'] = float(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['hoogte'])/culvert.hoogteopening
-                    culverts_dfm.at[culvert.Index, 'losscoeff'] = float(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code]['afvoercoefficient'])
+            if not afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code].empty:                
+                if len(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code])<1:
+                    raise IndexError(f'No instances of afsluitmiddel associated with culvert {culvert.code}')
+                for _,i in afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code].iterrows():
+                    if int(i['soortafsluitmiddelcode'])==5:
+                        culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'positive'
+                    if int(i['soortafsluitmiddelcode'])==4:
+                        culverts_dfm.at[culvert.Index, 'valveonoff'] = 1
+                        culverts_dfm.at[culvert.Index, 'valveopeningheight'] = float(i['hoogte'])
+                        culverts_dfm.at[culvert.Index, 'numlosscoeff'] = 1
+                        culverts_dfm.at[culvert.Index, 'relopening'] = float(i['hoogte'])/culvert.hoogteopening
+                        culverts_dfm.at[culvert.Index, 'losscoeff'] = float(i['afvoercoefficient'])
         culverts_dfm.at[culvert.Index, 'crosssection'] = crosssection
 
     return culverts_dfm
@@ -420,8 +421,11 @@ def dwarsprofiel_to_yzprofiles(crosssections, branches):
                 
         # determine thalweg
         if branches is not None:
-            branche_geom = branches[branches.code==css.branch_id].geometry.values        
-            thalweg_xyz = css.geometry.intersection(branche_geom[0]).coords[:][0]                
+            branche_geom = branches[branches.code==css.branch_id].geometry.values
+            if css.geometry.intersection(branche_geom[0]).geom_type == 'MultiPoint':
+                thalweg_xyz = css.geometry.intersection(branche_geom[0])[0].coords[:][0]                
+            else:
+                thalweg_xyz = css.geometry.intersection(branche_geom[0]).coords[:][0]                
             # and the Y-coordinate of the thalweg
             thalweg = np.hypot( thalweg_xyz[0]-xyz[0,0], thalweg_xyz[1]-xyz[0,1])
         else: 
