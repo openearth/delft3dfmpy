@@ -276,7 +276,7 @@ def generate_culverts(culverts,afsluitmiddel):
         if culvert.vormcode == 1 or culvert.vormcode == 'rond' or culvert.vormcode == 5 or culvert.vormcode == 'ellipsvormig':
             crosssection = {'shape': 'circle', 'diameter': culvert.hoogteopening}
             
-        elif culvert.vormcode == 3 or culvert.vormcode == 'rechthoekig' or culvert.vormcode == 99 or culvert.vormcode == 'onbekend':
+        elif culvert.vormcode == 3 or culvert.vormcode == 'rechthoekig' or culvert.vormcode == 99 or culvert.vormcode == 8 or culvert.vormcode == 'muilprofiel' or culvert.vormcode == 4 or culvert.vormcode == 'heulprofiel' or culvert.vormcode == 'onbekend':
             crosssection = {'shape': 'rectangle', 'height': culvert.hoogteopening, 'width': culvert.breedteopening, 'closed': 1}
         
         else:

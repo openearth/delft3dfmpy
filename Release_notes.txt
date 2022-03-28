@@ -8,7 +8,7 @@ Release notes delft3dfmpy
 - added a WWTP to paved nodes
 - added possibility of column mapping to hydamo objects without a geometry (e.g. afsluitmiddel).
 
-There are still some known issues:
+There are still some known issues to be solved in the GUI of D-Hydro:
 - compound structures are not read by the GUI
 - in the GUI, structure related time series (e.g. crest levels) need to be schematized using RTC, so no time series can be provided as is possible using DIMR.
 - after running the model in the GUI, there is an error regaring the import of certain RR-output (3blinks.his). This is a known issue.
