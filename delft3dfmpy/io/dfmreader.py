@@ -595,23 +595,32 @@ class ExternalForcingsIO:
                 }
             else:
                 if lateral_discharges is None:
-                    logger.warning(f'No lateral_discharges provied. {lateral.code} expects them. Skipping.')
+                    logger.warning(f'No lateral_discharges provided. {lateral.code} expects them. Skipping.')
                     continue
                 else:
                     if lateral.code not in lateral_discharges.columns:
                         logger.warning(f'No data found for {lateral.code}. Skipping.')
                         continue
-                    
-                # Get timeseries
-                series = lateral_discharges.loc[:, lateral.code]
-                
-                # Add to dictionary
-                self.external_forcings.laterals[lateral.code] = { 
-                    'branchid': lateral.branch_id,
-                    'branch_offset': str(lateral.branch_offset), 
-                    'timeseries': series            
-                }
+                    else:
+                        if type(lateral_discharges)==pd.Series:
+                            series = lateral_discharges.loc[lateral.code]
 
+							# Add to dictionary
+                            self.external_forcings.laterals[lateral.code] = { 
+								'branchid': lateral.branch_id,
+								'branch_offset': str(lateral.branch_offset), 
+								'constant': series            
+							}
+                        else:
+                        	# Get timeseries
+                            series = lateral_discharges.loc[:, lateral.code]
+							
+							# Add to dictionary
+                            self.external_forcings.laterals[lateral.code] = { 
+								'branchid': lateral.branch_id,
+								'branch_offset': str(lateral.branch_offset), 
+								'timeseries': series            
+							}
 
 class StorageNodesIO:
 

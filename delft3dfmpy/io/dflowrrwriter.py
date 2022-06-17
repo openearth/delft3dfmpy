@@ -173,7 +173,10 @@ class DFlowRRWriter:
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
                 temp = {"name":''+dct['id'], 'function':'constant','quantity':'water_level','unit':'m'} 
                 self._write_dict(f,temp,'Boundary','    0\n\n')
-                                   
+            if any(self.rrmodel.paved.pav_nodes): 
+                temp = {"name": "WWTP_BND",'function':'constant','quantity':'water_level','unit':'m'}  
+                self._write_dict(f,temp,'Boundary','    0\n\n')       
+          
     def write_unpaved(self):
         """
         Method to write all files associated with unpaved nodes: UNPAVED.3B, UNPAVED.ALF, UNPAVED.STO, UNPAVED.INF and UNPAVED.SEP. All files contain a definition for every node  because they may or may not be spatially distributed.
@@ -247,6 +250,10 @@ class DFlowRRWriter:
             filepath = os.path.join(self.output_dir, 'WWTP.3B')             
             with open(filepath, 'w') as f:                           
                 f.write('WWTP id \'WWTP\' tb 0  wwtp\n')                
+            
+            filepath = os.path.join(self.output_dir, 'WWTP.tbl')             
+            with open(filepath, 'w') as f:                           
+                f.write('\n')                
 
     def write_greenhouse(self):
         """
