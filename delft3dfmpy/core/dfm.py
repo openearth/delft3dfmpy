@@ -360,6 +360,7 @@ class CrossSections:
         self.dflowfmmodel = dflowfmmodel
 
         self.default_definition = None
+		self.default_locations = None
         self.default_definition_shift = 0.0
 
         self.get_roughnessname = self.dflowfmmodel.network.get_roughness_description        
@@ -373,7 +374,13 @@ class CrossSections:
 
         self.default_definition = definition
         self.default_definition_shift = shift
-
+    def set_default_locations(self, locations):
+        """
+        Add default profile locations
+        """
+        
+        self.default_locations = locations       
+		
     def add_yz_definition(self, yz=None, thalweg=None, roughnesstype=None, roughnessvalue=None, name=None):
         """
         Add xyz crosssection
