@@ -164,7 +164,7 @@ class StructuresIO:
                 dischargecoeff=uweir.dischargecoeff                
             )  
      
-    def weirs_from_hydamo(self, weirs, yz_profiles=None,  opening=None, management_device=None, management=None):
+    def weirs_from_hydamo(self, weirs, profile_groups=None, profile_lines=None, profiles=None,  opening=None, management_device=None, management=None):
         """
         Method to convert dflowfm weirs from hydamo weirs.
         
@@ -177,9 +177,12 @@ class StructuresIO:
         
         
         index = np.zeros((len(weirs.code)))
-        if yz_profiles is not None:
-            if 'stuwid' in yz_profiles:            
-                index[np.isin(weirs.globalid , np.asarray(yz_profiles.stuwid))]=1
+        if profile_groups is not None:
+            if 'stuwid' in profile_groups: 
+                # groups = profile_groups[profile_groups.stuwid != '-999'].globalid
+                # profile_lines.index = profile_lines.profielgroepid
+                # lijn = profile_lines.loc[groups]                           
+                index[np.isin(weirs.globalid , np.asarray(profile_groups.stuwid))]=1
         
         #regular = ExtendedGeoDataFrame(geotype=Point, required_columns=weirs.required_columns)   
         #regular.set_data(weirs[index==0], index_col='code',check_columns=True)        
@@ -213,7 +216,7 @@ class StructuresIO:
                  corrcoeff=orifice.afvoercoefficient                               
             )
         
-        universal_geconverteerd = hydamo_to_dflowfm.generate_uweirs(weirs[index==1],yz_profiles=yz_profiles)
+        universal_geconverteerd = hydamo_to_dflowfm.generate_uweirs(weirs[index==1], opening=opening, profile_groups=profile_groups, profile_lines=profile_lines, profiles=profiles)
         
         if universal_geconverteerd.empty:
             return("No profile detected for universal weir)")
@@ -223,19 +226,19 @@ class StructuresIO:
                 id=uweir.code,
                 branchid=uweir.branch_id,
                 chainage=uweir.branch_offset,                
-                crestlevel=uweir.laagstedoorstroomhoogte,
+                crestlevel=uweir.crestlevel,
                 yvalues=uweir.yvalues,
                 zvalues=uweir.zvalues,
                 allowedflowdir='both',
                 dischargecoeff=uweir.afvoercoefficient                
             )    
         
-    def bridges_from_hydamo(self, bridges, yz_profiles=None):
+    def bridges_from_hydamo(self, bridges, profile_groups=None, profile_lines=None, profiles=None):
         """
         Method to convert dflowfm bridges from hydamo bridges.
         """
         # Convert to dflowfm input
-        geconverteerd = hydamo_to_dflowfm.generate_bridges(bridges, yz_profiles=yz_profiles)
+        geconverteerd = hydamo_to_dflowfm.generate_bridges(bridges, profile_groups=profile_groups, profile_lines=profile_lines,profiles=profiles)
         # Add to dict
         for bridge in geconverteerd.itertuples():
             self.structures.add_bridge(
@@ -491,6 +494,29 @@ class ExternalForcingsIO:
             # Check if a 1d2d link should be removed
             #self.external_forcings.dflowfmmodel.network.links1d2d.check_boundary_link(self.external_forcings.boundaries.loc[key])
 
+    def create_laterals(self, catchments, branches, snap_distance=100.):
+        import rstr
+        pattern = "^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$"
+        
+        laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=['code','geometry','lateraleknoopid','globalid'])   
+        emptystr = ["" for x in range(len(catchments))]
+        lats = gpd.GeoDataFrame({'code': emptystr, 'globalid':emptystr, 'lateraleknoopid':emptystr, 'geometry': None })        
+        lats.index = catchments.index
+        for ind,cat in catchments.iterrows():
+            lats.at[ind,'code'] = 'lat_'+str(cat.code)
+            lats.at[ind,'geometry'] = cat.geometry.centroid
+            lats.at[ind,'lateraleknoopid'] = cat.lateraleknoopid
+            lats.at[ind, 'globalid'] =  rstr.xeger(pattern)
+        laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=['code','lateraleknoopid','globalid'])   
+        laterals.set_data(lats, index_col='code',check_columns=False)                
+        laterals.snap_to_branch(branches, snap_method='overal', maxdist=snap_distance)
+        for ind,lat in laterals.iterrows():
+            branch_geom = branches[branches.code==lat['branch_id']].geometry            
+            xy = branch_geom.values[0].interpolate(lat.branch_offset)
+            laterals.at[ind, 'geometry']  = xy
+            
+        return(laterals)
+
     def read_laterals(self, locations, lateral_discharges=None, rr_boundaries=None):
         """
         Process laterals
@@ -507,9 +533,7 @@ class ExternalForcingsIO:
 
         if rr_boundaries is None: rr_boundaries = []
         # Check argument
-        checks.check_argument(locations, 'locations', gpd.GeoDataFrame, columns=['geometry'])
-        if lateral_discharges is not None:
-            checks.check_argument(lateral_discharges, 'lateral_discharges', pd.DataFrame)
+        checks.check_argument(locations, 'locations', gpd.GeoDataFrame, columns=['geometry'])                          
 
         # Check if network has been loaded
         network1d = self.external_forcings.dflowfmmodel.network.mesh1d
@@ -543,21 +567,32 @@ class ExternalForcingsIO:
             else:
                 if lateral_discharges is None:
                     logger.warning(f'No lateral_discharges provied. {lateral.code} expects them. Skipping.')
-                    continue
+                    continue                               
                 else:
-                    if lateral.code not in lateral_discharges.columns:
-                        logger.warning(f'No data found for {lateral.code}. Skipping.')
-                        continue
-                    
-                # Get timeseries
-                series = lateral_discharges.loc[:, lateral.code]
-                
-                # Add to dictionary
-                self.external_forcings.laterals[lateral.code] = { 
-                    'branchid': lateral.branch_id,
-                    'branch_offset': str(lateral.branch_offset), 
-                    'timeseries': series            
-                }
+                    if type(lateral_discharges)==pd.Series:
+                        series = lateral_discharges.loc[lateral.code]
+
+                         # Add to dictionary
+                        self.external_forcings.laterals[lateral.code] = { 
+                            'branchid': lateral.branch_id,
+                            'branch_offset': str(lateral.branch_offset), 
+                            'constant': series            
+                        }
+
+                    else:
+                        if lateral.code not in lateral_discharges.columns:
+                            logger.warning(f'No data found for {lateral.code}. Skipping.')
+                            continue          
+                        
+                        # Get timeseries
+                        series = lateral_discharges.loc[:, lateral.code]
+                        
+                        # Add to dictionary
+                        self.external_forcings.laterals[lateral.code] = { 
+                            'branchid': lateral.branch_id,
+                            'branch_offset': str(lateral.branch_offset), 
+                            'timeseries': series            
+                        }
 
 
 class StorageNodesIO:

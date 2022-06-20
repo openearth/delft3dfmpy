@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - default
 dependencies:
-  - python=3.7.*
+  - python=3.8.*
   - git=2.30.0
   - pip=21.0
   - ipykernel=5.4.3
@@ -22,5 +22,6 @@ dependencies:
   - descartes=1.1.0
   - contextily=1.0.1
   - fire=0.4.0
+  - rstr=2.2.6  
   - pip:
     - hkvsobekpy==1.5

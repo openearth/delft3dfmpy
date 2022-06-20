@@ -40,6 +40,15 @@ class HyDAMO:
             'profielpuntid'        
         ])
         
+        self.profile_line = ExtendedGeoDataFrame(geotype=LineString, required_columns=[            
+            'globalid',
+            'profielgroepid'        
+        ])
+        
+        self.profile_group = ExtendedDataFrame(required_columns=[            
+            'globalid'            
+        ])
+        
         
         # self.crosssections = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
         #     'code',
@@ -136,7 +145,7 @@ class HyDAMO:
         
         # Laterals
         self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-            'code',            
+            'globalid',            
             'geometry'
         ])
 

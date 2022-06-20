@@ -49,7 +49,7 @@ class DFlowFMWriter:
         with open(os.path.join(self.output_dir, 'boundaries.bc'), 'w') as f:
             self._write_header(f, 'boundConds', 1.01, extra_linebreak=False)
 
-    def write_all(self):  # write all fm files from HyDAMO
+    def write_all(self, add_default_crosssections=None):  # write all fm files from HyDAMO
         """
         Wrapper to write all components to DFM. Remove existing files and create new ones. Note that the old format ext-file is not used anymore,.
         """
@@ -164,8 +164,12 @@ class DFlowFMWriter:
 
             # Write the default profile (if specified) to branches that do not have a cross section
             if self.dflowfmmodel.crosssections.default_definition is not None:
-                # Find branches without profile
-                no_css = self.dflowfmmodel.crosssections.get_branches_without_crosssection()
+                if self.dflowfmmodel.crosssections.default_locations is None:
+                    # Find branches without profile
+                    no_css = self.dflowfmmodel.crosssections.get_branches_without_crosssection()
+                else:
+                    no_css = self.dflowfmmodel.crosssections.default_locations
+
                 branches = (self.dflowfmmodel.network.branches.loc[no_css, 'geometry'].length / 2).to_dict()
                 ibranch=0
                 for branchid, chainage in branches.items():                    

@@ -195,44 +195,18 @@ def generate_paved( catchments=None,
         
         # find the paved area in the sewer areas
         for isew, sew in enumerate(sewer_areas.itertuples()):            
-            pav_area = 0
-            for cat_ind, cat in enumerate(catchments.itertuples()):                
-                # if no rasterdata could be obtained for this catchment, skip it.
-                if mean_elev[cat_ind]['median'] is None:
-                   logger.warning('No rasterdata available for catchment %s' % cat.code)     
-                   continue
-                if(cat.geometry.intersects(sew.geometry)):
-                    test_intersect = cat.geometry.intersection(sew.geometry)
-                    #print(cat.Index+' '+sew.Index+' '+test_intersect.type)
-                    if test_intersect.type =='LineString':
-                        logger.warning('Intersection in %s contains of LineStrings, not polygons. Skipping. '% cat.code)
-                        continue
-                    if test_intersect.type=='GeometryCollection':                                                
-                        numpol = 0
-                        logger.info('Intersection in %s contains a GeometryCollection - splitting into polygons.'% cat.code)
-                        for int_ft in test_intersect:                            
-                            if int_ft.type == 'Polygon':
-                                if numpol==0:                                                                
-                                    intersecting_pixels = zonal_stats(int_ft, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
-                                else:                                    
-                                    temp_int = zonal_stats(int_ft, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
-                                    intersecting_pixels = update_dict(intersecting_pixels, temp_int)
-                                numpol += 1                        
-                    else:
-                        # find the paved area within the intersection and add it to the sewer area sum
-                        intersecting_pixels = zonal_stats(cat.geometry.intersection(sew.geometry), lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
-                    if intersecting_pixels=={}:
-                        continue
-                    if 14.0 not in intersecting_pixels:
-                        logger.warning('%s/%s: no paved area in sewer area intersection!' % (sew.code, cat.code))
-                        continue
-                        
-                    pav_pixels = intersecting_pixels[14.0]
-                    pav_area += pav_pixels*px_area
-                    # subtract it fromthe total paved area in this catchment, make sure at least 0 remains
-                    lu_counts[cat_ind][14.0] -=  pav_pixels
-                    if lu_counts[cat_ind][14.0] < 0: lu_counts[cat_ind][14.0]  = 0
+            pav_area = 0                 
+            pixels = zonal_stats(sew.geometry, lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
+            if 14.0 not in pixels:
+                logger.warning('%s/%s: no paved area in sewer area!' % (sew.code))
+                continue                
+            pav_pixels =pixels[14.0]
+            pav_area += pav_pixels*px_area
             
+            # subtract it fromthe total paved area in this catchment, make sure at least 0 remains
+            #lu_counts[cat_ind][14.0] -=  pav_pixels
+            #if lu_counts[cat_ind][14.0] < 0: lu_counts[cat_ind][14.0]  = 0
+    
             elev = mean_sa_elev[isew]['median']
             # find overflows related to this sewer area
             ovf = overflows[overflows.codegerelateerdobject==sew.code]           
@@ -240,7 +214,7 @@ def generate_paved( catchments=None,
                 # find corresponding meteo-station
                 tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(sew.geometry.centroid)]
                 ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code                         
-                #ms = ms[0] if ms != [] else meteo_areas.iloc[0,:][0]                            
+            
                 # add prefix to the overflow id to create the paved-node id
                 paved_drr.at[ov.code, 'code'] = str(ov.code)
                 paved_drr.at[ov.code, 'area'] = str(pav_area * ov.fractie)
@@ -273,14 +247,29 @@ def generate_paved( catchments=None,
         if mean_elev[num]['median'] is None:
             logger.warning('No rasterdata available for catchment %s' % cat.code)     
             continue
-        
+        if sewer_areas is not None:
+            if cat.geometry.intersects(sewer_areas.unary_union):            
+                area_outside_sewer = cat.geometry.difference(sewer_areas.unary_union)
+                if area_outside_sewer.area == 0.0:
+                    logger.info('No paved area outside sewer area in catchments %s' % cat.code)
+                    pav_area = 0.0
+                else:
+                    pixels = zonal_stats(area_outside_sewer , lu_rast, affine=lu_affine, categorical=True, all_touched=all_touched)[0]
+                    if 14.0 in pixels:
+                        pav_area = str(pixels[14.0]*px_area)
+                    else:
+                        pav_area = 0.0
+
+        else:
+            pav_area = str(lu_counts[num][14.0]*px_area) if 14.0 in lu_counts[num] else '0'   
+
         # find corresponding meteo-station
         tm = [m for m in meteo_areas.itertuples() if m.geometry.contains(cat.geometry.centroid)]
         ms = meteo_areas.iloc[0,:][0] if tm==[] else tm[0].code        
             
         elev = mean_elev[num]['median']
         paved_drr.at[cat.code, 'code'] = str(cat.code)
-        paved_drr.at[cat.code, 'area'] = str(lu_counts[num][14]*px_area) if 14 in lu_counts[num] else '0'        
+        paved_drr.at[cat.code, 'area'] = str(pav_area)#
         paved_drr.at[cat.code, 'mvlevel'] = f'{elev:.2f}'         
         # if a float is given, a standard value is passed. If a string is given, a rastername is assumed to zonal statistics are applied.       
         if isinstance(street_storage, float):    
@@ -298,7 +287,7 @@ def generate_paved( catchments=None,
         paved_drr.at[cat.code,'meteostat'] = str(ms)
         paved_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+10:.0f}'
         paved_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        paved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
+        paved_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                    
     return paved_drr   
        
 def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_areas, zonalstats_alltouched=None):    
@@ -347,7 +336,7 @@ def generate_greenhouse(catchments, landuse, surface_level, roof_storage, meteo_
         gh_drr.at[cat.code, 'meteostat'] = str(ms)
         gh_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]+20:.0f}'
         gh_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        gh_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
+        gh_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode
     return gh_drr   
 
 def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=None):    
@@ -377,7 +366,7 @@ def generate_openwater(catchments, landuse, meteo_areas, zonalstats_alltouched=N
         ow_drr.at[cat.code, 'meteostat'] = str(ms)
         ow_drr.at[cat.code, 'px'] = f'{cat.geometry.centroid.coords[0][0]-20:.0f}'
         ow_drr.at[cat.code, 'py'] = f'{cat.geometry.centroid.coords[0][1]:.0f}'
-        ow_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode                        
+        ow_drr.at[cat.code, 'boundary'] = cat.lateraleknoopcode
     return ow_drr   
 
 def generate_boundary(boundary_nodes, catchments, drrmodel, overflows=None):
@@ -481,16 +470,16 @@ def generate_evap(areas, evap_folder):
     warnings.filterwarnings('ignore')
     file_list = os.listdir(evap_folder)
     # aggregated evap
-    areas['dissolve'] = 1
-    agg_areas = areas.iloc[0:len(areas),:].dissolve(by='dissolve',aggfunc='mean')
+    #areas['dissolve'] = 1
+    #agg_areas = areas.iloc[0:len(areas),:].dissolve(by='dissolve',aggfunc='mean')
     times = []    
-    arr = np.zeros((len(file_list), 1))
+    arr = np.zeros((len(file_list), len(areas)))
     for ifile, file in tqdm(enumerate(file_list),total=len(file_list),desc='Reading evaporation files'):
         array, affine, time = read_raster(os.path.join(evap_folder, file))
         times.append(time)                  
-        stats = zonal_stats(agg_areas, array, affine=affine, stats="mean",all_touched=True)
+        stats = zonal_stats(areas, array, affine=affine, stats="mean",all_touched=True)
         arr[ifile,:] = [s['mean'] for s in stats]       
-    result = pd.DataFrame(arr,columns=['ms_'+str(areas.iloc[0,0])])
+    result = pd.DataFrame(arr, columns=['ms_'+str(area) for area in areas.code])
     result.index = times 
     return result
 
