@@ -23,114 +23,158 @@ class HyDAMO:
         # Create standard dataframe for network, crosssections, orifices, weirs
         self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
             'code',
-            'geometry'
+            'geometry',
+            'typeruwheid',            
         ])
         
-        self.crosssections = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
+        self.profile = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
             'code',
             'geometry',
-            'ruwheidswaarde',
-            'ruwheidstypecode'
+            'globalid',
+            'profiellijnid'            
+            
         ])
-
-        self.parametrised_profiles = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
+        self.profile_roughness = ExtendedDataFrame(required_columns=[
             'code',
-            'bodemhoogtebenedenstrooms',
-            'bodemhoogtebovenstrooms',
-            'bodembreedte',
-            'taludhellinglinkerzijde',
-            'taludhellingrechterzijde',
-            'hoogteinsteeklinkerzijde',
-            'hoogteinsteekrechterzijde',
-            'ruwheidswaarde',
-            'ruwheidstypecode'
+            'globalid',
+            'profielpuntid'        
+        ])
+        
+        self.profile_line = ExtendedGeoDataFrame(geotype=LineString, required_columns=[            
+            'globalid',
+            'profielgroepid'        
+        ])
+        
+        self.profile_group = ExtendedDataFrame(required_columns=[            
+            'globalid'            
+        ])
+        
+        
+        # self.crosssections = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
+        #     'code',
+        #     'geometry'            
+        # ])
+        
+
+        self.param_profile = ExtendedDataFrame(required_columns=[
+            'globalid',
+            'normgeparamprofielid',
+            'hydroobjectid'
+        ])
+        
+        self.param_profile_values = ExtendedDataFrame(required_columns=[
+            'normgeparamprofielid',
+            'soortparameter',
+            'waarde',            
+            'ruwheidlaag',
+            'ruwheidhoog',
+            'typeruwheid'
         ])
         
         # Weirs
         self.weirs = ExtendedGeoDataFrame(geotype=Point, required_columns=[
             'code',
             'geometry',
-            'soortstuwcode',
-            'soortregelbaarheidcode',
-            'laagstedoorstroomhoogte',
-            'laagstedoorstroombreedte',
+            'globalid',
+            'soortstuw',                          
             'afvoercoefficient'
         ])         
         
-        # Bridges
-        self.bridges = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-            'code',            
-            #'name',
-            'geometry',
-            'hoogtebovenzijde',
-            'hoogteonderzijde',
-            'lengte',
-            'dwarsprofielcode',
-            'intreeverlies',
-            'uittreeverlies',            
-            'ruwheidstypecode',
-            'ruwheidswaarde'                   
+        # opening
+        self.opening = ExtendedDataFrame(required_columns=[            
+            'vormopening',            
+            'globalid',
+            'hoogstedoorstroombreedte',
+            'hoogstedoorstroomhoogte',
+            'laagstedoorstroombreedte',
+            'laagstedoorstroomhoogte',            
+            'vormopening',
+            'afvoercoefficient'
+         ])
+        
+        # opening
+        self.closing_device = ExtendedDataFrame(required_columns=[
+            'code'    
+            
         ])
         
-        # Orifices
-        self.orifices = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-             'code',
-             'geometry',
-             'laagstedoorstroomhoogte',
-             'laagstedoorstroombreedte',
-             'schuifhoogte',
-             'afvoercoefficient'
+        # opening
+        self.management_device = ExtendedDataFrame(required_columns=[
+            'code',
+            'soortregelbaarheid',            
+            'maximalehoogtebovenkant',
+            'maximalehoogtebovenkant'          
          ])
+        
+        # Bridges
+        self.bridges = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',                        
+            'globalid',
+            'geometry',
+            'lengte',
+            'intreeverlies',
+            'uittreeverlies'
+            
+        ])
+        
+        # # Orifices
+        # self.orifices = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+        #      'code',
+        #      'geometry',
+        #      'laagstedoorstroomhoogte',
+        #      'laagstedoorstroombreedte',
+        #      'schuifhoogte',
+        #      'afvoercoefficient'
+        #  ])
 
         # Culverts
         self.culverts = ExtendedGeoDataFrame(geotype=LineString, required_columns=[
-            'code',
+            'code',            
             'geometry',
             'lengte',
             'hoogteopening',
             'breedteopening',
-            'hoogtebinnenonderkantbenedenstrooms',
-            'hoogtebinnenonderkantbovenstrooms',
-            'vormcode',
+            'hoogtebinnenonderkantbene',
+            'hoogtebinnenonderkantbov',
+            'vormkoker',
             'intreeverlies',
             'uittreeverlies',
-            'ruwheidstypecode',
-            'ruwheidswaarde'
+            'typeruwheid',
+            'ruwheid'
         ])
         
         # Laterals
         self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-            'code',            
+            'globalid',            
             'geometry'
         ])
 
         # Gemalen
-        self.gemalen = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-            'code',
-        ])
-        self.pumps = ExtendedGeoDataFrame(geotype=Point, required_columns=[
-            'code',
-            'maximalecapaciteit',
+        self.pumpstations = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',            
+            'globalid',
             'geometry',
-            'codegerelateerdobject'
         ])
-        self.sturing = ExtendedDataFrame(required_columns=[
+        self.pumps = ExtendedDataFrame(required_columns=[
             'code',
-            'streefwaarde',
-            'bovenmarge',
-            'ondermarge',
-            'codegerelateerdobject'
+            'globalid',
+            'gemaalid',
+            'maximalecapaciteit'            
         ])
-        self.afsluitmiddel = ExtendedDataFrame(required_columns=[
+        self.management = ExtendedDataFrame(required_columns=[
             'code',
-            'soortafsluitmiddelcode',
-            'codegerelateerdobject'
+            'globalid'            
         ])
+        # self.afsluitmiddel = ExtendedDataFrame(required_columns=[
+        #     'code',
+        #     'soortafsluitmiddelcode',
+        #     'codegerelateerdobject'
+        # ])
 
         # Hydraulische randvoorwaarden
         self.boundary_conditions = ExtendedGeoDataFrame(geotype=Point, required_columns=[
             'code',
-            'typerandvoorwaardecode',
+            'typerandvoorwaarde',
             'geometry'
         ])
         
@@ -138,8 +182,15 @@ class HyDAMO:
         self.catchments = ExtendedGeoDataFrame(geotype=Polygon, required_columns=[
             'code',
             'geometry',
-            'lateraleknoopcode'
-            
+            'globalid',
+            'lateraleknoopid'            
+        ])
+        
+        # Laterals
+        self.laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=[
+            'code',
+            'geometry',
+            'globalid'            
         ])
         
         # RR overflows
@@ -156,7 +207,40 @@ class HyDAMO:
             'code',
             'geometry'            
         ])
-            
+        
+        
+    def roughness_int2str(self, df):
+        roughness = {
+            1: "Chezy",
+            2: "Manning",
+            3: "StricklerNikuradse",
+            4: "Strickler",
+            5: "WhiteColebrook",
+            6: "deBosBijkerk"
+        }
+        for val in roughness.keys():
+            if isinstance(df.typeruwheid.iloc[0],str):            
+                idx = df[df['typeruwheid'] == str(val)].index
+            else:
+                idx = df[df['typeruwheid'] == val].index
+            df.loc[idx, 'typeruwheid'] = roughness[val]
+        return df
+    
+    def roughness_str2int(self, df):
+        roughness = {
+            1: "Chezy",
+            2: "Manning",
+            3: "StricklerNikuradse",
+            4: "Strickler",
+            5: "WhiteColebrook",
+            6: "deBosBijkerk"
+        }
+        for strval in roughness.values():
+            idx = df[df['typeruwheid'] == strval].index
+            df.loc[idx, 'typeruwheid'] = [key for key, val in roughness.items() if val==strval][0]
+        return df
+    
+        
     def to_pickle(self, filename, overwrite=False):
         # Check if path exists
         if os.path.exists(filename) and not overwrite:
@@ -173,5 +257,6 @@ class HyDAMO:
             loaded_cls = pickle.load(handle)
 
         return loaded_cls
+
 
 

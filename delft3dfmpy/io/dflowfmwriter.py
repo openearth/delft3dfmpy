@@ -164,8 +164,12 @@ class DFlowFMWriter:
 
             # Write the default profile (if specified) to branches that do not have a cross section
             if self.dflowfmmodel.crosssections.default_definition is not None:
-                # Find branches without profile
-                no_css = self.dflowfmmodel.crosssections.get_branches_without_crosssection()
+                if self.dflowfmmodel.crosssections.default_locations is None:
+                    # Find branches without profile
+                    no_css = self.dflowfmmodel.crosssections.get_branches_without_crosssection()
+                else:
+                    no_css = self.dflowfmmodel.crosssections.default_locations
+
                 branches = (self.dflowfmmodel.network.branches.loc[no_css, 'geometry'].length / 2).to_dict()
                 ibranch=0
                 for branchid, chainage in branches.items():                    

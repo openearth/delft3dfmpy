@@ -57,36 +57,41 @@ def generate_pumps(pompen, sturing, gemalen):
     for idx, pump in pumps_dfm.iterrows():
 
         # Find sturing for pump
-        sturingidx = (sturing.codegerelateerdobject == idx).values
-
-        # The pump and 'sturing' might be linked to the pumping station,
+        sturingidx = (sturing.pompid == pump.globalid).values
+        
+        # find gemaal for pump
+        gemaalidx = (gemalen.globalid == pump.gemaalid).values
+        
         # so first check if there are multiple pumps with one 'sturing'
-        if not sturingidx.sum() == 1:
-            gemaalidx = (gemalen.code == pump.codegerelateerdobject).values
-            # If there als multiple pumping stations connected to one pump, raise an error
-            if sum(gemaalidx) != 1:
-                raise IndexError('Multiple pumping stations (gemalen) found for pump.')
+        if sum(sturingidx) != 1:            
+            raise IndexError('Multiple or no sturingen found for pump.')
+            
+        # If there als multiple pumping stations connected to one pump, raise an error
+        if sum(gemaalidx) != 1:
+            raise IndexError('Multiple or no pumping stations (gemalen) found for pump.')
 
-            # Find the idx if the pumping station connected to the pump
-            gemaalidx = gemalen.iloc[np.where(gemaalidx)[0][0]]['code']
+        # Find the idx if the pumping station connected to the pump
+            # gemaalidx = gemalen.iloc[np.where(gemaalidx)[0][0]]['code']
             # Find the control for the pumping station (and thus for the pump)
-            sturingidx = (sturing.codegerelateerdobject == gemaalidx).values
+            #@sturingidx = (sturing.codegerelateerdobject == gemaalidx).values
 
-            assert sum(sturingidx) == 1
+            #assert sum(sturingidx) == 1
 
+        pumps_dfm.at[idx, 'branch_id'] = gemalen.iloc[np.where(gemaalidx)[0][0]]['branch_id']
+        pumps_dfm.at[idx, 'branch_offset'] = gemalen.iloc[np.where(gemaalidx)[0][0]]['branch_offset']
         # Get the control by index
         pump_control = sturing.iloc[np.where(sturingidx)[0][0]]
 
-        if pump_control.doelvariabelecode != 1 and pump_control.doelvariabelecode != 'waterstand':
+        if pump_control.doelvariabele != 1 and pump_control.doelvariabele != 'waterstand':
             raise NotImplementedError('Sturing not implemented for anything else than water level (1).')
 
         # Add levels for suction side
-        pumps_dfm.at[idx, 'startlevelsuctionside'] = pump_control['bovenmarge'] 
-        pumps_dfm.at[idx, 'stoplevelsuctionside'] = pump_control['ondermarge'] 
+        pumps_dfm.at[idx, 'startlevelsuctionside'] = pump_control['bovengrens'] 
+        pumps_dfm.at[idx, 'stoplevelsuctionside'] = pump_control['ondergrens'] 
     
     return pumps_dfm
 
-def generate_weirs(weirs, afsluitmiddel=None, sturing=None):
+def generate_weirs(weirs, opening=None, management_device=None, management=None):
     """
     Generate weirs from Hydamo input
 
@@ -106,38 +111,65 @@ def generate_weirs(weirs, afsluitmiddel=None, sturing=None):
     pd.DataFrame
         DataFrame with weir attributes suitable for dflowfm
     """
+    weirs_dfm = gpd.GeoDataFrame()
+    orifices_dfm = gpd.GeoDataFrame()
+    for idx, weir in weirs.iterrows():
+        weir_opening = opening[opening.stuwid == weir.globalid]
+        weir_mandev = management_device[management_device.kunstwerkopeningid == weir_opening.globalid.to_string(index=False)]
+        if weir_mandev.overlaatonderlaat.to_string(index=False) == 'Overlaat':
+            weirs_dfm.at[idx,'code'] = weir.code
+            weirs_dfm.at[idx,'branch_id'] = weir.branch_id
+            weirs_dfm.at[idx,'branch_offset'] = weir.branch_offset
+            weirs_dfm.at[idx,'laagstedoorstroomhoogte'] = weir_opening.laagstedoorstroomhoogte.to_string(index=False)
+            weirs_dfm.at[idx,'laagstedoorstroombreedte'] = weir_opening.laagstedoorstroombreedte.to_string(index=False)
+            weirs_dfm.at[idx,'afvoercoefficient'] = weir.afvoercoefficient
+        elif weir_mandev.overlaatonderlaat.to_string(index=False) == 'Onderlaat':
+            orifices_dfm.at[idx,'code'] = weir.code
+            orifices_dfm.at[idx,'branch_id'] = weir.branch_id
+            orifices_dfm.at[idx,'branch_offset'] = weir.branch_offset
+            orifices_dfm.at[idx,'laagstedoorstroomhoogte'] = weir_opening.laagstedoorstroomhoogte.to_string(index=False)
+            orifices_dfm.at[idx,'laagstedoorstroombreedte'] = weir_opening.laagstedoorstroombreedte.to_string(index=False)
+            orifices_dfm.at[idx,'afvoercoefficient'] = weir.afvoercoefficient
+            orifices_dfm.at[idx,'schuifhoogte'] = weir_mandev.hoogteopening.to_string(index=False)
+            if 'maximaaldebiet' not in weir_mandev:  
+                orifices_dfm.at[idx,'uselimitflow'] = 'false'
+                orifices_dfm.at[idx,'limitflow'] = 0.0
+            else:
+                orifices_dfm.at[idx,'uselimitflow'] = 'true'
+                orifices_dfm.at[idx,'limitflow'] = weir_mandev.maximaaldebiet.to_string(index=False)
+            
+    return [weirs_dfm, orifices_dfm]
+                        
+    #logger.info('Currently only simple weirs can be applied. From Hydamo the attributes \'laagstedoorstroomhoogte\' and \'kruinbreedte\' are used to define the weir dimensions.')
 
-    weirs_dfm = weirs.copy().astype('object')
-    logger.info('Currently only simple weirs can be applied. From Hydamo the attributes \'laagstedoorstroomhoogte\' and \'kruinbreedte\' are used to define the weir dimensions.')
-
-    return weirs_dfm
-
-def generate_orifices(orifices, afsluitmiddel=None, sturing=None):
-    """
-    Generate orifices from Hydamo input
-
-    Parameters
-    ----------
-    orifices : gpd.GeoDataFrame
-        GeoDataFrame with geometry and attributes for weirs.
     
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with orifice attributes suitable for dflowfm
-    """
 
-    orifices_dfm = orifices.copy().astype('object')
-    if 'maximaaldebiet' not in orifices_dfm:  
-        orifices_dfm['uselimitflow'] = 'false'
-        orifices_dfm['limitflow'] = 0.0
-    else:
-        orifices_dfm['uselimitflow'] = 'true'
-        orifices_dfm['limitflow'] = orifices_dfm['maximaaldebiet']
-    return orifices_dfm
+# def generate_orifices(orifices, afsluitmiddel=None, sturing=None):
+#     """
+#     Generate orifices from Hydamo input
+
+#     Parameters
+#     ----------
+#     orifices : gpd.GeoDataFrame
+#         GeoDataFrame with geometry and attributes for weirs.
+    
+#     Returns
+#     -------
+#     pd.DataFrame
+#         DataFrame with orifice attributes suitable for dflowfm
+#     """
+
+#     orifices_dfm = orifices.copy().astype('object')
+#     if 'maximaaldebiet' not in orifices_dfm:  
+#         orifices_dfm['uselimitflow'] = 'false'
+#         orifices_dfm['limitflow'] = 0.0
+#     else:
+#         orifices_dfm['uselimitflow'] = 'true'
+#         orifices_dfm['limitflow'] = orifices_dfm['maximaaldebiet']
+#     return orifices_dfm
 
 
-def generate_uweirs(uweirs, yz_profiles=None, parametrised_profiles=None):
+def generate_uweirs(uweirs, opening=None, profile_groups=None, profile_lines=None, profiles=None):
    """
    Generate universal weirs from Hydamo input
 
@@ -161,33 +193,29 @@ def generate_uweirs(uweirs, yz_profiles=None, parametrised_profiles=None):
    for uweir in uweirs.itertuples():    
        
        # first search in yz-profiles
+       uweir_opening = opening[opening.stuwid == uweir.globalid]
        prof=np.empty(0)
-       if yz_profiles is not None:
-            if 'codegerelateerdobject' in yz_profiles:  
-                prof = yz_profiles[yz_profiles['codegerelateerdobject']==uweir.code]   
+       if profiles is not None:
+            if 'stuwid' in profile_groups:
+                group = profile_groups[profile_groups['stuwid']==uweir.globalid]
+                line = profile_lines[profile_lines['profielgroepid']==group['globalid'].values[0]]
+                prof = profiles[profiles['globalid']==line['globalid'].values[0]]   
                 if not prof.empty:                    
-                    counts = len(prof.geometry[0].coords[:])
-                    xyz = np.vstack(prof.geometry[0].coords[:])
+                    counts = len(prof.geometry.iloc[0].coords[:])
+                    xyz = np.vstack(prof.geometry.iloc[0].coords[:])
                     length = np.r_[0, np.cumsum(np.hypot(np.diff(xyz[:, 0]), np.diff(xyz[:, 1])))]
-                    yzvalues = np.c_[length, xyz[:, -1]-np.min(xyz[:,-1])]            
-                
-       if (prof.empty) & (parametrised_profiles is not None):
-            if 'codegerelateerdobject' in parametrised_profiles:  
-                # if not found, check the parametrised profiles
-                prof = parametrised_profiles[parametrised_profiles['codegerelateerdobject']==uweir.code]           
-                nulls = pd.isnull(prof[['bodembreedte', 'bodemhoogtebenedenstrooms', 'bodemhoogtebovenstrooms','taludhellinglinkerzijde','taludhellingrechterzijde','hoogteinsteeklinkerzijde','hoogteinsteekrechterzijde']]).any(axis=1).values
-                if nulls:
-                   raise ValueError(f'Insufficient fields avaialable in parametrised profile defintion {prof.code}.')
-                bodemhoogte = float((prof.bodemhoogtebenedenstrooms + prof.bodemhoogtebovenstrooms)/2.)
-                zvalues = [ float(prof.hoogteinsteeklinkerzijde-bodemhoogte), 0., 0., float( prof.hoogteinsteekrechterzijde-bodemhoogte )]
-                yvalues = list( np.cumsum( [0.,float((prof.hoogteinsteeklinkerzijde-bodemhoogte)/prof.taludhellinglinkerzijde),float(prof.bodembreedte), float((prof.hoogteinsteekrechterzijde-bodemhoogte)/prof.taludhellingrechterzijde) ] ) )           
-                yzvalues = list(zip(yvalues,zvalues))
-                counts = len(zvalues)
+                    yzvalues = np.c_[length, xyz[:, -1]-np.min(xyz[:,-1])]                            
+     
            
        if len(prof)==0:
            # return an error it is still not found
            raise ValueError(f'{uweir.code} is not found in any cross-section.')
-    
+
+       uweirs_dfm.at[uweir.Index, 'code'] = uweir.code
+       uweirs_dfm.at[uweir.Index, 'branch_id'] = uweir.branch_id
+       uweirs_dfm.at[uweir.Index, 'branch_offset'] = uweir.branch_offset
+       uweirs_dfm.at[uweir.Index, 'afvoercoefficient'] = uweir_opening.afvoercoefficient.values[0]
+       uweirs_dfm.at[uweir.Index, 'crestlevel'] = uweir_opening.laagstedoorstroomhoogte.values[0]
        uweirs_dfm.at[uweir.Index, 'numlevels'] = counts
        uweirs_dfm.at[uweir.Index, 'yvalues'] = ' '.join([f'{yz[0]:7.3f}' for yz in yzvalues])
        uweirs_dfm.at[uweir.Index, 'zvalues'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])        
@@ -224,7 +252,7 @@ def generate_uweirs(uweirs, yz_profiles=None, parametrised_profiles=None):
         #     weirs.at[weir.Index, 'zcoordinates'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])
         #     weirs.at[weir.Index, 'levelscount'] = len(yzvalues)
 
-def generate_bridges(bridges, yz_profiles=None, parametrised_profiles=None):
+def generate_bridges(bridges, profile_groups=None, profile_lines=None, profiles=None):
     """
     Generate bridges from Hydamo input
 
@@ -246,16 +274,14 @@ def generate_bridges(bridges, yz_profiles=None, parametrised_profiles=None):
     
     for bridge in bridges.itertuples():        
         # first search in yz-profiles
-        prof = yz_profiles[yz_profiles['codegerelateerdobject']==bridge.code]
+        group = profile_groups[profile_groups['brugid']==bridge.globalid]
+        line = profile_lines[profile_lines['profielgroepid']==group['globalid'].values[0]]
+        prof = profiles[profiles['globalid']==line['globalid'].values[0]]   
+        
         if len(prof) > 0:
             #bedlevel = np.min([c[2] for c in prof.geometry[0].coords[:]])  
             profile_id=prof.code.values[0]
         else:
-            # if not found, check the parametrised profiles
-            prof = parametrised_profiles[parametrised_profiles['codegerelateerdobject']==bridge.code]
-            #bedlevel = (prof['bodemhoogtebovenstrooms'] + prof['bodemhoogtebenedenstrooms'])/2.
-           
-        if len(prof)==0:
             # return an error it is still not found
             raise ValueError(f'{bridge.code} is not found in any cross-section.')
         
@@ -265,7 +291,7 @@ def generate_bridges(bridges, yz_profiles=None, parametrised_profiles=None):
              
     return bridges_dfm
           
-def generate_culverts(culverts,afsluitmiddel):
+def generate_culverts(culverts,management_device=None):
 
     culverts_dfm = culverts.copy()
     culverts_dfm['crosssection'] = [{} for _ in range(len(culverts_dfm))]
@@ -273,15 +299,15 @@ def generate_culverts(culverts,afsluitmiddel):
     for culvert in culverts.itertuples():
 
         # Generate cross section definition name
-        if culvert.vormcode == 1 or culvert.vormcode == 'rond' or culvert.vormcode == 5 or culvert.vormcode == 'ellipsvormig':
+        if culvert.vormkoker == 'Rond' or culvert.vormkoker == 'Ellipsvormig':
             crosssection = {'shape': 'circle', 'diameter': culvert.hoogteopening}
             
-        elif culvert.vormcode == 3 or culvert.vormcode == 'rechthoekig' or culvert.vormcode == 99 or culvert.vormcode == 8 or culvert.vormcode == 'muilprofiel' or culvert.vormcode == 4 or culvert.vormcode == 'heulprofiel' or culvert.vormcode == 'onbekend':
+        elif culvert.vormkoker == 'Rechthoekig' or culvert.vormkoker == 'Onbekend' or culvert.vormkoker == 'Eivormig' or culvert.vormkoker=='Muilprofiel' or culvert.vormkoker=='Heulprofiel':
             crosssection = {'shape': 'rectangle', 'height': culvert.hoogteopening, 'width': culvert.breedteopening, 'closed': 1}
         
         else:
             crosssection = {'shape': 'circle', 'diameter': 0.40}
-            print(f'Culvert {culvert.code} has an unknown shape: {culvert.vormcode}. Applying a default profile (round - 40cm)')
+            print(f'Culvert {culvert.code} has an unknown shape: {culvert.vormkoker}. Applying a default profile (round - 40cm)')
         
         # Set cross section definition
         culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'both'
@@ -291,21 +317,23 @@ def generate_culverts(culverts,afsluitmiddel):
         culverts_dfm.at[culvert.Index, 'relopening'] = 0
         culverts_dfm.at[culvert.Index, 'losscoeff'] = 0
         # check whether an afsluitmiddel is present and take action dependent on its settings
-        if afsluitmiddel is not None:
-            if not afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code].empty:                
-                if len(afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code])<1:
-                    raise IndexError(f'No instances of afsluitmiddel associated with culvert {culvert.code}')
-                for _,i in afsluitmiddel[afsluitmiddel.codegerelateerdobject==culvert.code].iterrows():
-                    if int(i['soortafsluitmiddelcode'])==5:
+        if management_device is not None:
+            
+            if not management_device[management_device.duikersifonhevelid==culvert.globalid].empty:
+                if len(management_device[management_device.duikersifonhevelid==culvert.globalid])==0:
+                    raise IndexError(f'No instances of closing_device associated with culvert {culvert.code}')
+                for _,i in management_device[management_device.duikersifonhevelid==culvert.globalid].iterrows():
+                    if i['soortregelmiddel']=='terugslagklep':
                         culverts_dfm.at[culvert.Index, 'allowedflowdir'] = 'positive'
-                    if int(i['soortafsluitmiddelcode'])==4:
+                    elif i['soortregelmiddel']=='schuif':
                         culverts_dfm.at[culvert.Index, 'valveonoff'] = 1
-                        culverts_dfm.at[culvert.Index, 'valveopeningheight'] = float(i['hoogte'])
+                        culverts_dfm.at[culvert.Index, 'valveopeningheight'] = float(i['hoogteopening'])
                         culverts_dfm.at[culvert.Index, 'numlosscoeff'] = 1
-                        culverts_dfm.at[culvert.Index, 'relopening'] = float(i['hoogte'])/culvert.hoogteopening
+                        culverts_dfm.at[culvert.Index, 'relopening'] = float(i['hoogteopening'])/culvert.hoogteopening
                         culverts_dfm.at[culvert.Index, 'losscoeff'] = float(i['afvoercoefficient'])
+                    else:
+                        print(f'Type of closing device for culvert {culvert.code} is not implemented; only "schuif" and "terugslagklep" are allowed.')
         culverts_dfm.at[culvert.Index, 'crosssection'] = crosssection
-
     return culverts_dfm
     
 def move_structure(struc, struc_dict, branch, offset):
@@ -387,7 +415,7 @@ def generate_compounds(idlist, structurelist, structures):
     
     return compounds_dfm
 
-def dwarsprofiel_to_yzprofiles(crosssections, branches):
+def dwarsprofiel_to_yzprofiles(crosssections, roughness, branches, roughness_variant='Low'):
     """
     Function to convert hydamo cross sections 'dwarsprofiel' to
     dflowfm input.
@@ -420,10 +448,11 @@ def dwarsprofiel_to_yzprofiles(crosssections, branches):
                 yz[i,0] +=0.01
                 
         # determine thalweg
-        if branches is not None:
+        if branches is not None:                              
             branche_geom = branches[branches.code==css.branch_id].geometry.values
-            if css.geometry.intersection(branche_geom[0]).geom_type == 'MultiPoint':
-                thalweg_xyz = css.geometry.intersection(branche_geom[0])[0].coords[:][0]                
+
+            if css.geometry.intersection(branche_geom[0]).geom_type=='MultiPoint':
+                thalweg_xyz = css.geometry.intersection(branche_geom[0])[0].coords[:][0]                            
             else:
                 thalweg_xyz = css.geometry.intersection(branche_geom[0]).coords[:][0]                
             # and the Y-coordinate of the thalweg
@@ -431,19 +460,24 @@ def dwarsprofiel_to_yzprofiles(crosssections, branches):
         else: 
             thalweg = 0.0
         
+        if roughness_variant == "High":
+            ruwheid=roughness[roughness['profielpuntid']==css.globalid].ruwheidhoog
+        if roughness_variant == "Low":
+            ruwheid=roughness[roughness['profielpuntid']==css.globalid].ruwheidlaag
+            
         # Add to dictionary
         cssdct[css.code] = {
             'branchid': css.branch_id,
             'chainage': css.branch_offset,
             'yz': yz,
             'thalweg':thalweg,
-            'ruwheidstypecode': css.ruwheidstypecode,
-            'ruwheidswaarde': css.ruwheidswaarde
+            'typeruwheid': roughness[roughness['profielpuntid']==css.globalid].typeruwheid.values[0],
+            'ruwheid': float(ruwheid)
         }
     
     return cssdct
 
-def parametrised_to_profiles(parametrised, branches):
+def parametrised_to_profiles(parametrised, parametrised_values,  branches, roughness_variant='Low'):
     """
     Generate parametrised cross sections for all branches,
     or the branches missing a cross section.
@@ -460,68 +494,67 @@ def parametrised_to_profiles(parametrised, branches):
     dictionary
         Dictionary with attributes of cross sections, usable for dflowfm
     """
-
-    checks.check_argument(parametrised, 'parametrised', (pd.DataFrame, gpd.GeoDataFrame))
-    checks.check_argument(branches, 'branches', (list, tuple))
-
-    # Find
-    if len(branches) != 0:
-         parambranches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.columns.tolist()+['css_type'])
-         parambranches.set_data(parametrised[np.isin(parametrised.code, branches)], index_col='code', check_columns=True)
-    else:
-        parambranches = parametrised
-     #   
-    #else:
-        #parambranches = parametrised.reindex(columns=parametrised.requiredcolumns + ['css_type'])
-    #    parambranches = parametrised[np.isin(parametrised.code,branches)]# ['css_type'])
-   
-   
-    # Drop profiles for which not enough data is available to write (as rectangle)
-    #nulls = pd.isnull(parambranches[['bodembreedte', 'bodemhoogtebenedenstrooms', 'bodemhoogtebovenstrooms']]).any(axis=1).values
-    #parambranches = parambranches.drop(ExtendedGeoDataFrame(geotype=LineString), parambranches.index[nulls], index_col='code',axis=0)
-    #parambranches.drop(parambranches.index[nulls], inplace=True)
-
-    # Determine characteristics
-    botlev = (parambranches['bodemhoogtebenedenstrooms'] + parambranches['bodemhoogtebovenstrooms']) / 2.0
-    dh1 = parambranches['hoogteinsteeklinkerzijde'] - botlev
-    dh2 = parambranches['hoogteinsteekrechterzijde'] - botlev
-    parambranches['height'] = (dh1 + dh2) / 2.0
-    parambranches['bottomlevel'] = botlev
-
-    # Determine maximum flow width and slope (both needed for output)
-    parambranches['maxflowwidth'] = parambranches['bodembreedte'] + parambranches['taludhellinglinkerzijde'] * dh1 + parambranches['taludhellingrechterzijde'] * dh2
-    parambranches['slope'] = (parambranches['taludhellinglinkerzijde'] + parambranches['taludhellingrechterzijde']) / 2.0
-
-    # Determine profile type
-    parambranches.loc[:, 'css_type'] = 'trapezium'
-    nulls = pd.isnull(parambranches[parametrised.required_columns]).any(axis=1).values
-    parambranches.loc[nulls, 'css_type'] = 'rectangle'
-
+    
     cssdct = {}
-    for branch in parambranches.itertuples():
+    for param in parametrised.itertuples():
+        branch = [branch for branch in branches if branch.globalid==param.hydroobjectid]
+    
+        values = parametrised_values[parametrised_values.normgeparamprofielid==param.normgeparamprofielid]
+    
+        #Drop profiles for which not enough data is available to write (as rectangle)
+        # nulls = pd.isnull(parambranches[['bodembreedte', 'bodemhoogtebenedenstrooms', 'bodemhoogtebovenstrooms']]).any(axis=1).values
+        # parambranches = parambranches.drop(ExtendedGeoDataFrame(geotype=LineString), parambranches.index[nulls], index_col='code',axis=0)
+        # parambranches.drop(parambranches.index[nulls], inplace=True)
+        
+        if pd.isnull(values[values.soortparameter=='bodemhoogte benedenstrooms'].waarde).values[0]:
+            print('bodemhoogte benedenstrooms not available for profile {}.'.format(param.globalid))
+        if pd.isnull(values[values.soortparameter=='bodembreedte'].waarde).values[0]:
+            print('bodembreedte not available for profile {}.'.format(param.globalid))
+        if pd.isnull(values[values.soortparameter=='bodemhoogte bovenstrooms'].waarde).values[0]:
+            print('bodemhoogte bovenstrooms not available for profile {}.'.format(param.globalid))
+        
+        # Determine characteristics
+        botlev = (values[values.soortparameter=='bodemhoogte benedenstrooms'].waarde.values[0] + values[values.soortparameter=='bodemhoogte benedenstrooms'].waarde.values[0]) / 2.0       
+        
+        
+        if pd.isnull(values[values.soortparameter=='taludhelling linkerzijde'].waarde).values[0]:
+            csstype=='rectangle'
+        else:
+            css_type = 'trapezium'
+            dh1 = values[values.soortparameter=='hoogte insteek linkerzijde'].waarde.values[0] - botlev
+            dh2 = values[values.soortparameter=='hoogte insteek rechterzijde'].waarde.values[0] - botlev
+            height = (dh1 + dh2) / 2.0
+            # Determine maximum flow width and slope (both needed for output)
+            maxflowwidth = values[values.soortparameter=='bodembreedte'].waarde.values[0] + values[values.soortparameter=='taludhelling linkerzijde'].waarde.values[0] * dh1 + values[values.soortparameter=='taludhelling rechterzijde'].waarde.values[0] * dh2
+            slope = (values[values.soortparameter=='taludhelling linkerzijde'].waarde.values[0] + values[values.soortparameter=='taludhelling rechterzijde'].waarde.values[0]) / 2.0
+           
+        if roughness_variant=='Low':
+            roughness =  values.ruwheidlaag.values[0]
+        else:
+            roughness = values.ruwheidhoog.values[0]
         # Determine name for cross section
-        if branch.css_type == 'trapezium':
-            cssdct[branch.Index] = {
-                'type': branch.css_type,
-                'slope': round(branch.slope, 2),
-                'maximumflowwidth': round(branch.maxflowwidth, 1),
-                'bottomwidth': round(branch.bodembreedte, 3),
+        if css_type == 'trapezium':
+            cssdct[branch[0].Index] = {
+                'type': css_type,
+                'slope': round(slope, 2),
+                'maximumflowwidth': round(maxflowwidth, 1),
+                'bottomwidth': round(values[values.soortparameter=='bodembreedte'].waarde.values[0], 3),
                 'closed': 0,
                 'thalweg': 0.0,
-                'ruwheidstypecode': int(branch.ruwheidstypecode) if isinstance(branch.ruwheidstypecode, float) else branch.ruwheidstypecode,
-                'ruwheidswaarde': branch.ruwheidswaarde,
-                'bottomlevel': branch.bottomlevel
+                'typeruwheid': values.typeruwheid.values[0],
+                'ruwheid': roughness,
+                'bottomlevel': botlev
             }
-        elif branch.css_type == 'rectangle':
-            cssdct[branch.Index] = {
-                'type': branch.css_type,
+        elif css_type == 'rectangle':
+            cssdct[branch[0].Index] = {
+                'type': css_type,
                 'height': 5.0,
-                'width': round(branch.bodembreedte, 3),
+                'width': round(values[values.soortparameter=='bodembreedte'].waarde.values[0], 3),
                 'closed': 0,
                 'thalweg': 0.0,
-                'ruwheidstypecode': int(branch.ruwheidstypecode) if isinstance(branch.ruwheidstypecode, float) else branch.ruwheidstypecode,
-                'ruwheidswaarde': branch.ruwheidswaarde,
-                'bottomlevel': branch.bottomlevel
+                'typeruwheid': values.typeruwheid.values[0],
+                'ruwheid': roughness,        
+                'bottomlevel': botlev
             }
 
     return cssdct
@@ -553,9 +586,9 @@ def generate_boundary_conditions(boundary_conditions, schematised):
         # # Create intersection line for boundary condition
         # bcline = LineString(geometry.orthogonal_line(line=extended_line, offset=0.1, width=0.1))
 
-        if bndcnd.typerandvoorwaardecode in [0, 'waterstand']:
+        if 'waterstand' in bndcnd.typerandvoorwaarde:
             bctype = 'waterlevel'
-        elif bndcnd.typerandvoorwaardecode in [1, 'debiet']:
+        elif 'debiet' in bndcnd.typerandvoorwaarde:
             bctype = 'discharge'
 
         # Add boundary condition

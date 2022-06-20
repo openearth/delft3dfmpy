@@ -114,27 +114,27 @@ class StructuresIO:
                 limitflowneg=orifice.limitflowneg,
             )
 
-    def orifices_from_hydamo(self, orifices):
-        """
-        Method to generate dflowfm orifices.
-        """
-        # Convert to dflowfm input
-        geconverteerd = hydamo_to_dflowfm.generate_orifices(orifices)
-        # Add to dict
-        for orifice in geconverteerd.itertuples():
-            self.structures.add_orifice(
-                id=orifice.code,
-                branchid=orifice.branch_id,
-                chainage=orifice.branch_offset,                
-                crestlevel=orifice.laagstedoorstroomhoogte,
-                crestwidth=orifice.laagstedoorstroombreedte,
-                gateloweredgelevel=orifice.schuifhoogte,
-                uselimitflowpos=orifice.uselimitflow,
-                limitflowpos=orifice.limitflow,
-                uselimitflowneg=orifice.uselimitflow,
-                limitflowneg=orifice.limitflow,
-                corrcoeff=orifice.afvoercoefficient                               
-            )
+    # def orifices_from_hydamo(self, orifices):
+    #     """
+    #     Method to generate dflowfm orifices.
+    #     """
+    #     # Convert to dflowfm input
+    #     geconverteerd = hydamo_to_dflowfm.generate_orifices(orifices)
+    #     # Add to dict
+    #     for orifice in geconverteerd.itertuples():
+    #         self.structures.add_orifice(
+    #             id=orifice.code,
+    #             branchid=orifice.branch_id,
+    #             chainage=orifice.branch_offset,                
+    #             crestlevel=orifice.laagstedoorstroomhoogte,
+    #             crestwidth=orifice.laagstedoorstroombreedte,
+    #             gateloweredgelevel=orifice.schuifhoogte,
+    #             uselimitflowpos=orifice.uselimitflow,
+    #             limitflowpos=orifice.limitflow,
+    #             uselimitflowneg=orifice.uselimitflow,
+    #             limitflowneg=orifice.limitflow,
+    #             corrcoeff=orifice.afvoercoefficient                               
+    #         )
     
     def weirs_from_datamodel(self, weirs):
         """"From parsed data model of weirs"""
@@ -164,7 +164,7 @@ class StructuresIO:
                 dischargecoeff=uweir.dischargecoeff                
             )  
      
-    def weirs_from_hydamo(self, weirs, yz_profiles=None, parametrised_profiles=None, afsluitmiddel=None, sturing=None):
+    def weirs_from_hydamo(self, weirs, profile_groups=None, profile_lines=None, profiles=None,  opening=None, management_device=None, management=None):
         """
         Method to convert dflowfm weirs from hydamo weirs.
         
@@ -175,55 +175,70 @@ class StructuresIO:
         """
         # Convert to dflowfm input
         
-        regular = ExtendedGeoDataFrame(geotype=Point, required_columns=weirs.required_columns)
+        
         index = np.zeros((len(weirs.code)))
-        if yz_profiles is not None:
-            if 'codegerelateerdobject' in yz_profiles:            
-                index[np.isin(weirs.code , np.asarray(yz_profiles.codegerelateerdobject))]=1
-        if parametrised_profiles is not None:
-            if 'codegerelateerdobject' in parametrised_profiles:            
-                index[np.isin(weirs.code , np.asarray(parametrised_profiles.codegerelateerdobject))]=1
-           
-        regular.set_data(weirs[index==0], index_col='code',check_columns=True)        
-        regular_geconverteerd = hydamo_to_dflowfm.generate_weirs(regular, afsluitmiddel=afsluitmiddel)        
-        regular.set_data(weirs, index_col='code',check_columns=True)        
+        if profile_groups is not None:
+            if 'stuwid' in profile_groups: 
+                # groups = profile_groups[profile_groups.stuwid != '-999'].globalid
+                # profile_lines.index = profile_lines.profielgroepid
+                # lijn = profile_lines.loc[groups]                           
+                index[np.isin(weirs.globalid , np.asarray(profile_groups.stuwid))]=1
+        
+        #regular = ExtendedGeoDataFrame(geotype=Point, required_columns=weirs.required_columns)   
+        #regular.set_data(weirs[index==0], index_col='code',check_columns=True)        
+        weirs_orifices_geconverteerd = hydamo_to_dflowfm.generate_weirs(weirs[index==0],  opening=opening, management_device=management_device, management=management)        
+        #regular.set_data(weirs_orifices_geconverteerd[0], index_col='code',check_columns=True)        
         
         # Add to dict
-        for weir in regular_geconverteerd.itertuples():
+        for weir in weirs_orifices_geconverteerd[0].itertuples():
             self.structures.add_weir(
                 id=weir.code,
                 branchid=weir.branch_id,
                 chainage=weir.branch_offset,                
                 crestlevel=weir.laagstedoorstroomhoogte,
                 crestwidth=weir.laagstedoorstroombreedte,
-                corrcoeff=float(weir.afvoercoefficient)
+                corrcoeff=weir.afvoercoefficient
             )
-    
-        universal = ExtendedGeoDataFrame(geotype=Point, required_columns=weirs.required_columns)
-        universal.set_data(weirs[index==1], index_col='code',check_columns=True)                                      
-        universal_geconverteerd = hydamo_to_dflowfm.generate_uweirs(universal,yz_profiles=yz_profiles, parametrised_profiles=parametrised_profiles)
+           
+        
+        for orifice in weirs_orifices_geconverteerd[1].itertuples():
+            self.structures.add_orifice(
+                 id=orifice.code,
+                 branchid=orifice.branch_id,
+                 chainage=orifice.branch_offset,                
+                 crestlevel=orifice.laagstedoorstroomhoogte,
+                 crestwidth=orifice.laagstedoorstroombreedte,
+                 gateloweredgelevel=orifice.schuifhoogte,
+                 uselimitflowpos=orifice.uselimitflow,
+                 limitflowpos=orifice.limitflow,
+                 uselimitflowneg=orifice.uselimitflow,
+                 limitflowneg=orifice.limitflow,
+                 corrcoeff=orifice.afvoercoefficient                               
+            )
+        
+        universal_geconverteerd = hydamo_to_dflowfm.generate_uweirs(weirs[index==1], opening=opening, profile_groups=profile_groups, profile_lines=profile_lines, profiles=profiles)
         
         if universal_geconverteerd.empty:
             return("No profile detected for universal weir)")
-        # Add to dict
+        
         for uweir in universal_geconverteerd.itertuples():
             self.structures.add_uweir(
                 id=uweir.code,
                 branchid=uweir.branch_id,
                 chainage=uweir.branch_offset,                
-                crestlevel=uweir.laagstedoorstroomhoogte,
+                crestlevel=uweir.crestlevel,
                 yvalues=uweir.yvalues,
                 zvalues=uweir.zvalues,
                 allowedflowdir='both',
-                dischargecoeff=float(uweir.afvoercoefficient)                
+                dischargecoeff=uweir.afvoercoefficient                
             )    
         
-    def bridges_from_hydamo(self, bridges, yz_profiles=None, parametrised_profiles=None):
+    def bridges_from_hydamo(self, bridges, profile_groups=None, profile_lines=None, profiles=None):
         """
         Method to convert dflowfm bridges from hydamo bridges.
         """
         # Convert to dflowfm input
-        geconverteerd = hydamo_to_dflowfm.generate_bridges(bridges, yz_profiles=yz_profiles, parametrised_profiles=parametrised_profiles)
+        geconverteerd = hydamo_to_dflowfm.generate_bridges(bridges, profile_groups=profile_groups, profile_lines=profile_lines,profiles=profiles)
         # Add to dict
         for bridge in geconverteerd.itertuples():
             self.structures.add_bridge(
@@ -232,13 +247,11 @@ class StructuresIO:
                 chainage=bridge.branch_offset,
                 length=bridge.lengte,
                 shift=bridge.shift,
-                upperheight=bridge.hoogtebovenzijde,
-                lowerheight=bridge.hoogteonderzijde,                
                 crosssection=bridge.crosssection,
-                inletlosscoeff=float(bridge.intreeverlies),
-                outletlosscoeff=float(bridge.uittreeverlies),
-                frictiontype=hydamo_to_dflowfm.roughness_gml[bridge.ruwheidstypecode],
-                frictionvalue=bridge.ruwheidswaarde
+                inletlosscoeff=bridge.intreeverlies,
+                outletlosscoeff=bridge.uittreeverlies,
+                frictiontype=bridge.typeruwheid,
+                frictionvalue=bridge.ruwheid
             )
 
     def culverts_from_datamodel(self, culverts):
@@ -270,12 +283,12 @@ class StructuresIO:
             )
             
 
-    def culverts_from_hydamo(self, culverts, afsluitmiddel=None):
+    def culverts_from_hydamo(self, culverts, management_device=None):
         """
         Method to convert dflowfm weirs from hydamo weirs.
         """
         # Convert to dflowfm input
-        geconverteerd = hydamo_to_dflowfm.generate_culverts(culverts, afsluitmiddel)
+        geconverteerd = hydamo_to_dflowfm.generate_culverts(culverts, management_device=management_device)
 
         # Add to dict
         for culvert in geconverteerd.itertuples():            
@@ -283,20 +296,20 @@ class StructuresIO:
                     id=culvert.code,
         	        branchid=culvert.branch_id,
         	        chainage=culvert.branch_offset,
-        	        leftlevel=culvert.hoogtebinnenonderkantbovenstrooms,
-        	        rightlevel=culvert.hoogtebinnenonderkantbenedenstrooms,
+        	        leftlevel=culvert.hoogtebinnenonderkantbov,
+        	        rightlevel=culvert.hoogtebinnenonderkantbene,
         	        crosssection=culvert.crosssection,
         	        length=culvert.lengte,#geometry.length,
-        	        inletlosscoeff=float(culvert.intreeverlies),
-        	        outletlosscoeff=float(culvert.uittreeverlies),
+        	        inletlosscoeff=culvert.intreeverlies,
+        	        outletlosscoeff=culvert.uittreeverlies,
                     allowedflowdir=culvert.allowedflowdir,
                     valveonoff=culvert.valveonoff,
                     numlosscoeff=culvert.numlosscoeff, 
                     valveopeningheight=culvert.valveopeningheight,
                     relopening=culvert.relopening,
-                    losscoeff=float(culvert.losscoeff),                                    
-                    frictiontype=hydamo_to_dflowfm.roughness_gml[culvert.ruwheidstypecode],
-                    frictionvalue=culvert.ruwheidswaarde
+                    losscoeff=culvert.losscoeff,                                    
+                    frictiontype=culvert.typeruwheid,
+                    frictionvalue=culvert.ruwheid
                 )
         
     def compound_structures(self, idlist, structurelist):
@@ -379,7 +392,7 @@ class CrossSectionsIO:
                 else:
                     raise NotImplementedError
 
-    def from_hydamo(self, dwarsprofielen, parametrised=None, branches=None):
+    def from_hydamo(self, crosssections=None, crossection_roughness=None, param_profile=None, param_profile_values=None, branches=None, roughness_variant=None):
         """
         Method to add cross section from hydamo files. Two files
         can be handed to the function, the cross section file (dwarsprofiel) and the
@@ -391,55 +404,50 @@ class CrossSectionsIO:
         """
 
         # first, make a selection as to use only the dwarsprofielen/parametrised that are related to branches, not structures
-        if dwarsprofielen is not None and not dwarsprofielen.empty:
-            if 'codegerelateerdobject' not in dwarsprofielen:
-                dwarsprofielen['codegerelateerdobject'] = np.empty((len(dwarsprofielen)))*np.nan
-            dp_branches = ExtendedGeoDataFrame(geotype=LineString, columns = dwarsprofielen.required_columns+['codegerelateerdobject'])
-            dp_branches.set_data(dwarsprofielen[dwarsprofielen.codegerelateerdobject.isna()], index_col='code', check_columns=True)
+        if crosssections is not None and not crosssections.empty:
+            if 'stuwid' not in crosssections:
+                crosssections['stuwid'] = str(-999.)
+            if 'brugid' not in crosssections:                
+                crosssections['brugid'] = str(-999.)
+            dp_branches = ExtendedGeoDataFrame(geotype=LineString, columns = crosssections.required_columns)
+            dp_branches.set_data(gpd.GeoDataFrame([i for i in crosssections.itertuples() if (len(i.brugid)<10)&(len(i.stuwid)<10)]))            
         else:     
             dp_branches = ExtendedGeoDataFrame(geotype=LineString)
             
-        if parametrised is not None and not parametrised.empty:
-            if 'codegerelateerdobject' not in parametrised:
-                parametrised['codegerelateerdobject'] = np.empty((len(parametrised)))*np.nan
-            if len(parametrised)>0:        
-                par_branches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns+['codegerelateerdobject'])
-                par_branches.set_data(parametrised[parametrised.codegerelateerdobject.isna()], index_col='code', check_columns=True)
-            else:
-                par_branches = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns+['codegerelateerdobject'])
-            # Assign cross-sections to branches
-            nnocross = len(self.crosssections.get_branches_without_crosssection())
-            logger.info(f'Before adding the number of branches without cross section is: {nnocross}.')
-        else:
-            par_branches = ExtendedGeoDataFrame(geotype=LineString)
-            
-        if not dp_branches.empty:
+       
+       # Assign cross-sections to branches
+        nnocross = len(self.crosssections.get_branches_without_crosssection())
+        logger.info(f'Before adding the number of branches without cross section is: {nnocross}.')
+             
+        if not dp_branches is None:
             # 1. Collect cross sections from 'dwarsprofielen'
-            crosssections = hydamo_to_dflowfm.dwarsprofiel_to_yzprofiles(dp_branches, branches)               
+            yz_profiles = hydamo_to_dflowfm.dwarsprofiel_to_yzprofiles(dp_branches, crossection_roughness, branches, roughness_variant=roughness_variant)               
         
-            for name, css in crosssections.items():
+            for name, css in yz_profiles.items():
                 # Add definition
-                self.crosssections.add_yz_definition(yz=css['yz'], thalweg=css['thalweg'], name=name, roughnesstype=css['ruwheidstypecode'], roughnessvalue=css['ruwheidswaarde'])
+                self.crosssections.add_yz_definition(yz=css['yz'], thalweg=css['thalweg'], name=name, roughnesstype=css['typeruwheid'], roughnessvalue=css['ruwheid'])
                 # Add location
                 self.crosssections.add_crosssection_location(branchid=css['branchid'], chainage=css['chainage'], definition=name)
         
         # Check the number of branches with cross sections
-        no_crosssection = self.crosssections.get_branches_without_crosssection()
+        no_crosssection_id = self.crosssections.get_branches_without_crosssection()
+        no_crosssection = [b for b in branches.itertuples() if b.code in no_crosssection_id]
+        
         nnocross = len(no_crosssection)
         logger.info(f'After adding \'dwarsprofielen\' the number of branches without cross section is: {nnocross}.')
         if (nnocross == 0):
             print('No further branches without a profile.')
-        elif par_branches.empty:
+        elif param_profile is None:
             print('No parametrised crossections available for branches.')
         else: 
             # Derive norm cross sections for norm parametrised
-            crosssections = hydamo_to_dflowfm.parametrised_to_profiles(par_branches, no_crosssection)
+            param_profiles_converted = hydamo_to_dflowfm.parametrised_to_profiles(param_profile, param_profile_values, no_crosssection, roughness_variant=roughness_variant)
             # Get branch information
-            branchdata = self.crosssections.dflowfmmodel.network.branches.loc[list(crosssections.keys())]
+            branchdata = self.crosssections.dflowfmmodel.network.branches.loc[list(param_profiles_converted.keys())]
             branchdata['chainage'] = branchdata.length / 2.
         
             # Add cross sections
-            for branchid, css in crosssections.items():
+            for branchid, css in param_profiles_converted.items():
                 chainage = branchdata.at[branchid, 'chainage']
                     
                 if css['type'] == 'rectangle':
@@ -447,8 +455,8 @@ class CrossSectionsIO:
                         height=css['height'],
                         width=css['width'],
                         closed=css['closed'],
-                        roughnesstype=css['ruwheidstypecode'],
-                        roughnessvalue=css['ruwheidswaarde']
+                        roughnesstype=css['typeruwheid'],
+                        roughnessvalue=css['ruwheid']
                     )
     
                 if css['type'] == 'trapezium':
@@ -457,8 +465,8 @@ class CrossSectionsIO:
                         maximumflowwidth=css['maximumflowwidth'],
                         bottomwidth=css['bottomwidth'],
                         closed=css['closed'],
-                        roughnesstype=css['ruwheidstypecode'],
-                        roughnessvalue=css['ruwheidswaarde']                        
+                        roughnesstype=css['typeruwheid'],
+                        roughnessvalue=css['ruwheid']                        
                     ) 
     
                 # Add location
@@ -466,65 +474,7 @@ class CrossSectionsIO:
 
             nnocross = len(self.crosssections.get_branches_without_crosssection())
             logger.info(f'After adding \'normgeparametriseerd\' the number of branches without cross section is: {nnocross}.')
-        
-        # Assign cross-sections to structures        
-        nnocross = len(self.crosssections.get_structures_without_crosssection())        
-        logger.info(f'Before adding the number of structures without cross section is: {nnocross}.')    
-        
-        if dwarsprofielen is not None:
-            # and subsets for structures    
-            dp_structures = ExtendedGeoDataFrame(geotype=LineString)
-            dp_structures.set_data(dwarsprofielen[~dwarsprofielen.codegerelateerdobject.isna()], index_col='code', check_columns=True)
-        
-            # 1. Collect cross sections from 'dwarsprofielen'
-            crosssections = hydamo_to_dflowfm.dwarsprofiel_to_yzprofiles(dp_structures, None)               
-        
-            for name, css in crosssections.items():        
-                self.crosssections.add_yz_definition(yz=css['yz'], thalweg=css['thalweg'], name=name, roughnesstype=css['ruwheidstypecode'], roughnessvalue=css['ruwheidswaarde'])
-        
-        if parametrised is not None:
-            par_structures = ExtendedGeoDataFrame(geotype=LineString, columns = parametrised.required_columns + ['codegerelateerdobject'])
-            par_structures.set_data(parametrised[~parametrised.codegerelateerdobject.isna()], index_col='code', check_columns=True)            
-        else:
-            par_structures = ExtendedGeoDataFrame(geotype=LineString)
-      
-        no_crosssection = self.crosssections.get_structures_without_crosssection()        
-        nnocross = len(no_crosssection)
-        logger.info(f'After adding \'dwarsprofielen\' the number of branches without cross section is: {nnocross}.')
-        if (nnocross == 0):
-            print('No further structures without a profile.')
-        elif par_structures.empty:
-            print('No parametrised crosssections available for structures.')
-        else:                 
-            # Derive norm cross sections for norm parametrised
-            crosssections = hydamo_to_dflowfm.parametrised_to_profiles(par_structures,[])                
-            # Add cross section definitions
-            for strucid, css in crosssections.items():             
-                        
-                    if css['type'] == 'rectangle':
-                        name = self.crosssections.add_rectangle_definition(
-                            height=css['height'],
-                            width=css['width'],
-                            closed=css['closed'],
-                            roughnesstype=css['ruwheidstypecode'],
-                            roughnessvalue=css['ruwheidswaarde'],                           
-                            name=strucid,                        
-                        )
-        
-                    if css['type'] == 'trapezium':
-                        name = self.crosssections.add_trapezium_definition(
-                            slope=css['slope'],
-                            maximumflowwidth=css['maximumflowwidth'],
-                            bottomwidth=css['bottomwidth'],
-                            closed=css['closed'],
-                            roughnesstype=css['ruwheidstypecode'],
-                            roughnessvalue=css['ruwheidswaarde'],
-                            bottomlevel=css['bottomlevel'],
-                            name=strucid
-                        ) 
-                        
-        nnocross = len(self.crosssections.get_structures_without_crosssection())
-        logger.info(f'After adding \'normgeparametriseerd\' the number of structures without cross section is: {nnocross}.')
+                
             
 class ExternalForcingsIO:
 
@@ -544,6 +494,29 @@ class ExternalForcingsIO:
             # Check if a 1d2d link should be removed
             #self.external_forcings.dflowfmmodel.network.links1d2d.check_boundary_link(self.external_forcings.boundaries.loc[key])
 
+    def create_laterals(self, catchments, branches, snap_distance=100.):
+        import rstr
+        pattern = "^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$"
+        
+        laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=['code','geometry','lateraleknoopid','globalid'])   
+        emptystr = ["" for x in range(len(catchments))]
+        lats = gpd.GeoDataFrame({'code': emptystr, 'globalid':emptystr, 'lateraleknoopid':emptystr, 'geometry': None })        
+        lats.index = catchments.index
+        for ind,cat in catchments.iterrows():
+            lats.at[ind,'code'] = 'lat_'+str(cat.code)
+            lats.at[ind,'geometry'] = cat.geometry.centroid
+            lats.at[ind,'lateraleknoopid'] = cat.lateraleknoopid
+            lats.at[ind, 'globalid'] =  rstr.xeger(pattern)
+        laterals = ExtendedGeoDataFrame(geotype=Point, required_columns=['code','lateraleknoopid','globalid'])   
+        laterals.set_data(lats, index_col='code',check_columns=False)                
+        laterals.snap_to_branch(branches, snap_method='overal', maxdist=snap_distance)
+        for ind,lat in laterals.iterrows():
+            branch_geom = branches[branches.code==lat['branch_id']].geometry            
+            xy = branch_geom.values[0].interpolate(lat.branch_offset)
+            laterals.at[ind, 'geometry']  = xy
+            
+        return(laterals)
+
     def read_laterals(self, locations, lateral_discharges=None, rr_boundaries=None):
         """
         Process laterals
@@ -560,9 +533,7 @@ class ExternalForcingsIO:
 
         if rr_boundaries is None: rr_boundaries = []
         # Check argument
-        checks.check_argument(locations, 'locations', gpd.GeoDataFrame, columns=['geometry'])
-        if lateral_discharges is not None:
-            checks.check_argument(lateral_discharges, 'lateral_discharges', pd.DataFrame)
+        checks.check_argument(locations, 'locations', gpd.GeoDataFrame, columns=['geometry'])                          
 
         # Check if network has been loaded
         network1d = self.external_forcings.dflowfmmodel.network.mesh1d
@@ -595,32 +566,34 @@ class ExternalForcingsIO:
                 }
             else:
                 if lateral_discharges is None:
-                    logger.warning(f'No lateral_discharges provided. {lateral.code} expects them. Skipping.')
-                    continue
+                    logger.warning(f'No lateral_discharges provied. {lateral.code} expects them. Skipping.')
+                    continue                               
                 else:
-                    if lateral.code not in lateral_discharges.columns:
-                        logger.warning(f'No data found for {lateral.code}. Skipping.')
-                        continue
-                    else:
-                        if type(lateral_discharges)==pd.Series:
-                            series = lateral_discharges.loc[lateral.code]
+                    if type(lateral_discharges)==pd.Series:
+                        series = lateral_discharges.loc[lateral.code]
 
-							# Add to dictionary
-                            self.external_forcings.laterals[lateral.code] = { 
-								'branchid': lateral.branch_id,
-								'branch_offset': str(lateral.branch_offset), 
-								'constant': series            
-							}
-                        else:
-                        	# Get timeseries
-                            series = lateral_discharges.loc[:, lateral.code]
-							
-							# Add to dictionary
-                            self.external_forcings.laterals[lateral.code] = { 
-								'branchid': lateral.branch_id,
-								'branch_offset': str(lateral.branch_offset), 
-								'timeseries': series            
-							}
+                         # Add to dictionary
+                        self.external_forcings.laterals[lateral.code] = { 
+                            'branchid': lateral.branch_id,
+                            'branch_offset': str(lateral.branch_offset), 
+                            'constant': series            
+                        }
+
+                    else:
+                        if lateral.code not in lateral_discharges.columns:
+                            logger.warning(f'No data found for {lateral.code}. Skipping.')
+                            continue          
+                        
+                        # Get timeseries
+                        series = lateral_discharges.loc[:, lateral.code]
+                        
+                        # Add to dictionary
+                        self.external_forcings.laterals[lateral.code] = { 
+                            'branchid': lateral.branch_id,
+                            'branch_offset': str(lateral.branch_offset), 
+                            'timeseries': series            
+                        }
+
 
 class StorageNodesIO:
 
