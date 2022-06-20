@@ -360,7 +360,7 @@ class CrossSections:
         self.dflowfmmodel = dflowfmmodel
 
         self.default_definition = None
-		self.default_locations = None
+        self.default_locations = None
         self.default_definition_shift = 0.0
 
         self.get_roughnessname = self.dflowfmmodel.network.get_roughness_description        
@@ -374,13 +374,14 @@ class CrossSections:
 
         self.default_definition = definition
         self.default_definition_shift = shift
+    
     def set_default_locations(self, locations):
         """
         Add default profile locations
         """
         
-        self.default_locations = locations       
-		
+        self.default_locations = locations        
+
     def add_yz_definition(self, yz=None, thalweg=None, roughnesstype=None, roughnessvalue=None, name=None):
         """
         Add xyz crosssection
@@ -640,7 +641,7 @@ class Links1d2d:
 
         # Remove conflicting 1d2d links
         for bc in self.network.dflowfmmodel.external_forcings.boundaries.values():
-            if bc['geometry'] is None:
+            if 'geometry' not in bc:
                 continue
             self.check_boundary_link(bc)
 
@@ -901,8 +902,7 @@ class Links1d2d:
                 nx, ny = nodes1d[item - 1]
                 logger.info(
                     f"Removed link(s) from 1d node: ({nx:.2f}, {ny:.2f}) because it is connected to an end-point."
-                )
-
+                )                
 
 class Network:
 
@@ -1372,8 +1372,9 @@ class Network:
             # Get the index of the first and last node in the dictionary (1 based, so +1)
             i_from = nodes.index(first_point) + 1
             i_to = nodes.index(last_point) + 1
-            if i_from == i_to:
-                raise ValueError('Start and end node are the same. Ring geometries are not accepted.')
+            if i_from == i_to:                
+                raise ValueError(f'For {branch.Index} a ring geometry was found: start and end node are the same. Ring geometries are not accepted.')
+
             network_edge_nodes.append([i_from, i_to])
 
             # Mesh1d edge node administration
@@ -1577,11 +1578,11 @@ class Network:
         
         # Get name
         name = f'{roughnesstype}_{float(value)}'
-        
+
         # Check if the description is already known
         if name.lower() in map(str.lower, self.roughness_definitions.keys()):
             return name
-        print(name)
+        
         # Convert roughness type string to integer for dflowfm
         delft3dfmtype = roughnesstype
 
