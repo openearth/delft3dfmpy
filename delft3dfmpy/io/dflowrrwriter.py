@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class DFlowRRWriter:
     """Writer for RR files"""
 
-    def __init__(self, rrmodel, output_dir, name):
+    def __init__(self, rrmodel, output_dir, name, wwtp=None):
         self.rrmodel = rrmodel
         # self.geometries = parent.geometries
         # self.boundary_conditions = parent.boundary_conditions
@@ -35,6 +35,11 @@ class DFlowRRWriter:
         self.precip_df  = {}
         self.run_dimrpad = rrmodel.dimr_path
         
+        if wwtp is None:
+            self.wwtp = Point((1e5,5e5))
+        else:
+            self.wwtp  = Point((wwtp[0],wwtp[1]))
+
     def write_all(self):  # write all RR files
         """
         Wrapper method to write all components
@@ -101,7 +106,10 @@ class DFlowRRWriter:
                 for _, dct in self.rrmodel.paved.pav_nodes.items():
                     if float(dct['ar']) > 0.0:                    
                         f.write('NODE id \''+dct['id']+'\' nm \''+dct['id']+'\' ri \'-1\' mt 1 \'1\' nt 43 ObID \'3B_PAVED\' px '+dct['px']+' py '+dct['py']+' node\n')
-                  
+
+                f.write('NODE id \'WWTP\' nm \'WWTP\' ri \'-1\' mt 1 \'14\' nt 56 ObID \'3B_WWTP\' px '+str(self.wwtp.coords[0][0])+' py '+str(self.wwtp.coords[0][1])+' node\n')
+                f.write('NODE id \'WWTP_BND\' nm \'WWTP_BND\' ri \'-1\' mt 1 \'6\' nt 47 ObID \'3B_BOUNDARY\' px '+str(self.wwtp.coords[0][0]+50.)+' py '+str(self.wwtp.coords[0][1]+50.)+' node\n')
+
             # Greenhouse nodes
             if any(self.rrmodel.greenhouse.gh_nodes):
                 for _, dct in self.rrmodel.greenhouse.gh_nodes.items():
@@ -127,28 +135,35 @@ class DFlowRRWriter:
                 for _, dct in self.rrmodel.unpaved.unp_nodes.items():
                     if np.sum([float(d) for d in dct['ar'].split(' ')]) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \'link_'+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
             if any(self.rrmodel.paved.pav_nodes):                
                 for _, dct in self.rrmodel.paved.pav_nodes.items():
                     if float(dct['ar']) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \'link_'+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
+                        cnt += 1
+                        f.write("BRCH id \'link_"+str(cnt)+"\' ri \'-1\' mt 1 \'1\' bt 18 ObID \'3B_LINK_RWZI\' bn \'"+dct['id']+"\' en \'WWTP\' brch\n")
+                cnt += 1                             
+                f.write('BRCH id \'link_'+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \'WWTP\' en \'WWTP_BND\' brch\n')
+
             if any(self.rrmodel.greenhouse.gh_nodes):                
                 for _, dct in self.rrmodel.greenhouse.gh_nodes.items():
                     if float(dct['ar']) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \'link_'+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
             if any(self.rrmodel.openwater.ow_nodes):                
                 for _, dct in self.rrmodel.openwater.ow_nodes.items():
                     if float(dct['ar']) > 0.0:                    
                         cnt += 1
-                        f.write('BRCH id \''+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
+                        f.write('BRCH id \'link_'+str(cnt)+'\' ri \'-1\' mt 1 \'0\' bt 17 ObID \'3B_LINK\' bn \''+dct['id']+'\' en \''+dct['boundary_node']+'\' brch\n')
 
         # bound3b.3b        
         filepath = os.path.join(self.output_dir, 'Bound3B.3B')
         with open(filepath, 'w') as f:
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
                 f.write('BOUN id \''+dct['id']+'\' bl 2 \'0\' is 0 boun\n')
+            if any(self.rrmodel.paved.pav_nodes):    
+                f.write('BOUN id \'WWTP_BND\' bl 0 -3 is 0 boun\n')        
                 
         # BoundaryConditions.bc
         filepath = os.path.join(self.output_dir, 'BoundaryConditions.bc')
@@ -158,7 +173,10 @@ class DFlowRRWriter:
             for _, dct in self.rrmodel.external_forcings.boundary_nodes.items():                
                 temp = {"name":''+dct['id'], 'function':'constant','quantity':'water_level','unit':'m'} 
                 self._write_dict(f,temp,'Boundary','    0\n\n')
-                                   
+            if any(self.rrmodel.paved.pav_nodes): 
+                temp = {"name": "WWTP_BND",'function':'constant','quantity':'water_level','unit':'m'}  
+                self._write_dict(f,temp,'Boundary','    0\n\n')       
+          
     def write_unpaved(self):
         """
         Method to write all files associated with unpaved nodes: UNPAVED.3B, UNPAVED.ALF, UNPAVED.STO, UNPAVED.INF and UNPAVED.SEP. All files contain a definition for every node  because they may or may not be spatially distributed.
@@ -228,7 +246,15 @@ class DFlowRRWriter:
             filepath = os.path.join(self.output_dir, 'PAVED.DWA')             
             with open(filepath, 'w') as f:                           
                 f.write('DWA id \'Def_DWA\' nm \'Def_DWA\' do 1 wc 0 wd 0 wh 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 dwa\n')
-                    
+
+            filepath = os.path.join(self.output_dir, 'WWTP.3B')             
+            with open(filepath, 'w') as f:                           
+                f.write('WWTP id \'WWTP\' tb 0  wwtp\n')                
+            
+            filepath = os.path.join(self.output_dir, 'WWTP.tbl')             
+            with open(filepath, 'w') as f:                           
+                f.write('\n')                
+
     def write_greenhouse(self):
         """
         Method to write all files associated with greenhouse nodes: GREENHSE.3B, GREENHSE.RF and GREENHSE.SIL. The latter contains only one definition.

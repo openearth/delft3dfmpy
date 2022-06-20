@@ -868,6 +868,34 @@ class Links1d2d:
                 loc = linkdim.index(item)
                 self.nodes1d.pop(loc)
                 self.faces2d.pop(loc)
+                
+    def remove_1d_endpoints(self):
+        """Method to remove 1d2d links from end points of the 1d mesh. The GUI
+        will interpret every endpoint as a boundary conditions, which does not
+        allow a 1d 2d link at the same node. To avoid problems with this, use
+        this method.
+        """
+        # Can only be done after links have been generated
+        if not self.nodes1d or not self.faces2d:
+            return None
+
+        nodes1d = self.mesh1d.get_nodes()
+        edge_nodes = self.mesh1d.get_values("edge_nodes", as_array=True)
+
+        # Select 1d nodes that are only present in a single edge
+        edgeid, counts = np.unique(edge_nodes, return_counts=True)
+        to_remove = edgeid[counts == 1]
+
+        for item in to_remove:
+            while item in self.nodes1d:
+                loc = self.nodes1d.index(item)
+                self.nodes1d.pop(loc)
+                self.faces2d.pop(loc)
+                nx, ny = nodes1d[item - 1]
+                logger.info(
+                    f"Removed link(s) from 1d node: ({nx:.2f}, {ny:.2f}) because it is connected to an end-point."
+                )
+
 
 class Network:
 
@@ -1542,7 +1570,7 @@ class Network:
         
         # Get name
         name = f'{roughnesstype}_{float(value)}'
-
+        
         # Check if the description is already known
         if name.lower() in map(str.lower, self.roughness_definitions.keys()):
             return name

@@ -1,4 +1,70 @@
 Release notes delft3dfmpy 
+----------------------------------------------------------------------------------------------------------------------
+ v2.0.0: June 2022
+
+This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite 2022.03.
+
+It also contains a major updata where the input data format changed from HyDAMO v12 GML-files to HyDAMO DAMO2.2 GPKG (geopackage).
+
+Updates:
+- all input data changed to HyDAMO DAMO2.2 format. A function is included to show GPKG file contents. See the example notebooks or details.
+- added support for constant lateral discharges (instead of artificial time series);
+- handling of sewage areas has been changed. Paved area inside a sewer area is distributed over the overflows without intersecting with the catchments. For the paved fration of catchment that does not intersect with sewer areas, a paved node is created as well.
+- branches to which default profile definitions are assigned can be specified.
+- instead of Moergesstelsbroek, a part of the Oostrumsche beek is used as an example model, as HyDAMO DAMO2.2 data was available. This is the first model based on this data, so there might still be some errors in the schematisation or the model/output might not be completely realistic.
+
+Note that some things do not work correctly with the GUI yet:
+ - 2d observations points cannot be imported;
+ - structure time series should be provided through RTC and cannot be included in the BC-file;
+ - Initial condition by polygon does not work correctly;
+ - Time series for seepage are not supported;
+ - Some settings in the RR-model, that can considerably affect results, are not imported. Most importantly this pertains to 'UnpavedPercolationLikeSobek213’;
+
+----------------------------------------------------------------------------------------------------------------------
+ v1.2.3: June, 2022
+ 
+This version is the last update to the package based on HyDAMO v12 GML-files. This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite 2022.03.
+
+Updates compared to v1.2.2:
+- added support for constant lateral discharges (instead of artificial time series);
+- handling of sewage areas has been changed. Paved area inside a sewer area is distributed over the overflows without intersecting with the catchments. For te paved fration of catchment that does not intersect with sewer areas, a paved node is created as well.
+
+Differences with simultaneously released v2.0.0:
+- HyDAMO DAMO2.2-GPKG data is required instead of HyDAMO v12-GML;
+- a part of the Oostrumsche beek is used as an example model instead of Moergestelsbroek;
+- A default profile is assigned to all branches without profiles; in v2.0.0 branches can be specified.
+
+There are still some known issues to be solved in the GUI of D-Hydro:
+- compound structures are not read by the GUI.
+- in the GUI, structure related time series (e.g. crest levels) need to be schematized using RTC, so no time series can be provided as is possible using DIMR.
+- after running the model in the GUI, there is an error regaring the import of certain RR-output (3blinks.his). This is a known issue.
+- the GUI issues some warnings about the links to and from paved notes (dry weather flow and WWTP). This will addressed in the next version.
+
+
+----------------------------------------------------------------------------------------------------------------------
+ v1.2.2: March, 2022
+ 
+ This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite 2022.02.
+
+- now more than one 'afsluitmidddel' can be connected to a culvert (e.g. of types schuif and a terugslagklep)
+- function added to remove 1d2d-links to end nodes in the 1d-network. They are interpreted as boundaries by D_Hydro and therefore should not have 1d2d-links connected to them
+- bug fix in notebook to add quotes around DELFT3B.INI start- and endtime definitions
+- added a WWTP to paved nodes
+- added possibility of column mapping to hydamo objects without a geometry (e.g. afsluitmiddel).
+
+There are still some known issues to be solved in the GUI of D-Hydro:
+- compound structures are not read by the GUI
+- in the GUI, structure related time series (e.g. crest levels) need to be schematized using RTC, so no time series can be provided as is possible using DIMR.
+- after running the model in the GUI, there is an error regaring the import of certain RR-output (3blinks.his). This is a known issue.
+- the GUI issues some warnings about the links to and from paved notes (dry weather flow and WWTP). This will addressed in the next version.
+
+
+----------------------------------------------------------------------------------------------------------------------
+ v1.2.1: December, 2021
+
+This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite v1.0.0.
+
+The D-HYDRO GUI requires a unique crosssection definitiation for every location. This didn't work correctly for a 'default'-profile when this is used for multiple locations. Now, the default definition is copied for all separate locations. Note that in the default profile definition in the workflow, an argument "name" should be added and called 'default': ", name='dafault". See example notebooks for details.
 
 ----------------------------------------------------------------------------------------------------------------------
  v1.2.0: September, 2021

@@ -20,9 +20,9 @@ class DFlowFMWriter:
     # versioning info
     version = { 'number'        : delft3dfmpy.__version__,
                 'date'          :  datetime.datetime.strftime(datetime.datetime.utcnow(),'%Y-%m-%dT%H:%M:%S.%fZ'),
-                'dfm_version'   : 'Deltares, D-Flow FM Version 1.2.124.69571M',
-                'dimr_version'  : 'Deltares, DIMR_EXE Version 2.00.00.69571M (Win64)',
-                'suite_version' : 'D-HYDRO Suite 1D2D (1.0.0.53506),'} 
+                'dfm_version'   : 'Deltares, D-Flow FM Version 5.00.024.74498M',
+                'dimr_version'  : 'Deltares, DIMR_EXE Version 2.00.00.140737 (Win64) (Win64)',
+                'suite_version' : 'D-HYDRO Suite 2022.03 1D2D,'} 
      
     def __init__(self, dflowfmmodel, output_dir, name):
         self.dflowfmmodel = dflowfmmodel
@@ -304,6 +304,18 @@ class DFlowFMWriter:
                         f'unit       = m3/s\n'
                        )
                 write_fm_file(file=os.path.join(self.output_dir, 'boundaries.bc'), data=data, mode='a')
+                discharge_kw = f'boundaries.bc'
+            elif 'constant' in dct:       
+                # and write data to the bc file
+                data = dct['constant']
+                with open(os.path.join(self.output_dir, 'boundaries.bc'), 'a') as f:
+                    f.write(f'\n[Forcing]\n'
+                        f'name       = {name}\n'
+                        f'function   = constant\n'
+                        f'quantity   = lateral_discharge\n'
+                        f'unit       = m3/s\n'
+                        f'{data}\n'
+                       )
                 discharge_kw = f'boundaries.bc'
             else:
                 discharge_kw = 'REALTIME'

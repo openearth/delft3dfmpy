@@ -40,6 +40,7 @@ Prepare an environment with the correct dependencies for ``delft3dfmpy``.
 
      https://www.anaconda.com/products/individual
      https://docs.conda.io/en/latest/miniconda.html
+	 
 2.  Save the content of https://raw.githubusercontent.com/openearth/delft3dfmpy/master/environment.yml and store this in a local file named ``environment.yml``
 
 3.  Open Ananconda prompt and enter the directory where the ``envrionment.yml`` from step 2 is stored.
@@ -63,18 +64,18 @@ Python package ``delft3dfmpy``
 
         ``python -m pip install delft3dfmpy``
 
-    Note that in this way the most recent version that is available on PyPi (see releases) is installed. It is also possible to force installation of older versions. For example, to install version 1.0.0 (the 'frozen' version, or the initial release):
-    
-        ``python -m pip install delft3dfmpy=1.0.0``
+    Note that in this way the most recent version that is available on PyPi (see releases) is installed. From June 2022, and version 2.0.0, delft3dfmpy expects DAMO2.2 GPKG files as input, instead of HyDAMO v13 GML-files. 
 
-     Since that version, however, no significant features have been implemented, but there were some minor improvements and bug fixes.
-     
+	It is also possible to force installation of older versions and use the idential packages for GML input. The equivalent version of ``delft3dfmpy`` for HyDAMO v13 format is v1.2.3. This can be installed as follows:
+    
+        ``python -m pip install delft3dfmpy=1.2.3``
+         
 2.  If the command prompt states ``Successfully built delft3dfmpy`` then installation is succesful.
 
 
 Envrionment Integration in your IDE 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Integration of the prepared envrionment depends on the IDE of usage. Here we mention briefly some options for the user (pick one!): 
+Integration of the prepared environment depends on the IDE of usage. Here we mention briefly some options for the user (pick one!): 
 
 1.  For a new instance of Jupyter within the activated environment:
 
