@@ -8,6 +8,7 @@ from osgeo import ogr
 from shapely import wkb
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 import logging
+import rstr
 
 from copy import deepcopy
 
@@ -40,7 +41,8 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         self.required_columns = required_columns[:]
         self.geotype = geotype
-
+        
+        
     # def drop(self,edf, item, index_col=None,axis=None):
     #     #edf = ExtendedGeoDataFrame(geotype=LineString)
     #     temp = gpd.GeoDataFrame()
@@ -228,18 +230,18 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
 
         geometries = []
         new_feats = []
+        pattern = "^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$"
         for i,f in enumerate(features):
             geometry = wkb.loads(georefs[i].ExportToWkb())
             if(geometry.type=='MultiPolygon')|(geometry.type=='MultiPoint'):
                 new_geoms = list(geometry)
                 geometries.extend(new_geoms)
-                new_features = [f]*len(new_geoms)
+                new_features = [f]*len(new_geoms)                
                 new_feats.extend(new_features)
             else:
                 geometries.append(geometry)
                 new_feats.append(f)
-            
-                
+                            
         features = new_feats
         #geometries = [wkb.loads(geo.ExportToWkb()) for geo in georefs]
 
@@ -310,13 +312,18 @@ class ExtendedGeoDataFrame(gpd.GeoDataFrame):
         gdf = gpd.GeoDataFrame(fields, columns=columns, geometry=geometries)
         gdf.rename(columns=column_mapping, inplace=True)
 
-        # add a letter to 'exploded' multipolygons
-        #sfx = ['_'+str(i) for i in range(100)]
+        # add a letter to 'exploded' multipolygons 
+        # if 'Polygon' in geometry.type:               
         for ftc in gdf[id_col].unique():
             if len(gdf[gdf[id_col]==ftc])>1:
                 gdf.loc[gdf[id_col]==ftc,id_col] = [f'{i}_{n}' for n, i in enumerate(gdf[gdf[id_col]==ftc][id_col])]
-                print(f'{ftc} is MultiPolygon; split into single parts.')
-
+                if 'Polygon' in geometry.type:
+                    print(f'{ftc} is MultiPolygon; split into single parts.')
+                elif 'LineString' in geometry.type:                     
+                    print(f'{ftc} is MultiLineString; split into single parts.')
+                else:           
+                    print(f'{ftc} is MultiPoint; split into single parts.')
+                
         # Add data to class GeoDataFrame
         self.set_data(gdf, index_col=index_col, check_columns=check_columns, check_geotype=check_geotype)
 

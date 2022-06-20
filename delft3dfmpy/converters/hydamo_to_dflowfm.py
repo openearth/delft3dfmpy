@@ -82,7 +82,7 @@ def generate_pumps(pompen, sturing, gemalen):
         # Get the control by index
         pump_control = sturing.iloc[np.where(sturingidx)[0][0]]
 
-        if pump_control.doelvariable != 1 and pump_control.doelvariable != 'waterstand':
+        if pump_control.doelvariabele != 1 and pump_control.doelvariabele != 'waterstand':
             raise NotImplementedError('Sturing not implemented for anything else than water level (1).')
 
         # Add levels for suction side
@@ -169,7 +169,7 @@ def generate_weirs(weirs, opening=None, management_device=None, management=None)
 #     return orifices_dfm
 
 
-def generate_uweirs(uweirs, yz_profiles=None):
+def generate_uweirs(uweirs, opening=None, profile_groups=None, profile_lines=None, profiles=None):
    """
    Generate universal weirs from Hydamo input
 
@@ -193,10 +193,13 @@ def generate_uweirs(uweirs, yz_profiles=None):
    for uweir in uweirs.itertuples():    
        
        # first search in yz-profiles
+       uweir_opening = opening[opening.stuwid == uweir.globalid]
        prof=np.empty(0)
-       if yz_profiles is not None:
-            if 'stuwid' in yz_profiles:  
-                prof = yz_profiles[yz_profiles['stuwid']==uweir.globalid]   
+       if profiles is not None:
+            if 'stuwid' in profile_groups:
+                group = profile_groups[profile_groups['stuwid']==uweir.globalid]
+                line = profile_lines[profile_lines['profielgroepid']==group['globalid'].values[0]]
+                prof = profiles[profiles['globalid']==line['globalid'].values[0]]   
                 if not prof.empty:                    
                     counts = len(prof.geometry.iloc[0].coords[:])
                     xyz = np.vstack(prof.geometry.iloc[0].coords[:])
@@ -207,7 +210,12 @@ def generate_uweirs(uweirs, yz_profiles=None):
        if len(prof)==0:
            # return an error it is still not found
            raise ValueError(f'{uweir.code} is not found in any cross-section.')
-    
+
+       uweirs_dfm.at[uweir.Index, 'code'] = uweir.code
+       uweirs_dfm.at[uweir.Index, 'branch_id'] = uweir.branch_id
+       uweirs_dfm.at[uweir.Index, 'branch_offset'] = uweir.branch_offset
+       uweirs_dfm.at[uweir.Index, 'afvoercoefficient'] = uweir_opening.afvoercoefficient.values[0]
+       uweirs_dfm.at[uweir.Index, 'crestlevel'] = uweir_opening.laagstedoorstroomhoogte.values[0]
        uweirs_dfm.at[uweir.Index, 'numlevels'] = counts
        uweirs_dfm.at[uweir.Index, 'yvalues'] = ' '.join([f'{yz[0]:7.3f}' for yz in yzvalues])
        uweirs_dfm.at[uweir.Index, 'zvalues'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])        
@@ -244,7 +252,7 @@ def generate_uweirs(uweirs, yz_profiles=None):
         #     weirs.at[weir.Index, 'zcoordinates'] = ' '.join([f'{yz[1]:7.3f}' for yz in yzvalues])
         #     weirs.at[weir.Index, 'levelscount'] = len(yzvalues)
 
-def generate_bridges(bridges, yz_profiles=None):
+def generate_bridges(bridges, profile_groups=None, profile_lines=None, profiles=None):
     """
     Generate bridges from Hydamo input
 
@@ -266,7 +274,10 @@ def generate_bridges(bridges, yz_profiles=None):
     
     for bridge in bridges.itertuples():        
         # first search in yz-profiles
-        prof = yz_profiles[yz_profiles['brugid']==bridge.globalid]
+        group = profile_groups[profile_groups['brugid']==bridge.globalid]
+        line = profile_lines[profile_lines['profielgroepid']==group['globalid'].values[0]]
+        prof = profiles[profiles['globalid']==line['globalid'].values[0]]   
+        
         if len(prof) > 0:
             #bedlevel = np.min([c[2] for c in prof.geometry[0].coords[:]])  
             profile_id=prof.code.values[0]
@@ -291,7 +302,7 @@ def generate_culverts(culverts,management_device=None):
         if culvert.vormkoker == 'Rond' or culvert.vormkoker == 'Ellipsvormig':
             crosssection = {'shape': 'circle', 'diameter': culvert.hoogteopening}
             
-        elif culvert.vormkoker == 'Rechthoekig' or culvert.vormkoker == 'Onbekend' or culvert.vormkoker=='Muilprofiel' or culvert.vormkoker=='Heulprofiel':
+        elif culvert.vormkoker == 'Rechthoekig' or culvert.vormkoker == 'Onbekend' or culvert.vormkoker == 'Eivormig' or culvert.vormkoker=='Muilprofiel' or culvert.vormkoker=='Heulprofiel':
             crosssection = {'shape': 'rectangle', 'height': culvert.hoogteopening, 'width': culvert.breedteopening, 'closed': 1}
         
         else:
@@ -437,8 +448,9 @@ def dwarsprofiel_to_yzprofiles(crosssections, roughness, branches, roughness_var
                 yz[i,0] +=0.01
                 
         # determine thalweg
-        if branches is not None:                       
+        if branches is not None:                              
             branche_geom = branches[branches.code==css.branch_id].geometry.values
+
             if css.geometry.intersection(branche_geom[0]).geom_type=='MultiPoint':
                 thalweg_xyz = css.geometry.intersection(branche_geom[0])[0].coords[:][0]                            
             else:
@@ -459,7 +471,7 @@ def dwarsprofiel_to_yzprofiles(crosssections, roughness, branches, roughness_var
             'chainage': css.branch_offset,
             'yz': yz,
             'thalweg':thalweg,
-            'typeruwheid': roughness[roughness['profielpuntid']==css.globalid].typeruwheid.to_string(index=False),
+            'typeruwheid': roughness[roughness['profielpuntid']==css.globalid].typeruwheid.values[0],
             'ruwheid': float(ruwheid)
         }
     
@@ -540,7 +552,7 @@ def parametrised_to_profiles(parametrised, parametrised_values,  branches, rough
                 'width': round(values[values.soortparameter=='bodembreedte'].waarde.values[0], 3),
                 'closed': 0,
                 'thalweg': 0.0,
-                'typeruwheid': values.typeruwheid.iloc[0],
+                'typeruwheid': values.typeruwheid.values[0],
                 'ruwheid': roughness,        
                 'bottomlevel': botlev
             }

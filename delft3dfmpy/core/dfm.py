@@ -360,6 +360,7 @@ class CrossSections:
         self.dflowfmmodel = dflowfmmodel
 
         self.default_definition = None
+        self.default_locations = None
         self.default_definition_shift = 0.0
 
         self.get_roughnessname = self.dflowfmmodel.network.get_roughness_description        
@@ -373,6 +374,13 @@ class CrossSections:
 
         self.default_definition = definition
         self.default_definition_shift = shift
+    
+    def set_default_locations(self, locations):
+        """
+        Add default profile locations
+        """
+        
+        self.default_locations = locations        
 
     def add_yz_definition(self, yz=None, thalweg=None, roughnesstype=None, roughnessvalue=None, name=None):
         """
@@ -633,7 +641,7 @@ class Links1d2d:
 
         # Remove conflicting 1d2d links
         for bc in self.network.dflowfmmodel.external_forcings.boundaries.values():
-            if bc['geometry'] is None:
+            if 'geometry' not in bc:
                 continue
             self.check_boundary_link(bc)
 
@@ -868,6 +876,33 @@ class Links1d2d:
                 loc = linkdim.index(item)
                 self.nodes1d.pop(loc)
                 self.faces2d.pop(loc)
+                
+    def remove_1d_endpoints(self):
+        """Method to remove 1d2d links from end points of the 1d mesh. The GUI
+        will interpret every endpoint as a boundary conditions, which does not
+        allow a 1d 2d link at the same node. To avoid problems with this, use
+        this method.
+        """
+        # Can only be done after links have been generated
+        if not self.nodes1d or not self.faces2d:
+            return None
+
+        nodes1d = self.mesh1d.get_nodes()
+        edge_nodes = self.mesh1d.get_values("edge_nodes", as_array=True)
+
+        # Select 1d nodes that are only present in a single edge
+        edgeid, counts = np.unique(edge_nodes, return_counts=True)
+        to_remove = edgeid[counts == 1]
+
+        for item in to_remove:
+            while item in self.nodes1d:
+                loc = self.nodes1d.index(item)
+                self.nodes1d.pop(loc)
+                self.faces2d.pop(loc)
+                nx, ny = nodes1d[item - 1]
+                logger.info(
+                    f"Removed link(s) from 1d node: ({nx:.2f}, {ny:.2f}) because it is connected to an end-point."
+                )                
 
 class Network:
 
@@ -1337,8 +1372,9 @@ class Network:
             # Get the index of the first and last node in the dictionary (1 based, so +1)
             i_from = nodes.index(first_point) + 1
             i_to = nodes.index(last_point) + 1
-            if i_from == i_to:
-                raise ValueError('Start and end node are the same. Ring geometries are not accepted.')
+            if i_from == i_to:                
+                raise ValueError(f'For {branch.Index} a ring geometry was found: start and end node are the same. Ring geometries are not accepted.')
+
             network_edge_nodes.append([i_from, i_to])
 
             # Mesh1d edge node administration
@@ -1546,7 +1582,7 @@ class Network:
         # Check if the description is already known
         if name.lower() in map(str.lower, self.roughness_definitions.keys()):
             return name
-        print(name)
+        
         # Convert roughness type string to integer for dflowfm
         delft3dfmtype = roughnesstype
 
