@@ -1,9 +1,9 @@
 Relase notes delftdfmy
-----------------------------------------------------------------------------------------------------------------------
 
+----------------------------------------------------------------------------------------------------------------------
  v1.2.3: June, 2022
  
-This version is the last update to the package based on HyDAMO v12 GML-files. 
+This version is the last update to the package based on HyDAMO v12 GML-files. This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite 2022.03.
 
 Updates compared to v1.2.2:
 - added support for constant lateral discharges (instead of artificial time series);
@@ -11,6 +11,7 @@ Updates compared to v1.2.2:
 
 Differences with simultaneously released v2.0.0:
 - HyDAMO DAMO2.2-GPKG data is required instead of HyDAMO v12-GML;
+- a part of the Oostrumsche beek is used as an example model instead of Moergestelsbroek;
 - A default profile is assigned to all branches without profiles; in v2.0.0 branches can be specified.
 
 There are still some known issues to be solved in the GUI of D-Hydro:
@@ -22,6 +23,8 @@ There are still some known issues to be solved in the GUI of D-Hydro:
 
 ----------------------------------------------------------------------------------------------------------------------
  v1.2.2: March, 2022
+ 
+ This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite 2022.02.
 
 - now more than one 'afsluitmidddel' can be connected to a culvert (e.g. of types schuif and a terugslagklep)
 - function added to remove 1d2d-links to end nodes in the 1d-network. They are interpreted as boundaries by D_Hydro and therefore should not have 1d2d-links connected to them
@@ -39,6 +42,7 @@ There are still some known issues to be solved in the GUI of D-Hydro:
 ----------------------------------------------------------------------------------------------------------------------
  v1.2.1: December, 2021
 
+This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite v1.0.0.
 
 The D-HYDRO GUI requires a unique crosssection definitiation for every location. This didn't work correctly for a 'default'-profile when this is used for multiple locations. Now, the default definition is copied for all separate locations. Note that in the default profile definition in the workflow, an argument "name" should be added and called 'default': ", name='dafault". See example notebooks for details.
 
