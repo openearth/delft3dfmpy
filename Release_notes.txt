@@ -1,6 +1,6 @@
 Release notes delft3dfmpy 
 ----------------------------------------------------------------------------------------------------------------------
- v2.0.0: June 2022
+ v2.0.1: June 2022
 
 This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite 2022.03.
 
