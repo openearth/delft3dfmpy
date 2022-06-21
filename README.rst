@@ -64,7 +64,7 @@ Python package ``delft3dfmpy``
 
         ``python -m pip install delft3dfmpy``
 
-    Note that in this way the most recent version that is available on PyPi (see releases) is installed. From June 2022, and version 2.0.0, delft3dfmpy expects DAMO2.2 GPKG files as input, instead of HyDAMO v13 GML-files. 
+    Note that in this way the most recent version that is available on PyPi (see releases) is installed. From June 2022, and version 2.0.1, delft3dfmpy expects DAMO2.2 GPKG files as input, instead of HyDAMO v13 GML-files. 
 
 	It is also possible to force installation of older versions and use the idential packages for GML input. The equivalent version of ``delft3dfmpy`` for HyDAMO v13 format is v1.2.3. This can be installed as follows:
     
