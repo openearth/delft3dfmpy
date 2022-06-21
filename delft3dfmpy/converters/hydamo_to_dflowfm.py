@@ -199,7 +199,7 @@ def generate_uweirs(uweirs, opening=None, profile_groups=None, profile_lines=Non
             if 'stuwid' in profile_groups:
                 group = profile_groups[profile_groups['stuwid']==uweir.globalid]
                 line = profile_lines[profile_lines['profielgroepid']==group['globalid'].values[0]]
-                prof = profiles[profiles['globalid']==line['globalid'].values[0]]   
+                prof = profiles[profiles['profiellijnid']==line['globalid'].values[0]]   
                 if not prof.empty:                    
                     counts = len(prof.geometry.iloc[0].coords[:])
                     xyz = np.vstack(prof.geometry.iloc[0].coords[:])
@@ -209,7 +209,7 @@ def generate_uweirs(uweirs, opening=None, profile_groups=None, profile_lines=Non
            
        if len(prof)==0:
            # return an error it is still not found
-           raise ValueError(f'{uweir.code} is not found in any cross-section.')
+           raise ValueError(f'{uweir.globalid} is not found in any cross-section.')
 
        uweirs_dfm.at[uweir.Index, 'code'] = uweir.code
        uweirs_dfm.at[uweir.Index, 'branch_id'] = uweir.branch_id
@@ -276,14 +276,14 @@ def generate_bridges(bridges, profile_groups=None, profile_lines=None, profiles=
         # first search in yz-profiles
         group = profile_groups[profile_groups['brugid']==bridge.globalid]
         line = profile_lines[profile_lines['profielgroepid']==group['globalid'].values[0]]
-        prof = profiles[profiles['globalid']==line['globalid'].values[0]]   
+        prof = profiles[profiles['profiellijnid']==line['globalid'].values[0]]   
         
         if len(prof) > 0:
             #bedlevel = np.min([c[2] for c in prof.geometry[0].coords[:]])  
             profile_id=prof.code.values[0]
         else:
             # return an error it is still not found
-            raise ValueError(f'{bridge.code} is not found in any cross-section.')
+            raise ValueError(f'{bridge.globalid} is not found in any cross-section.')
         
         profile_id=prof.code.values[0]
         bridges_dfm.at[bridge.Index, 'crosssection'] = profile_id
