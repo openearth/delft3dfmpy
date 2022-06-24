@@ -9,6 +9,9 @@ Delft3D Flexible Mesh Python
 .. image:: https://img.shields.io/pypi/l/delft3dfmpy.svg
         :target: https://img.shields.io/pypi/l/delft3dfmpy
 
+.. image:: https://mybinder.org/badge_logo.svg
+ :target: https://mybinder.org/v2/gh/openearth/delft3dfmpy/DSD_Training_04072022?labpath=notebooks%2FUsage_introduction_RRFM.ipynb
+
 Python package to generate delft3dfm models from standardized data models or other flow models.
 
 
