@@ -429,7 +429,7 @@ def generate_seepage(catchments, seepage_folder):
     We assume seepage is read from Metaswap (m3 per cell). It needs to be converted to mm/day.
     """
     warnings.filterwarnings('ignore')
-    file_list = os.listdir(seepage_folder)
+    file_list = sorted(os.listdir(seepage_folder))
     file_list = [file for file in file_list if file.lower().endswith('_l1.idf')]
     times = []    
     arr = np.zeros((len(file_list), len(catchments.code)))
@@ -450,7 +450,7 @@ def generate_precip(areas, precip_folder):
     
     """
     warnings.filterwarnings('ignore')
-    file_list = os.listdir(precip_folder)
+    file_list = sorted(os.listdir(precip_folder))
     times = []        
     arr = np.zeros((len(file_list), len(areas.code)))
     for ifile, file in tqdm(enumerate(file_list),total=len(file_list),desc='Reading precipitation files'):
@@ -468,7 +468,7 @@ def generate_evap(areas, evap_folder):
     
     """
     warnings.filterwarnings('ignore')
-    file_list = os.listdir(evap_folder)
+    file_list = sorted(os.listdir(evap_folder))
     # aggregated evap
     #areas['dissolve'] = 1
     #agg_areas = areas.iloc[0:len(areas),:].dissolve(by='dissolve',aggfunc='mean')
