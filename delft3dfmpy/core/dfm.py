@@ -1428,7 +1428,7 @@ class Network:
                 one_d_mesh_distance,
                 structures=structures if seperate_structures else None,
                 max_dist_to_struc=max_dist_to_struc,
-                urban_branches=urban_branches
+                urban_branches=urban_branches,
             )
 
         # Add the network data to the 1d mesh structure
@@ -1500,7 +1500,7 @@ class Network:
 
             # If no points remain, add an extra halfway: each branch should have at least 1 node
             if len(offsets) == 0:
-                if branch.Index not in urban_branches:
+                if urban_branches is not None and branch.Index not in urban_branches:
                     offsets = np.array([branch.geometry.length / 2.0])
                     edge_offsets = np.array([i * branch.geometry.length for i in [0.25, 0.75]])
                     nlinks += 1
