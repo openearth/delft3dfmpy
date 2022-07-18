@@ -266,7 +266,7 @@ class ExternalForcingsIO:
                  series = cat[1] 
             )        
         
-    def precip_from_input(self, areas, precip_folder): 
+    def precip_from_input(self, areas, precip_folder=None, precip_file=None): 
          """
         Method to get precipitation fluxes from raster input.
         
@@ -281,15 +281,17 @@ class ExternalForcingsIO:
         None.
 
         """
-         geconverteerd = hydamo_to_dflowrr.generate_precip( areas, precip_folder)
-        
-         for cat in geconverteerd.iteritems():
-            self.external_forcings.add_precip(
-                 id = cat[0],                
-                 series = cat[1] 
-            )
+         geconverteerd = hydamo_to_dflowrr.generate_precip( areas, precip_folder=precip_folder, precip_file=precip_file)
+         if isinstance(geconverteerd,str):
+            self.external_forcings.precip = precip_file
+         else:
+            for cat in geconverteerd.iteritems():
+                self.external_forcings.add_precip(
+                    id = cat[0],                
+                    series = cat[1] 
+                )
             
-    def evap_from_input(self, areas, evap_folder):        
+    def evap_from_input(self, areas, evap_folder=None, evap_file=None):        
          """
         Method to get evaporation fluxes from raster input.
         
@@ -304,12 +306,17 @@ class ExternalForcingsIO:
         None.
 
         """
-         geconverteerd = hydamo_to_dflowrr.generate_evap( areas, evap_folder)
-         for cat in geconverteerd.iteritems():
-            self.external_forcings.add_evap(
-                 id = cat[0],                
-                 series = cat[1] 
-            )
+         geconverteerd = hydamo_to_dflowrr.generate_evap( areas, evap_folder=evap_folder, evap_file=evap_file)
+         if isinstance(geconverteerd,str):
+            self.external_forcings.evap = evap_file
+         else:
+            for cat in geconverteerd.iteritems():
+                self.external_forcings.add_evap(
+                    id = cat[0],                
+                    series = cat[1] 
+                )
+        
+            
             
     def boundary_from_input(self, boundary_nodes, catchments, drrmodel, overflows=None):    
         """

@@ -15,6 +15,7 @@ from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.common import ExtendedGeoDataFrame
 from delft3dfmpy.datamodels.cstructures import meshgeom, meshgeomdim
 from delft3dfmpy.io import dfmreader
+
 logger = logging.getLogger(__name__)
 
 class DFlowFMModel:
@@ -590,7 +591,6 @@ class CrossSections:
             columns=['branchid', 'chainage', 'minz'],
             geometry=geometry
         )
-
         return gdf
 
 
