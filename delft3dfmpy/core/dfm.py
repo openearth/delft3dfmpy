@@ -966,18 +966,17 @@ class Links1d2d:
         # Create an array with 2d facecenters and 1d nodes, that form the links
         nodes1d = self.mesh1d.get_nodes()[np.array(self.nodes1d) - 1]
         faces2d = self.mesh2d.get_faces(geometry="center")[np.array(self.faces2d) - 1]
-        
+
         # Check which links intersect the provided area
         index = np.zeros(len(nodes1d), dtype=bool)
         for part in geometry.as_polygon_list(polygon):
-            index |= geometry.points_in_polygon(nodes1d, part) 
+            index |= geometry.points_in_polygon(nodes1d, part)
             index |= geometry.points_in_polygon(faces2d, part)
-        
+
         # Remove these links
-        for item in reversed(self.nodes1d[index]):
-            loc = self.nodes1d.index(item)
-            self.nodes1d.pop(loc)
-            self.faces2d.pop(loc)       
+        for i in reversed(np.where(index)[0]):
+            self.nodes1d.pop(i)
+            self.faces2d.pop(i)
 
 
 class Network:
