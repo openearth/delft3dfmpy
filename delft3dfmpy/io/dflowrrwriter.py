@@ -308,48 +308,55 @@ class DFlowRRWriter:
 
         """            
          # precip         
-        df = {}
-        for ii,ms in enumerate( self.rrmodel.external_forcings.precip.items()):                 
-            df[ms[0]] = pd.Series(ms[1]['precip'])
         filepath = os.path.join(self.output_dir, 'DEFAULT.BUI')
-        f = open(filepath, 'w')
-        f.write('*Name of this file: c:\Result\1058\DEFAULT.BUI\n')
-        f.close()
-        f = open(filepath,'a')
-        f.write('*Date and time of construction: 00/00/2000 00:00:00.\n')
-        f.write('1\n')
-        f.write('*Aantal stations\n')
-        f.write(str(len(self.rrmodel.external_forcings.precip))+'\n')
-        f.write('*Namen van stations\n')
-        for ms in self.rrmodel.external_forcings.precip.items():
-            f.write('\''+ms[0]+'\''+'\n' )
-        f.write('*Aantal gebeurtenissen (omdat het 1 bui betreft is dit altijd 1)\n')
-        f.write('*en het aantal seconden per waarnemingstijdstap\n')
-        f.write(f'1 {(ms[1]["precip"].index[1]-ms[1]["precip"].index[0]).total_seconds():.0f}\n')
-        f.write('*Elke commentaarregel wordt begonnen met een * (asterisk).\n')
-        f.write('*Eerste record bevat startdatum en -tijd, lengte van de gebeurtenis in dd hh mm ss\n')
-        f.write('*Het format is: yyyymmdd:hhmmss:ddhhmmss')
-        f.write('*Daarna voor elk station de neerslag in mm per tijdstap.\n')
-        duration = (ms[1]['precip'].index[-1]-ms[1]['precip'].index[0]).total_seconds()
-        f.write(ms[1]['precip'].index[0].strftime("%Y %#m %#d %#H %#M %#S ")+str(int(duration/86400.))+' '+str(int(np.remainder(duration,86400.)/3600.))+' 0 0\n')                        
-        f.close()
-        self._dict_to_df()
-        self.precip_df.to_csv(filepath, header=False, index=False, sep=" ", float_format='%.3f', mode='a')
+        if isinstance(self.rrmodel.external_forcings.precip,str):
+            shutil.copy(self.rrmodel.external_forcings.precip, filepath)
+        else:
+            df = {}
+            for ii,ms in enumerate( self.rrmodel.external_forcings.precip.items()):                 
+                df[ms[0]] = pd.Series(ms[1]['precip'])
+            
+            f = open(filepath, 'w')
+            f.write('*Name of this file: c:\Result\1058\DEFAULT.BUI\n')
+            f.close()
+            f = open(filepath,'a')
+            f.write('*Date and time of construction: 00/00/2000 00:00:00.\n')
+            f.write('1\n')
+            f.write('*Aantal stations\n')
+            f.write(str(len(self.rrmodel.external_forcings.precip))+'\n')
+            f.write('*Namen van stations\n')
+            for ms in self.rrmodel.external_forcings.precip.items():
+                f.write('\''+ms[0]+'\''+'\n' )
+            f.write('*Aantal gebeurtenissen (omdat het 1 bui betreft is dit altijd 1)\n')
+            f.write('*en het aantal seconden per waarnemingstijdstap\n')
+            f.write(f'1 {(ms[1]["precip"].index[1]-ms[1]["precip"].index[0]).total_seconds():.0f}\n')
+            f.write('*Elke commentaarregel wordt begonnen met een * (asterisk).\n')
+            f.write('*Eerste record bevat startdatum en -tijd, lengte van de gebeurtenis in dd hh mm ss\n')
+            f.write('*Het format is: yyyymmdd:hhmmss:ddhhmmss')
+            f.write('*Daarna voor elk station de neerslag in mm per tijdstap.\n')
+            duration = (ms[1]['precip'].index[-1]-ms[1]['precip'].index[0]).total_seconds()
+            f.write(ms[1]['precip'].index[0].strftime("%Y %#m %#d %#H %#M %#S ")+str(int(duration/86400.))+' '+str(int(np.remainder(duration,86400.)/3600.))+' 0 0\n')                        
+            f.close()
+            self._dict_to_df()
+            self.precip_df.to_csv(filepath, header=False, index=False, sep=" ", float_format='%.3f', mode='a')
 #%%
           
 #%%%          
         # evaporation         
         filepath = os.path.join(self.output_dir, 'DEFAULT.EVP')
-        f = open(filepath,'w')
-        f.write('*Verdampingsfile\n')
-        f.write('*Meteo data: evaporation intensity in mm/day\n')
-        f.write('*First record: start date, data in mm/day\n')
-        f.write('*Datum (year month day), verdamping (mm/dag) voor elk weerstation\n')
-        f.write('*jaar maand dag verdamping[mm]\n')     
-        f.close()
-        table = list(self.rrmodel.external_forcings.evap.values())[0]['evap']          
-        table.to_csv(filepath,float_format='%.3f', date_format='%#Y  %#m  %#d ', sep=" ", header=False ,quoting=csv.QUOTE_NONE, mode="a", escapechar=" ")         
-               
+        if isinstance(self.rrmodel.external_forcings.evap,str):
+            shutil.copy(self.rrmodel.external_forcings.evap, filepath)
+        else:
+            f = open(filepath,'w')
+            f.write('*Verdampingsfile\n')
+            f.write('*Meteo data: evaporation intensity in mm/day\n')
+            f.write('*First record: start date, data in mm/day\n')
+            f.write('*Datum (year month day), verdamping (mm/dag) voor elk weerstation\n')
+            f.write('*jaar maand dag verdamping[mm]\n')     
+            f.close()
+            table = list(self.rrmodel.external_forcings.evap.values())[0]['evap']          
+            table.to_csv(filepath,float_format='%.3f', date_format='%#Y  %#m  %#d ', sep=" ", header=False ,quoting=csv.QUOTE_NONE, mode="a", escapechar=" ")         
+                
     def _dict_to_df(self):        
         """
         Method to convert the precip dictionary to a dataframe

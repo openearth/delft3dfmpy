@@ -632,8 +632,11 @@ class CrossSections:
             data.append([css["branchid"], css["chainage"], minz])
 
         # Add to geodataframe
-        gdf = gpd.GeoDataFrame(data=data, columns=["branchid", "chainage", "minz"], geometry=geometry)
-
+        gdf = gpd.GeoDataFrame(
+            data=data,
+            columns=['branchid', 'chainage', 'minz'],
+            geometry=geometry
+        )
         return gdf
 
 

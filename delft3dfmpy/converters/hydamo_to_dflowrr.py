@@ -9,6 +9,7 @@ from delft3dfmpy.core import checks, geometry
 from delft3dfmpy.datamodels.common import ExtendedDataFrame
 import rasterio
 import warnings
+import shutil
 from rasterio.transform import from_origin
 import os
 import imod
@@ -444,11 +445,13 @@ def generate_seepage(catchments, seepage_folder):
     result_mmd = (result / (1e-3*(affine[0]*-affine[4])))/((times[2]-times[1]).total_seconds()/86400.)
     return result_mmd
 
-def generate_precip(areas, precip_folder):
+def generate_precip(areas, precip_folder=None, precip_file=None):
     """
     Method to obtain catchment-average seepage fluxes from rasters. The time step is deduced from the raster filenames.
     
     """
+    if precip_file is not None:
+        return precip_file
     warnings.filterwarnings('ignore')
     file_list = os.listdir(precip_folder)
     times = []        
@@ -462,11 +465,13 @@ def generate_precip(areas, precip_folder):
     result.index = times 
     return result
 
-def generate_evap(areas, evap_folder):    
+def generate_evap(areas, evap_folder=None, evap_file=None):    
     """
     Method to obtain catchment-average evaporation fluxes from rasters. The time step is deduced from the raster filenames. Since only one timeeries is allowed, the meteo areas are dissolved to a user specifield field.
     
     """
+    if evap_file is not None:
+        return evap_file
     warnings.filterwarnings('ignore')
     file_list = os.listdir(evap_folder)
     # aggregated evap
