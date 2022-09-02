@@ -46,14 +46,13 @@ BedlevType                        = 1                   # Bathymetry specificati
                                                         # 5: at nodes, face levels max. of node values
                                                         # 6: at nodes, face levels max. of cell-center values
 Bedslope                          = 0.                  # bedslopeinclination, sets zk = bedlevuni + x*bedslope ans sets zbndz = xbndz*bedslope
-PartitionFile                     =                     # Domain partition polygon file *_part.pol for parallel run
 AngLat                            = 0.                  # Angle of latitude S-N (deg), 0: no Coriolis
 AngLon                            = 0.                  # Angle of longitude E-W (deg), 0: Greenwich, used in solar heat flux computation.
 Conveyance2D                      = -1                  # -1: R=HU,0: R=H, 1: R=A/P, 2: K=analytic-1D conv, 3: K=analytic-2D conv
 Slotw2D                           = 0.                  # -
 NonLin1D                          = 0
 1D2DLinkFile                      = # File containing the custom parameterization of 1D-2D links. 
-PartitionFile                     = # *_part.pol, polyline(s) x,y
+PartitionFile                     = #  Domain partition polygon file *_part.pol for parallel run 
 Blmeanbelow                       = -999.               # if not -999d0, below this level the cell centre bedlevel is the mean of surrouding netnodes
 Blminabove                        = -999.               # if not -999d0, above this level the cell centre bedlevel is the min of surrouding netnodes
 Nonlin2D                          = 0                   # Non-linear 2D volumes, only i.c.m. ibedlevtype = 3 and Conveyance2D>=1

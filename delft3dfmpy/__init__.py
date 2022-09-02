@@ -2,9 +2,9 @@
 
 """Top-level package for delft3dfmpy."""
 
-__author__ = """Guus Rongen"""
-__email__ = 'rongen@hkv.nl'
-__version__ = '2.0.1'
+__author__ = """Guus Rongen / Ruud Hurkmans"""
+__email__ = 'r.hurkmans@hkv.nl'
+__version__ = '2.0.2'
 
 from delft3dfmpy.core.dfm import DFlowFMModel
 from delft3dfmpy.core.drr import DFlowRRModel

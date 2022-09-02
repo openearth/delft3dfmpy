@@ -42,6 +42,17 @@ class DFlowFMModel:
 
         self.storagenodes = StorageNodes(self)
 
+        self.roughness_mapping = {
+            "Chezy": "Chezy",
+            "Manning": "Manning",
+            "StricklerKn": "StricklerNikuradse",
+            "StricklerKs": "Strickler",
+            "White Colebrook": "WhiteColebrook",
+            "Bos en Bijkerk": "deBosBijkerk",
+            "Onbekend": "Strickler",
+            "Overig": "Strickler",
+        }
+
     def export_network(self, output_dir, overwrite=False):
         """
         Expert network to shapefiles
@@ -78,7 +89,8 @@ class DFlowFMModel:
 
         # Mesh2d
         mesh2d = gpd.GeoDataFrame(
-            geometry=[Polygon(poly) for poly in self.network.mesh2d.get_faces()], crs="epsg:28992"
+            geometry=[Polygon(poly) for poly in self.network.mesh2d.get_faces()],
+            crs="epsg:28992",
         )
         # Add properties
         # Save
@@ -86,10 +98,13 @@ class DFlowFMModel:
 
         # Mesh1d
         mesh1d = gpd.GeoDataFrame(
-            geometry=[LineString(line) for line in self.network.mesh1d.get_segments()], crs="epsg:28992"
+            geometry=[LineString(line) for line in self.network.mesh1d.get_segments()],
+            crs="epsg:28992",
         )
         # Add properties
-        mesh1d["node1"], mesh1d["node2"] = self.network.mesh1d.get_values("edge_nodes", as_array=True).T
+        mesh1d["node1"], mesh1d["node2"] = self.network.mesh1d.get_values(
+            "edge_nodes", as_array=True
+        ).T
         # Save
         mesh1d.to_file(paths[0])
 
@@ -117,7 +132,15 @@ class ExternalForcings:
 
         # Dataframe for saving time series for structure
         self.structures = pd.DataFrame(
-            columns=["id", "type", "parameter", "time", "time_unit", "value", "value_unit"]
+            columns=[
+                "id",
+                "type",
+                "parameter",
+                "time",
+                "time_unit",
+                "value",
+                "value_unit",
+            ]
         )
 
         # Dictionary for saving laterals
@@ -138,7 +161,12 @@ class ExternalForcings:
         # Add to geodataframe
         if polygon == None:
             new_df = pd.DataFrame(
-                {"waterlevel": level, "geometry": polygon, "locationType": locationtype}, index=[name]
+                {
+                    "waterlevel": level,
+                    "geometry": polygon,
+                    "locationType": locationtype,
+                },
+                index=[name],
             )
             self.initial_waterlevel_polygons = new_df
         else:
@@ -177,7 +205,12 @@ class ExternalForcings:
         if polygon == None:
 
             new_df = pd.DataFrame(
-                {"waterdepth": depth, "geometry": polygon, "locationType": locationtype}, index=[name]
+                {
+                    "waterdepth": depth,
+                    "geometry": polygon,
+                    "locationType": locationtype,
+                },
+                index=[name],
             )
 
             self.initial_waterdepth_polygons = new_df
@@ -236,14 +269,21 @@ class ExternalForcings:
 
         unit = "m3/s" if bctype == "discharge" else "m"
         if name in self.boundaries.keys():
-            raise KeyError(f'A boundary condition with name "{name}" is already present.')
+            raise KeyError(
+                f'A boundary condition with name "{name}" is already present.'
+            )
 
         if isinstance(pt, tuple):
             pt = Point(*pt)
 
         # Find the nearest node
         nodes1d = np.asarray(
-            [n.split("_") for n in self.dflowfmmodel.network.mesh1d.description1d["network_node_ids"]],
+            [
+                n.split("_")
+                for n in self.dflowfmmodel.network.mesh1d.description1d[
+                    "network_node_ids"
+                ]
+            ],
             dtype="float",
         )
         get_nearest = KDTree(nodes1d)
@@ -319,29 +359,43 @@ class ExternalForcings:
         if structure_type == "weir":
             weirnames = list(self.dflowfmmodel.structures.weirs.keys())
             if structure_id not in weirnames:
-                raise IndexError(f'"{structure_id}" not in index: "{",".join(weirnames)}"')
-            self.dflowfmmodel.structures.weirs[structure_id][parameter] = "boundaries.bc"
+                raise IndexError(
+                    f'"{structure_id}" not in index: "{",".join(weirnames)}"'
+                )
+            self.dflowfmmodel.structures.weirs[structure_id][
+                parameter
+            ] = "boundaries.bc"
             if "crest" in parameter.lower():
                 parameter = "weir_crestLevel"
                 unit = "m+NAP"
         elif structure_type == "orifice":
             orificenames = list(self.dflowfmmodel.structures.orifices.keys())
             if structure_id not in orificenames:
-                raise IndexError(f'"{structure_id}" not in index: "{",".join(orificenames)}"')
+                raise IndexError(
+                    f'"{structure_id}" not in index: "{",".join(orificenames)}"'
+                )
             if "gate" in parameter.lower():
                 parameter = "orifice_gateLowerEdgeLevel"
                 unit = "m"
-            self.dflowfmmodel.structures.orifices[structure_id][parameter] = "boundaries.bc"
+            self.dflowfmmodel.structures.orifices[structure_id][
+                parameter
+            ] = "boundaries.bc"
         elif structure_type == "culvert":
             culvertnames = list(self.dflowfmmodel.structures.culverts.keys())
             if structure_id not in culvertnames:
-                raise IndexError(f'"{structure_id}" not in index: "{",".join(culvertnames)}"')
+                raise IndexError(
+                    f'"{structure_id}" not in index: "{",".join(culvertnames)}"'
+                )
             if "valve" in parameter.lower():
                 parameter = "culvert_valveOpeningHeight"
                 unit = "m"
-            self.dflowfmmodel.structures.culverts[structure_id][parameter] = "boundaries.bc"
+            self.dflowfmmodel.structures.culverts[structure_id][
+                parameter
+            ] = "boundaries.bc"
         else:
-            raise NotImplementedError("Only implemented for weirs, culverts and orifices.")
+            raise NotImplementedError(
+                "Only implemented for weirs, culverts and orifices."
+            )
 
         #  Convert time to minutes
         if isinstance(series, pd.DataFrame):
@@ -414,7 +468,9 @@ class CrossSections:
 
         self.default_locations = locations
 
-    def add_yz_definition(self, yz=None, thalweg=None, roughnesstype=None, roughnessvalue=None, name=None):
+    def add_yz_definition(
+        self, yz=None, thalweg=None, roughnesstype=None, roughnessvalue=None, name=None
+    ):
         """
         Add xyz crosssection
 
@@ -477,7 +533,9 @@ class CrossSections:
 
         return name
 
-    def add_rectangle_definition(self, height, width, closed, roughnesstype, roughnessvalue, name=None):
+    def add_rectangle_definition(
+        self, height, width, closed, roughnesstype, roughnessvalue, name=None
+    ):
         """
         Add rectangle cross section. The cross section name is derived from the shape and roughness,
         so similar cross sections will result in a single definition.
@@ -529,7 +587,9 @@ class CrossSections:
 
         if not closed:
             levels = f"{bottomlevel} 100"
-            flowwidths = f"{bottomwidth:.2f} {bottomwidth + 2.*((100.0-bottomlevel)*slope):.2f}"
+            flowwidths = (
+                f"{bottomwidth:.2f} {bottomwidth + 2.*((100.0-bottomlevel)*slope):.2f}"
+            )
         else:
             levels = f"0 {((maximumflowwidth - bottomwidth)/2.0) / slope:.2f}"
             flowwidths = f"{bottomwidth:.2f} {maximumflowwidth:.2f}"
@@ -549,7 +609,14 @@ class CrossSections:
         return name
 
     def add_zw_definition(
-        self, numLevels, levels, flowWidths, totalWidths, roughnesstype, roughnessvalue, name=None
+        self,
+        numLevels,
+        levels,
+        flowWidths,
+        totalWidths,
+        roughnesstype,
+        roughnessvalue,
+        name=None,
     ):
         """
         Add zw cross section. The cross section name is derived from the shape and roughness,
@@ -557,7 +624,9 @@ class CrossSections:
         """
         # Get name if not given
         if name is None:
-            name = f'zw_h{levels.replace(" ","_"):.1f}_w{flowWidths.replace(" ","_"):.1f}'
+            name = (
+                f'zw_h{levels.replace(" ","_"):.1f}_w{flowWidths.replace(" ","_"):.1f}'
+            )
 
         # Get roughnessname
         roughnessname = self.get_roughnessname(roughnesstype, roughnessvalue)
@@ -576,7 +645,9 @@ class CrossSections:
 
         return name
 
-    def add_crosssection_location(self, branchid, chainage, definition, minz=np.nan, shift=0.0):
+    def add_crosssection_location(
+        self, branchid, chainage, definition, minz=np.nan, shift=0.0
+    ):
 
         descr = f"{branchid}_{chainage:.1f}"
         # Add cross section location
@@ -599,8 +670,12 @@ class CrossSections:
 
     def get_structures_without_crosssection(self):
         struc_ids = [dct["id"] for _, dct in self.crosssection_def.items()]
-        bridge_ids = [dct["csDefId"] for _, dct in self.dflowfmmodel.structures.bridges.items()]
-        no_cross_bridge = np.asarray(bridge_ids)[~np.isin(bridge_ids, struc_ids)].tolist()
+        bridge_ids = [
+            dct["csDefId"] for _, dct in self.dflowfmmodel.structures.bridges.items()
+        ]
+        no_cross_bridge = np.asarray(bridge_ids)[
+            ~np.isin(bridge_ids, struc_ids)
+        ].tolist()
         no_crosssection = no_cross_bridge
         # uweir_ids = [dct['numlevels'] for _, dct in self.dflowfmmodel.structures.uweirs.items()]
         # no_cross_uweir = uweirs.index[~np.isin(uweirs.index, list(uweir_ids))]
@@ -617,9 +692,9 @@ class CrossSections:
         for key, css in self.crosssection_loc.items():
             # Get location
             geometry.append(
-                self.dflowfmmodel.network.schematised.at[css["branchid"], "geometry"].interpolate(
-                    css["chainage"]
-                )
+                self.dflowfmmodel.network.schematised.at[
+                    css["branchid"], "geometry"
+                ].interpolate(css["chainage"])
             )
             shift = css["shift"]
 
@@ -633,9 +708,7 @@ class CrossSections:
 
         # Add to geodataframe
         gdf = gpd.GeoDataFrame(
-            data=data,
-            columns=['branchid', 'chainage', 'minz'],
-            geometry=geometry
+            data=data, columns=["branchid", "chainage", "minz"], geometry=geometry
         )
         return gdf
 
@@ -667,7 +740,9 @@ class Links1d2d:
         logger.info(f"Generating links from 1d to 2d based on distance.")
 
         # Create KDTree for faces
-        faces2d = np.c_[self.mesh2d.get_values("facex"), self.mesh2d.get_values("facey")]
+        faces2d = np.c_[
+            self.mesh2d.get_values("facex"), self.mesh2d.get_values("facey")
+        ]
         get_nearest = KDTree(faces2d)
 
         # Get network geometry
@@ -690,7 +765,11 @@ class Links1d2d:
             self.check_boundary_link(bc)
 
     def generate_2d_to_1d(
-        self, max_distance=np.inf, intersecting=True, branchid=None, shift_to_centroid=True
+        self,
+        max_distance=np.inf,
+        intersecting=True,
+        branchid=None,
+        shift_to_centroid=True,
     ):
         """
         Generate 1d2d links from 2d cells. A maximum distance can be specified
@@ -741,7 +820,11 @@ class Links1d2d:
             data=centers2d[idx],
             columns=["x", "y"],
             index=idx + 1,
-            geometry=[Polygon(cell) for i, cell in enumerate(self.mesh2d.get_faces()) if i in idx],
+            geometry=[
+                Polygon(cell)
+                for i, cell in enumerate(self.mesh2d.get_faces())
+                if i in idx
+            ],
         )
 
         # Find intersecting cells with branches
@@ -756,7 +839,9 @@ class Links1d2d:
         if intersecting:
             geometry.find_nearest_branch(branches, cells, method="intersecting")
         else:
-            geometry.find_nearest_branch(branches, cells, method="overal", maxdist=max_distance)
+            geometry.find_nearest_branch(
+                branches, cells, method="overal", maxdist=max_distance
+            )
 
         # Drop the cells without intersection
         cells.dropna(subset=["branch_offset"], inplace=True)
@@ -780,9 +865,13 @@ class Links1d2d:
             # Remove links that intersect multiple cells
             cellbounds = cells.bounds.values.T
             for link in tqdm(
-                links.itertuples(), total=len(links), desc="Removing links crossing mult. cells"
+                links.itertuples(),
+                total=len(links),
+                desc="Removing links crossing mult. cells",
             ):
-                selectie = cells.loc[geometry.possibly_intersecting(cellbounds, link.geometry)].copy()
+                selectie = cells.loc[
+                    geometry.possibly_intersecting(cellbounds, link.geometry)
+                ].copy()
                 if selectie.intersects(link.geometry).sum() > 1:
                     todrop.append(link.Index)
             links.drop(todrop, inplace=True)
@@ -800,7 +889,9 @@ class Links1d2d:
             cx, cy = self.mesh2d.get_faces(geometry="center").T
             # Calculate centroids for cells with link
             idx = np.array(self.faces2d) - 1
-            centroids = np.vstack([cell.mean(axis=0) for cell in np.array(self.mesh2d.get_faces())[idx]]).T
+            centroids = np.vstack(
+                [cell.mean(axis=0) for cell in np.array(self.mesh2d.get_faces())[idx]]
+            ).T
             cx[idx] = centroids[0]
             cy[idx] = centroids[1]
             # Set values back to geometry
@@ -829,7 +920,9 @@ class Links1d2d:
         # Find the nearest node with the KDTree
         nodes1d = self.mesh1d.get_nodes()
         get_nearest = KDTree(nodes1d)
-        distance, idx_nearest = get_nearest.query([float(pt) for pt in bc["nodeid"].split("_")])
+        distance, idx_nearest = get_nearest.query(
+            [float(pt) for pt in bc["nodeid"].split("_")]
+        )
         node_id = idx_nearest + 1
 
         # Check 1. Determine if the nearest node itself is not a bifurcation
@@ -872,7 +965,9 @@ class Links1d2d:
         faces2d = self.mesh2d.get_faces(geometry="center")
 
         # Get links
-        links = np.dstack([nodes1d[np.array(self.nodes1d) - 1], faces2d[np.array(self.faces2d) - 1]])
+        links = np.dstack(
+            [nodes1d[np.array(self.nodes1d) - 1], faces2d[np.array(self.faces2d) - 1]]
+        )
 
         if not as_gdf:
             return np.array([line.T for line in links])
@@ -895,7 +990,9 @@ class Links1d2d:
                 x, y, n = line.split()
                 if int(n) >= threshold:
                     if node == "2d":
-                        self.remove_1d2d_link(float(x), float(y), mesh=node, max_distance=2.0)
+                        self.remove_1d2d_link(
+                            float(x), float(y), mesh=node, max_distance=2.0
+                        )
                     else:
                         # Find the 1d node connected to the link
                         idx = links.distance(Point(float(x), float(y))).idxmin()
@@ -991,8 +1088,12 @@ class Network:
         self.offsets = {}
 
         # Branches and schematised branches
-        self.branches = ExtendedGeoDataFrame(geotype=LineString, required_columns=["code", "geometry"])
-        self.schematised = ExtendedGeoDataFrame(geotype=LineString, required_columns=["geometry"])
+        self.branches = ExtendedGeoDataFrame(
+            geotype=LineString, required_columns=["code", "geometry"]
+        )
+        self.schematised = ExtendedGeoDataFrame(
+            geotype=LineString, required_columns=["geometry"]
+        )
 
         # Create mesh for the 1d network
         self.mesh1d = meshgeom(meshgeomdim())
@@ -1021,7 +1122,9 @@ class Network:
         Set branches from geodataframe
         """
         # Check input
-        checks.check_argument(branches, "branches", (ExtendedGeoDataFrame, gpd.GeoDataFrame))
+        checks.check_argument(
+            branches, "branches", (ExtendedGeoDataFrame, gpd.GeoDataFrame)
+        )
         # Add data to branches
         self.branches.set_data(branches[self.branches.required_columns])
         # Copy branches to schematised
@@ -1150,7 +1253,9 @@ class Network:
         bedlevels_crs_branches = self.dflowfmmodel.crosssections.get_bottom_levels()
         branch_order = self.mesh1d.get_values("nbranchorder", as_array=True)
         self.make_branches_to_node_map(), self.make_nodes_to_branch_map()
-        nodes_dict = {n: {"up": [], "down": []} for n in self.branches_to_node_map.keys()}
+        nodes_dict = {
+            n: {"up": [], "down": []} for n in self.branches_to_node_map.keys()
+        }
         reserved_branches = []
         for order, (branch, nodes) in tqdm(
             zip(branch_order, self.nodes_to_branch_map.items()),
@@ -1160,10 +1265,14 @@ class Network:
             if order == -1:
                 # No branch order so just get upstream and downstream levels
                 branch_length = self.branches.loc[branch, "geometry"].length
-                subset = bedlevels_crs_branches.loc[bedlevels_crs_branches["branchid"] == branch]
+                subset = bedlevels_crs_branches.loc[
+                    bedlevels_crs_branches["branchid"] == branch
+                ]
                 if subset.empty:
                     continue  # if this happens, crs is not defined. This can be a problem.
-                nodes_dict[nodes[0]]["up"].append(np.interp(0.0, subset["chainage"], subset["minz"]))
+                nodes_dict[nodes[0]]["up"].append(
+                    np.interp(0.0, subset["chainage"], subset["minz"])
+                )
                 nodes_dict[nodes[1]]["down"].append(
                     np.interp(branch_length, subset["chainage"], subset["minz"])
                 )
@@ -1177,7 +1286,9 @@ class Network:
                 # First check if any of the branches has a bedlevel from a cross-section profile otherwise skip
                 check = all(
                     [
-                        bedlevels_crs_branches.loc[bedlevels_crs_branches["branchid"] == b].empty
+                        bedlevels_crs_branches.loc[
+                            bedlevels_crs_branches["branchid"] == b
+                        ].empty
                         for b in all_branches
                     ]
                 )
@@ -1190,8 +1301,18 @@ class Network:
                 direction = list(np.ones(n_length))
                 max_tries = 0
                 while n < n_length:
-                    up = np.count_nonzero(all_nodes[n][0] == np.array([x[0] for x in all_nodes])) == 1
-                    down = np.count_nonzero(all_nodes[n][1] == np.array([x[1] for x in all_nodes])) == 1
+                    up = (
+                        np.count_nonzero(
+                            all_nodes[n][0] == np.array([x[0] for x in all_nodes])
+                        )
+                        == 1
+                    )
+                    down = (
+                        np.count_nonzero(
+                            all_nodes[n][1] == np.array([x[1] for x in all_nodes])
+                        )
+                        == 1
+                    )
                     if (not up) or (not down):
                         # Reverse
                         all_nodes[n] = list(np.flip(all_nodes[n]))
@@ -1201,13 +1322,19 @@ class Network:
                     if n == n_length:
                         up = all(
                             [
-                                np.count_nonzero(node[0] == np.array([x[0] for x in all_nodes])) == 1
+                                np.count_nonzero(
+                                    node[0] == np.array([x[0] for x in all_nodes])
+                                )
+                                == 1
                                 for node in all_nodes
                             ]
                         )
                         down = all(
                             [
-                                np.count_nonzero(node[1] == np.array([x[1] for x in all_nodes])) == 1
+                                np.count_nonzero(
+                                    node[1] == np.array([x[1] for x in all_nodes])
+                                )
+                                == 1
                                 for node in all_nodes
                             ]
                         )
@@ -1215,15 +1342,21 @@ class Network:
                             n = 0
                             max_tries += 1
                     if max_tries > 500:
-                        print(f"Can't fix correct directions branch groups {all_branches}")
+                        print(
+                            f"Can't fix correct directions branch groups {all_branches}"
+                        )
                         break
 
                 # Add reserved branches to return
-                reserved_branches.extend([b for b, d in zip(all_branches, direction) if d == -1])
+                reserved_branches.extend(
+                    [b for b, d in zip(all_branches, direction) if d == -1]
+                )
 
                 # Get most upstream node. Otherwise just pick i_upstream = 0 as starting point
                 i_upstream = [
-                    i for i, n in enumerate([x[0] for x in all_nodes]) if n not in [x[1] for x in all_nodes]
+                    i
+                    for i, n in enumerate([x[0] for x in all_nodes])
+                    if n not in [x[1] for x in all_nodes]
                 ]
                 if len(i_upstream) == 1:
                     i_upstream = i_upstream[0]
@@ -1233,12 +1366,15 @@ class Network:
                     i_upstream = [
                         i
                         for i, n in enumerate([x[0] for x in all_nodes])
-                        if (len(self.branches_to_node_map[n]) > 2) or (len(self.branches_to_node_map[n]) == 1)
+                        if (len(self.branches_to_node_map[n]) > 2)
+                        or (len(self.branches_to_node_map[n]) == 1)
                     ]
                     if len(i_upstream) == 1:
                         i_upstream = i_upstream[0]
                     else:
-                        raise ValueError(f"Something is not right with the branch order group {all_branches}")
+                        raise ValueError(
+                            f"Something is not right with the branch order group {all_branches}"
+                        )
 
                 # Now put branch list in correct order
                 all_branches_sorted = []
@@ -1260,7 +1396,9 @@ class Network:
                 chainage, bedlevel = [], []
                 branch_length = 0
                 for b, d in zip(all_branches_sorted, direction_sorted):
-                    subset = bedlevels_crs_branches.loc[bedlevels_crs_branches["branchid"] == b]
+                    subset = bedlevels_crs_branches.loc[
+                        bedlevels_crs_branches["branchid"] == b
+                    ]
                     chain, bed = subset["chainage"], subset["minz"]
                     # Reverse chainage and bedlevel arrays
                     if d == -1:
@@ -1272,16 +1410,23 @@ class Network:
                 # Get chainage of up- and downstream node of loop branch within the overall branch
                 if len(all_branches_sorted) == 1:
                     up_node_chainage = 0
-                    down_node_chainage = self.branches.loc[all_branches_sorted[0], "geometry"].length
+                    down_node_chainage = self.branches.loc[
+                        all_branches_sorted[0], "geometry"
+                    ].length
                 else:
                     i = np.argmax(
-                        [1 if ((nodes == n) or (list(np.flip(nodes)) == n)) else 0 for n in all_nodes_sorted]
+                        [
+                            1 if ((nodes == n) or (list(np.flip(nodes)) == n)) else 0
+                            for n in all_nodes_sorted
+                        ]
                     )
                     up_node_chainage = sum(
                         [0]
                         + [
                             self.branches.loc[b, "geometry"].length
-                            for b, n in zip(all_branches_sorted[:-1], all_nodes_sorted[:-1])
+                            for b, n in zip(
+                                all_branches_sorted[:-1], all_nodes_sorted[:-1]
+                            )
                         ][: i + 1]
                     )
                     down_node_chainage = sum(
@@ -1291,30 +1436,47 @@ class Network:
                         ][: i + 1]
                     )
                 # Finally interpolate
-                nodes_dict[nodes[0]]["up"].append(np.interp(up_node_chainage, chainage, bedlevel))
-                nodes_dict[nodes[1]]["down"].append(np.interp(down_node_chainage, chainage, bedlevel))
+                nodes_dict[nodes[0]]["up"].append(
+                    np.interp(up_node_chainage, chainage, bedlevel)
+                )
+                nodes_dict[nodes[1]]["down"].append(
+                    np.interp(down_node_chainage, chainage, bedlevel)
+                )
 
         # Summarize everything and save
         nodes = list(nodes_dict.keys())
         node_geom = [
-            Point(x, y) for x, y in zip(self.mesh1d.get_values("nnodex"), self.mesh1d.get_values("nnodey"))
+            Point(x, y)
+            for x, y in zip(
+                self.mesh1d.get_values("nnodex"), self.mesh1d.get_values("nnodey")
+            )
         ]
         if resolve_at_bifurcation_method == "min":
-            upstream_bedlevel = [np.min(v["up"]) if len(v["up"]) > 0 else np.nan for v in nodes_dict.values()]
+            upstream_bedlevel = [
+                np.min(v["up"]) if len(v["up"]) > 0 else np.nan
+                for v in nodes_dict.values()
+            ]
             downstream_bedlevel = [
-                np.min(v["down"]) if len(v["down"]) > 0 else np.nan for v in nodes_dict.values()
+                np.min(v["down"]) if len(v["down"]) > 0 else np.nan
+                for v in nodes_dict.values()
             ]
         elif resolve_at_bifurcation_method == "max":
-            upstream_bedlevel = [np.max(v["up"]) if len(v["up"]) > 0 else np.nan for v in nodes_dict.values()]
+            upstream_bedlevel = [
+                np.max(v["up"]) if len(v["up"]) > 0 else np.nan
+                for v in nodes_dict.values()
+            ]
             downstream_bedlevel = [
-                np.max(v["down"]) if len(v["down"]) > 0 else np.nan for v in nodes_dict.values()
+                np.max(v["down"]) if len(v["down"]) > 0 else np.nan
+                for v in nodes_dict.values()
             ]
         elif resolve_at_bifurcation_method == "mean":
             upstream_bedlevel = [
-                np.average(["up"]) if len(v["up"]) > 0 else np.nan for v in nodes_dict.values()
+                np.average(["up"]) if len(v["up"]) > 0 else np.nan
+                for v in nodes_dict.values()
             ]
             downstream_bedlevel = [
-                np.average(v["down"]) if len(v["down"]) > 0 else np.nan for v in nodes_dict.values()
+                np.average(v["down"]) if len(v["down"]) > 0 else np.nan
+                for v in nodes_dict.values()
             ]
         else:
             raise NotImplementedError
@@ -1365,10 +1527,14 @@ class Network:
                     if b in branch_ids_checked:
                         # connected branch is already added to a group, so this means that branch should be added to
                         # that group
-                        groups[[k for k, v in groups.items() if b in v][0]].append(branch_id)
+                        groups[[k for k, v in groups.items() if b in v][0]].append(
+                            branch_id
+                        )
                         branch_ids_checked.extend([branch_id])
                     else:
-                        groups[list(groups.keys())[-1] + 1] = [branch_id]  # otherwise add to group
+                        groups[list(groups.keys())[-1] + 1] = [
+                            branch_id
+                        ]  # otherwise add to group
                         branch_ids_checked.extend([branch_id])
                 branch_ids_checked = list(np.unique(branch_ids_checked))
         groups.pop(0)  # remove the 0th group because empty
@@ -1385,12 +1551,24 @@ class Network:
                     if _k == -1:
                         _k = k  # set index to first group found
                     else:
-                        _groups[_k].extend(v)  # otherwise add group to first found group
-                        _groups[_k] = list(np.unique(_groups[_k]))  # remove duplicates due to add
+                        _groups[_k].extend(
+                            v
+                        )  # otherwise add group to first found group
+                        _groups[_k] = list(
+                            np.unique(_groups[_k])
+                        )  # remove duplicates due to add
                         _groups.pop(k)  # and remove group from groups
             groups = _groups.copy()  # copy changed dict over original
         # One pass over all branches should be sufficient to group everything together. Otherwise raise error
-        if max([sum([1 if b in v else 0 for k, v in groups.items()]) for b in branch_ids]) > 1:
+        if (
+            max(
+                [
+                    sum([1 if b in v else 0 for k, v in groups.items()])
+                    for b in branch_ids
+                ]
+            )
+            > 1
+        ):
             raise ValueError(
                 f"Still branches contained in multiple groups. Maximum number of groups where this "
                 f"happens: {max([sum([1 if b in v else 0 for k, v in groups.items()]) for b in branch_ids])}"
@@ -1428,7 +1606,9 @@ class Network:
         """
 
         if self.branches.empty:
-            raise ValueError("Branches should be added before 1d network can be generated.")
+            raise ValueError(
+                "Branches should be added before 1d network can be generated."
+            )
 
         checks.check_argument(one_d_mesh_distance, "one_d_mesh_distance", (float, int))
 
@@ -1463,10 +1643,18 @@ class Network:
         # Add network branch data
         dimensions = self.mesh1d.meshgeomdim
         dimensions.nbranches = len(sorted_branches)
-        self.mesh1d.set_values("nbranchorder", (np.ones(dimensions.nbranches, dtype=int) * -1).tolist())
-        self.mesh1d.set_values("nbranchlengths", sorted_branches.geometry.length + 1e-12)
-        self.mesh1d.description1d["network_branch_ids"] = sorted_branches.index.astype(str).tolist()
-        self.mesh1d.description1d["network_branch_long_names"] = sorted_branches.index.astype(str).tolist()
+        self.mesh1d.set_values(
+            "nbranchorder", (np.ones(dimensions.nbranches, dtype=int) * -1).tolist()
+        )
+        self.mesh1d.set_values(
+            "nbranchlengths", sorted_branches.geometry.length + 1e-12
+        )
+        self.mesh1d.description1d["network_branch_ids"] = sorted_branches.index.astype(
+            str
+        ).tolist()
+        self.mesh1d.description1d[
+            "network_branch_long_names"
+        ] = sorted_branches.index.astype(str).tolist()
 
         # Add network branch geometry
         coords = [line.coords[:] for line in sorted_branches.geometry]
@@ -1494,7 +1682,9 @@ class Network:
 
             # Get branch coordinates. Round to 6 decimals to make sure that, due to precision errors in coordinates,
             # already existing first and/or end nodes are not recognized
-            points = shapely.wkt.loads(shapely.wkt.dumps(branch.geometry, rounding_precision=6)).coords[:]
+            points = shapely.wkt.loads(
+                shapely.wkt.dumps(branch.geometry, rounding_precision=6)
+            ).coords[:]
 
             # Network edge node administration
             # -------------------------------
@@ -1507,7 +1697,10 @@ class Network:
             nlinks = len(offsets) - 1
 
             # also get the offsets of the edge nodes, halfway the segments
-            edge_offsets = [(offsets[i] + offsets[i + 1]) / 2.0 for i in range(np.max([1, len(offsets) - 1]))]
+            edge_offsets = [
+                (offsets[i] + offsets[i + 1]) / 2.0
+                for i in range(np.max([1, len(offsets) - 1]))
+            ]
 
             # Check if the first and last point of the branch are already in the set
             if first_point not in nodes:
@@ -1528,7 +1721,9 @@ class Network:
             if len(offsets) == 0:
                 if urban_branches is not None and branch.Index not in urban_branches:
                     offsets = np.array([branch.geometry.length / 2.0])
-                    edge_offsets = np.array([i * branch.geometry.length for i in [0.25, 0.75]])
+                    edge_offsets = np.array(
+                        [i * branch.geometry.length for i in [0.25, 0.75]]
+                    )
                     nlinks += 1
                 else:
                     offsets = self.offsets[branch.Index]
@@ -1550,7 +1745,9 @@ class Network:
             # For each link, create a new edge node connection
             if first_present:
                 start_index -= 1
-            new_edge_nodes = [[start_index + i, start_index + i + 1] for i in range(nlinks)]
+            new_edge_nodes = [
+                [start_index + i, start_index + i + 1] for i in range(nlinks)
+            ]
             # If the first node is present, change the first point of the first edge to the existing point
             if first_present:
                 new_edge_nodes[0][0] = edge_nodes_dict[first_point]
@@ -1576,7 +1773,10 @@ class Network:
             lengths = np.r_[
                 0.0,
                 np.cumsum(
-                    np.hypot(np.diff(coords[i_branch], axis=0)[:, 0], np.diff(coords[i_branch], axis=0)[:, 1])
+                    np.hypot(
+                        np.diff(coords[i_branch], axis=0)[:, 0],
+                        np.diff(coords[i_branch], axis=0)[:, 1],
+                    )
                 ),
             ]
             edge_x = []
@@ -1608,7 +1808,9 @@ class Network:
         nodex, nodey = list(zip(*nodes))[:2]
         self.mesh1d.set_values("nnodex", nodex)
         self.mesh1d.set_values("nnodey", nodey)
-        self.mesh1d.description1d["network_node_ids"].extend([f"{xy[0]:.6f}_{xy[1]:.6f}" for xy in nodes])
+        self.mesh1d.description1d["network_node_ids"].extend(
+            [f"{xy[0]:.6f}_{xy[1]:.6f}" for xy in nodes]
+        )
         self.mesh1d.description1d["network_node_long_names"].extend(
             [f"x={xy[0]:.6f}_y={xy[1]:.6f}" for xy in nodes]
         )
@@ -1643,7 +1845,11 @@ class Network:
             if section_length <= 0.0:
                 raise ValueError("Section length must be larger than 0.0")
             nnodes = max(2, int(round(section_length / one_d_mesh_distance) + 1))
-            offsets.extend(np.linspace(anchor_pts[i], anchor_pts[i + 1], nnodes - 1, endpoint=False).tolist())
+            offsets.extend(
+                np.linspace(
+                    anchor_pts[i], anchor_pts[i + 1], nnodes - 1, endpoint=False
+                ).tolist()
+            )
         offsets.append(anchor_pts[-1])
 
         return np.asarray(offsets)
@@ -1677,17 +1883,26 @@ class Network:
             # Distribute points along network [1d mesh]
             if urban_branches is not None:
                 if branch.Index in urban_branches:
-                    offsets = self._generate_1d_spacing([0.0, branch.geometry.length], branch.geometry.length)
+                    offsets = self._generate_1d_spacing(
+                        [0.0, branch.geometry.length], branch.geometry.length
+                    )
                 else:
-                    offsets = self._generate_1d_spacing([0.0, branch.geometry.length], one_d_mesh_distance)
+                    offsets = self._generate_1d_spacing(
+                        [0.0, branch.geometry.length], one_d_mesh_distance
+                    )
             else:
-                offsets = self._generate_1d_spacing([0.0, branch.geometry.length], one_d_mesh_distance)
+                offsets = self._generate_1d_spacing(
+                    [0.0, branch.geometry.length], one_d_mesh_distance
+                )
             self.offsets[branch.Index] = offsets
 
         if structures is not None:
             # Check argument
             checks.check_argument(
-                structures, "structures", (pd.DataFrame, gpd.GeoDataFrame), columns=["branchid", "chainage"]
+                structures,
+                "structures",
+                (pd.DataFrame, gpd.GeoDataFrame),
+                columns=["branchid", "chainage"],
             )
 
             # Get structure data from dfs
@@ -1705,7 +1920,11 @@ class Network:
                 if any(c > 1):
                     logger.warning(
                         "Structures {} have the same location.".format(
-                            ", ".join(group.loc[np.isin(group["chainage"], u[c > 1])].index.tolist())
+                            ", ".join(
+                                group.loc[
+                                    np.isin(group["chainage"], u[c > 1])
+                                ].index.tolist()
+                            )
                         )
                     )
 
@@ -1732,17 +1951,21 @@ class Network:
                             # the mesh point will be too far away. Add a limit on the minimum of half the length and
                             # two times the max distance
                             dist_to_prev_limit = limits[i] - (
-                                max(additional[-1], limits[i - 1]) if any(additional) else limits[i - 1]
+                                max(additional[-1], limits[i - 1])
+                                if any(additional)
+                                else limits[i - 1]
                             )
                             if dist_to_prev_limit > 2 * max_dist_to_struc:
                                 additional.append(
-                                    limits[i] - min(2 * max_dist_to_struc, dist_to_prev_limit / 2)
+                                    limits[i]
+                                    - min(2 * max_dist_to_struc, dist_to_prev_limit / 2)
                                 )
 
                             dist_to_next_limit = limits[i + 1] - limits[i]
                             if dist_to_next_limit > 2 * max_dist_to_struc:
                                 additional.append(
-                                    limits[i] + min(2 * max_dist_to_struc, dist_to_next_limit / 2)
+                                    limits[i]
+                                    + min(2 * max_dist_to_struc, dist_to_next_limit / 2)
                                 )
 
                         # Join the limits
@@ -1767,7 +1990,9 @@ class Network:
                         anchor_pts = sorted(anchor_pts)
 
                         # Generate new offsets
-                        offsets = self._generate_1d_spacing(anchor_pts, one_d_mesh_distance)
+                        offsets = self._generate_1d_spacing(
+                            anchor_pts, one_d_mesh_distance
+                        )
 
                         # Determine the segments that are missing a grid point
                         in_range = [
@@ -1793,8 +2018,8 @@ class Network:
         # checks.check_argument(value, 'roughness value', (float, int, np.float, np.integer))
 
         # Convert integer to string
-        # if isinstance(roughnesstype, int):
-        #    roughnesstype = hydamo_to_dflowfm.roughness_gml[roughnesstype]
+        # map HyDAMO definition to D-Hydro definition
+        roughnesstype = self.dflowfmmodel.roughness_mapping[roughnesstype]
 
         # Get name
         name = f"{roughnesstype}_{float(value)}"
@@ -1806,11 +2031,12 @@ class Network:
         # Convert roughness type string to integer for dflowfm
         delft3dfmtype = roughnesstype
 
-        if roughnesstype.lower() == "stricklerks":
-            raise ValueError()
-
         # Add to dict
-        self.roughness_definitions[name] = {"name": name, "code": delft3dfmtype, "value": value}
+        self.roughness_definitions[name] = {
+            "name": name,
+            "code": delft3dfmtype,
+            "value": value,
+        }
 
         return name
 
@@ -1845,7 +2071,9 @@ class Network:
 
         # Get the branch data from the networkdata
         branchidx = (
-            self.mesh1d.description1d["network_branch_ids"].index(self.str2chars(branch_id, self.idstrlength))
+            self.mesh1d.description1d["network_branch_ids"].index(
+                self.str2chars(branch_id, self.idstrlength)
+            )
             + 1
         )
         pt_branch_id = self.mesh1d.get_values("branchidx", as_array=True)
@@ -2069,7 +2297,7 @@ class Structures:
         outletlosscoeff,
         name=np.nan,
         allowedflowdir="both",
-        frictiontype="Strickler",
+        frictiontype="StricklerKs",
         frictionvalue=75.0,
     ):
         """
@@ -2084,6 +2312,8 @@ class Structures:
 
         # Check the content of the cross section dictionary
         # checks.check_dictionary(crosssection, required='shape', choice=['diameter', ['width', 'height', 'closed']])
+        # map frictiontype from HyDAMO to D-Hydro
+        frictiontype = self.dflowfmmodel.roughness_mapping[frictiontype]
 
         self.bridges[id] = remove_nan_values(
             {
@@ -2156,7 +2386,7 @@ class Structures:
         valveopeningheight=None,
         relopening=None,
         losscoeff=None,
-        frictiontype="Strickler",
+        frictiontype="StricklerKs",
         frictionvalue=75.0,
     ):
         """
@@ -2170,11 +2400,14 @@ class Structures:
         if isinstance(crosssection, dict):
             # Check the content of the cross section dictionary
             checks.check_dictionary(
-                crosssection, required="shape", choice=["diameter", ["width", "height", "closed"]]
+                crosssection,
+                required="shape",
+                choice=["diameter", ["width", "height", "closed"]],
             )
 
             # Get roughnessname
-            roughnessname = self.dflowfmmodel.network.get_roughness_description(frictiontype, frictionvalue)
+            # map HyDAMO roughness type to D-Hydro roughness type
+            frictiontype_mapped = self.dflowfmmodel.roughness_mapping[frictiontype]
 
             # Add cross section definition
             # WORKAROUND: for the GUI, a profile definition has to be created for every culvert. We do this temporary.
@@ -2192,12 +2425,16 @@ class Structures:
                     name=id,
                 )
             else:
-                NotImplementedError(f'Cross section with shape "{crosssection["shape"]}" not implemented.')
+                NotImplementedError(
+                    f'Cross section with shape "{crosssection["shape"]}" not implemented.'
+                )
         elif isinstance(crosssection, str):
             # Id of cross-section definition that's already added
             definition = crosssection
         else:
-            raise ValueError(f"Type of 'crosssection' key is not supported ({type(crosssection)})")
+            raise ValueError(
+                f"Type of 'crosssection' key is not supported ({type(crosssection)})"
+            )
 
         # Add the culvert to the dictionary
         self.culverts[id] = remove_nan_values(
@@ -2216,7 +2453,7 @@ class Structures:
                 "outletLossCoeff": outletlosscoeff,
                 "valveOnOff": int(valveonoff),
                 "numLossCoeff": int(numlosscoeff),
-                "bedFrictionType": frictiontype,
+                "bedFrictionType": frictiontype_mapped,
                 "bedFriction": frictionvalue,
             }
         )
@@ -2262,8 +2499,26 @@ class Structures:
                 self.orifices,
                 self.compounds,
             ],
-            ["generalstructure", "culvert", "weir", "bridge", "pump", "uweir", "orifice", "compound"],
-            [generalstructures, culverts, weirs, bridges, pumps, uweirs, orifices, compounds],
+            [
+                "generalstructure",
+                "culvert",
+                "weir",
+                "bridge",
+                "pump",
+                "uweir",
+                "orifice",
+                "compound",
+            ],
+            [
+                generalstructures,
+                culverts,
+                weirs,
+                bridges,
+                pumps,
+                uweirs,
+                orifices,
+                compounds,
+            ],
         ):
             if any(df) and add:
                 df = pd.DataFrame.from_dict(df, orient="index")
@@ -2277,7 +2532,14 @@ class Structures:
 class ObservationPoints(ExtendedGeoDataFrame):
     def __init__(self, dflowfmmodel):
         super(ObservationPoints, self).__init__(
-            geotype=Point, required_columns=["name", "branchId", "chainage", "geometry", "locationType"]
+            geotype=Point,
+            required_columns=[
+                "name",
+                "branchId",
+                "chainage",
+                "geometry",
+                "locationType",
+            ],
         )
 
         self._metadata.append("dflowfmmodel")
@@ -2306,7 +2568,9 @@ class ObservationPoints(ExtendedGeoDataFrame):
                 locationTypes = [locationTypes]
             # split 1d and 2d points, as the first ones need to be snapped to branches
             obs2d = gpd.GeoDataFrame()
-            obs2d["name"] = [n for nn, n in enumerate(names) if locationTypes[nn] == "2d"]
+            obs2d["name"] = [
+                n for nn, n in enumerate(names) if locationTypes[nn] == "2d"
+            ]
             obs2d["locationType"] = "2d"
             # obs2d['geometry'] = [Point(*pt) for ipt,pt in enumerate(crds) if (locationTypes[ipt]=='2d')&(not isinstance(pt, Point))]
             obs2d["geometry"] = [
@@ -2331,10 +2595,16 @@ class ObservationPoints(ExtendedGeoDataFrame):
 
         obs1d = gpd.GeoDataFrame()
         obs1d["name"] = names1d
-        obs1d["geometry"] = [Point(*pt) if not isinstance(pt, Point) else pt for pt in crds1d]
+        obs1d["geometry"] = [
+            Point(*pt) if not isinstance(pt, Point) else pt for pt in crds1d
+        ]
         obs1d["locationType"] = "1d"
-        geometry.find_nearest_branch(network.branches, obs1d, method="overal", maxdist=snap_distance)
-        obs1d.rename(columns={"branch_id": "branchId", "branch_offset": "chainage"}, inplace=True)
+        geometry.find_nearest_branch(
+            network.branches, obs1d, method="overal", maxdist=snap_distance
+        )
+        obs1d.rename(
+            columns={"branch_id": "branchId", "branch_offset": "chainage"}, inplace=True
+        )
         obs = obs1d.append(obs2d, sort=True) if locationTypes is not None else obs1d
 
         # Add to dataframe
@@ -2397,7 +2667,9 @@ class StorageNodes:
                 "interpolate": interpolate,
             }
         else:
-            raise ValueError("Value of key 'usetable' is not supported. Either use 'true' or 'false")
+            raise ValueError(
+                "Value of key 'usetable' is not supported. Either use 'true' or 'false"
+            )
         self.storagenodes[id] = remove_nan_values(out)
 
 
