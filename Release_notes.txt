@@ -5,13 +5,11 @@ Release notes delft3dfmpy
 
 This release of delft3dfmpy is known to be compatible with, and is tested with, D-Hydro Suite 2022.04.
 
-It also contains a major updata where the input data format changed from HyDAMO v12 GML-files to HyDAMO DAMO2.2 GPKG (geopackage).
-
 Updates (relative to v2.0.1):
- - functionality added to remove 1d2d-links a within polygon
- - double line (PartionFile) in template MDU removed
- - roughness definitions were not fully consistent with HyDAMO DAMO2.2 (e.g. StricklerKs is allowed in HyDAMO DAMO 2.2, but not yet in D-HyDAMO). They are now mapped to D-Hydro definitions.
- - fixed some bugs in the compulsory columns definition for the input GPKG: globalid is no longer required for the object 'ruwheidprofiel' and 'typeruwheid' no longer for 'hydroobject'.
+ - functionality added to remove 1d2d-links within a polygon;
+ - double line (PartionFile) in template MDU removed;
+ - roughness definitions were not fully consistent with HyDAMO DAMO2.2 (e.g. StricklerKs is allowed in HyDAMO DAMO 2.2, but not yet in D-HyDAMO). They are now mapped to D-Hydro definitions;
+ - fixed some bugs in the compulsory columns definition for the input GPKG. Globalid is no longer required for the object 'ruwheidprofiel' and 'typeruwheid' no longer for 'hydroobject';
  - notebooks were changed accordingly
  
 Note that some things do not work correctly with the GUI yet:
