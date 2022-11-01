@@ -362,7 +362,7 @@ class Mesh2D:
             raise ValueError('Only NaN values found, interpolation or nearest not possible.')
         
         # Fill missing values
-        if missing == 'default':
+        if missing.lower() == 'default':
             # With default value
             zvalues[isnan] = self.fill_value_z
 
@@ -370,14 +370,14 @@ class Mesh2D:
             # With a given number
             zvalues[isnan] = missing
 
-        elif missing == 'nearest':
+        elif missing.lower() == 'nearest':
             # By looking for the nearest value in the grid
             # Create a KDTree of the known points
             tree = KDTree(data=xy[~isnan])
             idx = tree.query(x=xy[isnan])[1]
             zvalues[isnan] = zvalues[~isnan][idx]
 
-        elif missing == 'interpolation':
+        elif missing.lower() == 'interpolation':
             # By interpolating
             isnan = np.isnan(zvalues)
             interp = LinearNDInterpolator(xy[~isnan], zvalues[~isnan], fill_value=self.fill_value_z)

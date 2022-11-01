@@ -215,7 +215,7 @@ class DFlowRRWriter:
             with open(filepath, 'w') as f:            
                 for _, dct in self.rrmodel.unpaved.unp_nodes.items():                                            
                     if np.sum([float(d) for d in dct['ar'].split(' ')]) > 0.0:
-                        f.write('SEEP id \''+dct['sp']+'\' nm \''+dct['sp']+'\' co 4 PDIN 1 1 \'365;00:00:00\' pdin ss 0\n')
+                        f.write('SEEP id \''+dct['sp']+'\' nm \''+dct['sp']+'\' co 4 PDIN 0 0 pdin ss 0\n')
                         f.write('TBLE\n')
                         for row in self.rrmodel.external_forcings.seepage[dct['sp']]['seepage'].iteritems():
                             f.write('\''+row[0].strftime('%Y/%m/%d;%H:%M:%S')+'\' '+f'{row[1]:.5f} <\n')

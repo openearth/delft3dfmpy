@@ -267,7 +267,7 @@ class ExternalForcings:
 
         assert bctype in ["discharge", "waterlevel"]
 
-        unit = "m3/s" if bctype == "discharge" else "m"
+        unit = "m3/s" if bctype.lower() == "discharge" else "m"
         if name in self.boundaries.keys():
             raise KeyError(
                 f'A boundary condition with name "{name}" is already present.'
@@ -356,7 +356,7 @@ class ExternalForcings:
         }
 
     def set_structure_series(self, structure_id, structure_type, parameter, series):
-        if structure_type == "weir":
+        if structure_type.lower() == "weir":
             weirnames = list(self.dflowfmmodel.structures.weirs.keys())
             if structure_id not in weirnames:
                 raise IndexError(
@@ -368,7 +368,7 @@ class ExternalForcings:
             if "crest" in parameter.lower():
                 parameter = "weir_crestLevel"
                 unit = "m+NAP"
-        elif structure_type == "orifice":
+        elif structure_type.lower() == "orifice":
             orificenames = list(self.dflowfmmodel.structures.orifices.keys())
             if structure_id not in orificenames:
                 raise IndexError(
@@ -380,7 +380,7 @@ class ExternalForcings:
             self.dflowfmmodel.structures.orifices[structure_id][
                 parameter
             ] = "boundaries.bc"
-        elif structure_type == "culvert":
+        elif structure_type.lower() == "culvert":
             culvertnames = list(self.dflowfmmodel.structures.culverts.keys())
             if structure_id not in culvertnames:
                 raise IndexError(
@@ -701,7 +701,7 @@ class CrossSections:
             # Get depth from definition if yz and shift
             definition = self.crosssection_def[css["definitionId"]]
             minz = shift
-            if definition["type"] == "yz":
+            if definition["type"].lower() == "yz":
                 minz += min(float(z) for z in definition["zCoordinates"].split())
 
             data.append([css["branchid"], css["chainage"], minz])
@@ -2195,11 +2195,11 @@ class Structures:
         startleveldeliveryside=np.nan,
         stopleveldeliveryside=np.nan,
     ):
-        if controlside == "suctionSide":
+        if controlside.lower() == "suctionside":
             pass
-        elif controlside == "deliverySide":
+        elif controlside.lower() == "deliveryside":
             pass
-        elif controlside != "both":
+        elif controlside.lower() != "both":
             raise ValueError(
                 "Incorrect controlSide value specified. Either use 'suctionSide', 'deliverySide' or 'both'."
             )
@@ -2411,11 +2411,11 @@ class Structures:
 
             # Add cross section definition
             # WORKAROUND: for the GUI, a profile definition has to be created for every culvert. We do this temporary.
-            if crosssection["shape"] == "circle":
+            if crosssection["shape"].lower() == "circle":
                 definition = self.dflowfmmodel.crosssections.add_circle_definition(
                     crosssection["diameter"], frictiontype, frictionvalue, name=id
                 )
-            elif crosssection["shape"] == "rectangle":
+            elif crosssection["shape"].lower() == "rectangle":
                 definition = self.dflowfmmodel.crosssections.add_rectangle_definition(
                     crosssection["height"],
                     crosssection["width"],

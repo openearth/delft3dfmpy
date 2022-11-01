@@ -4,7 +4,7 @@
 
 __author__ = """Guus Rongen / Ruud Hurkmans"""
 __email__ = 'r.hurkmans@hkv.nl'
-__version__ = '2.0.2'
+__version__ = '2.0.3'
 
 from delft3dfmpy.core.dfm import DFlowFMModel
 from delft3dfmpy.core.drr import DFlowRRModel

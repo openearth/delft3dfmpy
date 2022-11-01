@@ -5,9 +5,9 @@ Credits
 Development Lead
 ----------------
 
-* Guus Rongen <rongen@hkv.nl>
+* Ruud Hurkmans <hurkmans@hkv.nl>
 
 Contributors
 ------------
 
-Ruud Hurkmans <hurkmans@hkv.nl>
+* Guy Dupuits <dupuits@hkv.nl>

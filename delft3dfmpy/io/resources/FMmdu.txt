@@ -142,11 +142,14 @@ RefDate                           = 20000101            # Reference date (yyyymm
 Tzone                             = 0.                  # Time zone assigned to input time series
 DtUser                            = 60.                 # Time interval (s) for external forcing update
 DtNodal                           = 60.                 # Time interval (s) for updating nodal factors in astronomical boundary conditions
-DtMax                             = 30.               # Maximal computation timestep (s)
+DtMax                             = 30.                 # Maximal computation timestep (s)
 DtInit                            = 60.                 # Initial computation timestep (s)
 Tunit                             = S                   # Time unit for start/stop times (D, H, M or S)
 TStart                            = 0.0                 # Start time w.r.t. RefDate (in TUnit)
 TStop                             = 1728000.0           # Stop  time w.r.t. RefDate (in TUnit)
+AutoTimestepNoStruct              = 1                   # 0 = no, 1 = yes (Exclude structure links (and neighbours) from time step limitation)
+AutoTimestepNoQout                = 1                   # 0 = no, 1 = yes Exclude negative qin terms from time step limitation
+
 
 [restart]
 RestartFile                       =                     # Restart netcdf-file, either *_rst.nc or *_map.nc

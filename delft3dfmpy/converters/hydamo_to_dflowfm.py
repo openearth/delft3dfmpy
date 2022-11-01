@@ -131,7 +131,7 @@ def generate_weirs(weirs, opening=None, management_device=None, management=None)
             management_device.kunstwerkopeningid
             == weir_opening.globalid.to_string(index=False)
         ]
-        if weir_mandev.overlaatonderlaat.to_string(index=False) == "Overlaat":
+        if weir_mandev.overlaatonderlaat.to_string(index=False).lower() == "overlaat":
             weirs_dfm.at[idx, "code"] = weir.code
             weirs_dfm.at[idx, "branch_id"] = weir.branch_id
             weirs_dfm.at[idx, "branch_offset"] = weir.branch_offset
@@ -142,7 +142,9 @@ def generate_weirs(weirs, opening=None, management_device=None, management=None)
                 idx, "laagstedoorstroombreedte"
             ] = weir_opening.laagstedoorstroombreedte.to_string(index=False)
             weirs_dfm.at[idx, "afvoercoefficient"] = weir.afvoercoefficient
-        elif weir_mandev.overlaatonderlaat.to_string(index=False) == "Onderlaat":
+        elif (
+            weir_mandev.overlaatonderlaat.to_string(index=False).lower() == "onderlaat"
+        ):
             orifices_dfm.at[idx, "code"] = weir.code
             orifices_dfm.at[idx, "branch_id"] = weir.branch_id
             orifices_dfm.at[idx, "branch_offset"] = weir.branch_offset
@@ -342,15 +344,18 @@ def generate_culverts(culverts, management_device=None):
     for culvert in culverts.itertuples():
 
         # Generate cross section definition name
-        if culvert.vormkoker == "Rond" or culvert.vormkoker == "Ellipsvormig":
+        if (
+            culvert.vormkoker.lower() == "rond"
+            or culvert.vormkoker.lower() == "ellipsvormig"
+        ):
             crosssection = {"shape": "circle", "diameter": culvert.hoogteopening}
 
         elif (
-            culvert.vormkoker == "Rechthoekig"
-            or culvert.vormkoker == "Onbekend"
-            or culvert.vormkoker == "Eivormig"
-            or culvert.vormkoker == "Muilprofiel"
-            or culvert.vormkoker == "Heulprofiel"
+            culvert.vormkoker.lower() == "rechthoekig"
+            or culvert.vormkoker.lower() == "onbekend"
+            or culvert.vormkoker.lower() == "eivormig"
+            or culvert.vormkoker.lower() == "muilprofiel"
+            or culvert.vormkoker.lower() == "heulprofiel"
         ):
             crosssection = {
                 "shape": "rectangle",
@@ -392,9 +397,9 @@ def generate_culverts(culverts, management_device=None):
                 for _, i in management_device[
                     management_device.duikersifonhevelid == culvert.globalid
                 ].iterrows():
-                    if i["soortregelmiddel"] == "terugslagklep":
+                    if i["soortregelmiddel"].lower() == "terugslagklep":
                         culverts_dfm.at[culvert.Index, "allowedflowdir"] = "positive"
-                    elif i["soortregelmiddel"] == "schuif":
+                    elif i["soortregelmiddel"].lower() == "schuif":
                         culverts_dfm.at[culvert.Index, "valveonoff"] = 1
                         culverts_dfm.at[culvert.Index, "valveopeningheight"] = float(
                             i["hoogteopening"]
@@ -623,17 +628,23 @@ def parametrised_to_profiles(
         # parambranches.drop(parambranches.index[nulls], inplace=True)
 
         if pd.isnull(
-            values[values.soortparameter == "bodemhoogte benedenstrooms"].waarde
+            values[
+                values.soortparameter.str.lower() == "bodemhoogte benedenstrooms"
+            ].waarde
         ).values[0]:
             print(
                 "bodemhoogte benedenstrooms not available for profile {}.".format(
                     param.globalid
                 )
             )
-        if pd.isnull(values[values.soortparameter == "bodembreedte"].waarde).values[0]:
+        if pd.isnull(
+            values[values.soortparameter.str.lower() == "bodembreedte"].waarde
+        ).values[0]:
             print("bodembreedte not available for profile {}.".format(param.globalid))
         if pd.isnull(
-            values[values.soortparameter == "bodemhoogte bovenstrooms"].waarde
+            values[
+                values.soortparameter.str.lower() == "bodemhoogte bovenstrooms"
+            ].waarde
         ).values[0]:
             print(
                 "bodemhoogte bovenstrooms not available for profile {}.".format(
@@ -643,55 +654,59 @@ def parametrised_to_profiles(
 
         # Determine characteristics
         botlev = (
-            values[values.soortparameter == "bodemhoogte benedenstrooms"].waarde.values[
-                0
-            ]
+            values[
+                values.soortparameter.str.lower() == "bodemhoogte benedenstrooms"
+            ].waarde.values[0]
             + values[
-                values.soortparameter == "bodemhoogte benedenstrooms"
+                values.soortparameter.str.lower() == "bodemhoogte benedenstrooms"
             ].waarde.values[0]
         ) / 2.0
 
         if pd.isnull(
-            values[values.soortparameter == "taludhelling linkerzijde"].waarde
+            values[
+                values.soortparameter.str.lower() == "taludhelling linkerzijde"
+            ].waarde
         ).values[0]:
             css_type == "rectangle"
         else:
             css_type = "trapezium"
             dh1 = (
                 values[
-                    values.soortparameter == "hoogte insteek linkerzijde"
+                    values.soortparameter.str.lower() == "hoogte insteek linkerzijde"
                 ].waarde.values[0]
                 - botlev
             )
             dh2 = (
                 values[
-                    values.soortparameter == "hoogte insteek rechterzijde"
+                    values.soortparameter.str.lower() == "hoogte insteek rechterzijde"
                 ].waarde.values[0]
                 - botlev
             )
             height = (dh1 + dh2) / 2.0
             # Determine maximum flow width and slope (both needed for output)
             maxflowwidth = (
-                values[values.soortparameter == "bodembreedte"].waarde.values[0]
+                values[
+                    values.soortparameter.str.lower() == "bodembreedte"
+                ].waarde.values[0]
                 + values[
-                    values.soortparameter == "taludhelling linkerzijde"
+                    values.soortparameter.str.lower() == "taludhelling linkerzijde"
                 ].waarde.values[0]
                 * dh1
                 + values[
-                    values.soortparameter == "taludhelling rechterzijde"
+                    values.soortparameter.str.lower() == "taludhelling rechterzijde"
                 ].waarde.values[0]
                 * dh2
             )
             slope = (
                 values[
-                    values.soortparameter == "taludhelling linkerzijde"
+                    values.soortparameter.str.lower() == "taludhelling linkerzijde"
                 ].waarde.values[0]
                 + values[
-                    values.soortparameter == "taludhelling rechterzijde"
+                    values.soortparameter.str.lower() == "taludhelling rechterzijde"
                 ].waarde.values[0]
             ) / 2.0
 
-        if roughness_variant == "Low":
+        if roughness_variant.lower() == "low":
             roughness = values.ruwheidlaag.values[0]
         else:
             roughness = values.ruwheidhoog.values[0]
@@ -702,7 +717,10 @@ def parametrised_to_profiles(
                 "slope": round(slope, 2),
                 "maximumflowwidth": round(maxflowwidth, 1),
                 "bottomwidth": round(
-                    values[values.soortparameter == "bodembreedte"].waarde.values[0], 3
+                    values[
+                        values.soortparameter.str.lower() == "bodembreedte"
+                    ].waarde.values[0],
+                    3,
                 ),
                 "closed": 0,
                 "thalweg": 0.0,
@@ -710,12 +728,15 @@ def parametrised_to_profiles(
                 "ruwheid": roughness,
                 "bottomlevel": botlev,
             }
-        elif css_type == "rectangle":
+        elif css_type.lower() == "rectangle":
             cssdct[branch[0].Index] = {
                 "type": css_type,
                 "height": 5.0,
                 "width": round(
-                    values[values.soortparameter == "bodembreedte"].waarde.values[0], 3
+                    values[
+                        values.soortparameter.str.lower() == "bodembreedte"
+                    ].waarde.values[0],
+                    3,
                 ),
                 "closed": 0,
                 "thalweg": 0.0,
