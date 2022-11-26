@@ -155,8 +155,8 @@ def generate_weirs(weirs, opening=None, management_device=None, management=None)
                 idx, "laagstedoorstroombreedte"
             ] = weir_opening.laagstedoorstroombreedte.to_string(index=False)
             orifices_dfm.at[idx, "afvoercoefficient"] = weir.afvoercoefficient
-            orifices_dfm.at[idx, "schuifhoogte"] = weir_mandev.hoogteopening.to_string(
-                index=False
+            orifices_dfm.at[idx, "schuifhoogte"] = str(
+                weir_opening.laagstedoorstroomhoogte + weir_mandev.hoogteopening
             )
             if "maximaaldebiet" not in weir_mandev:
                 orifices_dfm.at[idx, "uselimitflow"] = "false"
